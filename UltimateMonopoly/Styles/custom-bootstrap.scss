@@ -1,0 +1,64 @@
+// ------------------------------------------------------------------
+// Custom Bootstrap Color Overrides (Dark Mode)
+// Override these variables BEFORE importing Bootstrap.
+// See: https://getbootstrap.com/docs/5.3/customize/color/
+// ------------------------------------------------------------------
+
+// Base black
+$black: #212121;
+
+// Theme colors
+$primary:   #6f42c1;   // purple – change to your brand color
+$secondary: #6c757d;
+$success:   #198754;
+$info:      #0dcaf0;
+$warning:   #ffc107;
+$danger:    #dc3545;
+$light:     #f8f9fa;
+$dark:      #212121;
+
+// Dark mode body overrides
+$body-bg:                 #212121;
+$body-color:              #e0e0e0;
+$body-secondary-color:    rgba(#e0e0e0, 0.75);
+$body-tertiary-color:     rgba(#e0e0e0, 0.5);
+$body-emphasis-color:     #ffffff;
+
+// Card / component backgrounds
+$card-bg:                 #2c2c2c;
+$card-border-color:       #3a3a3a;
+
+// Input / form overrides
+$input-bg:                #2c2c2c;
+$input-color:             #e0e0e0;
+$input-border-color:      #4a4a4a;
+$input-focus-border-color: $primary;
+
+// Navbar
+$navbar-dark-color:       rgba(#ffffff, 0.85);
+
+// Links
+$link-color:              lighten($primary, 15%);
+
+// Border
+$border-color:            #3a3a3a;
+
+// ------------------------------------------------------------------
+// Import Bootstrap (uses the overridden variables above)
+// ------------------------------------------------------------------
+@import "../node_modules/bootstrap/scss/bootstrap";
+
+// ------------------------------------------------------------------
+// Force dark color mode globally
+// ------------------------------------------------------------------
+:root {
+  color-scheme: dark;
+}
+
+html {
+  &[data-bs-theme="dark"], & {
+    --bs-body-bg: #{$body-bg};
+    --bs-body-color: #{$body-color};
+    --bs-border-color: #{$border-color};
+  }
+}
