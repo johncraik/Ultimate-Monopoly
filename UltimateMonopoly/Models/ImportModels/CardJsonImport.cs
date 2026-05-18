@@ -2,7 +2,6 @@ namespace UltimateMonopoly.Models.ImportModels;
 
 public class CardJsonImport
 {
-    public string CardType { get; set; }
     public string RawText { get; set; }
 
     public CardActionJson[] Actions { get; set; } = [];

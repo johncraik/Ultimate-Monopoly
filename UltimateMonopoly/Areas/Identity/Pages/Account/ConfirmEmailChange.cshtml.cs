@@ -14,6 +14,7 @@ using UltimateMonopoly.Data;
 
 namespace UltimateMonopoly.Areas.Identity.Pages.Account
 {
+    [AllowAnonymous]
     public class ConfirmEmailChangeModel : PageModel
     {
         private readonly UserManager<AppUser> _userManager;

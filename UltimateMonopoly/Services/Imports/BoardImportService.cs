@@ -15,6 +15,7 @@ public class BoardImportService
     private readonly IRepositoryManager _repos;
     private readonly IUserInfo _userInfo;
     private readonly string _boardFileName;
+    private readonly string _boardName;
 
     public BoardImportService(FilePathProvider filePathProvider, 
         IConfiguration config,
@@ -30,6 +31,7 @@ public class BoardImportService
             throw new ArgumentNullException(nameof(fileName), "Board file name is not set in configuration");
         
         _boardFileName = $"{fileName}{FilePathProvider.ConfigFileType}";
+        _boardName = config["Imports:BoardName"] ?? "Monopoly Board";
     }
 
     public async Task<Board> ImportDefaultBoard()
@@ -60,7 +62,7 @@ public class BoardImportService
         
         return spaces.Count != IndexHelper.BoardSize 
             ? throw new InvalidOperationException($"Board must have {IndexHelper.BoardSize} spaces") 
-            : new Board(spaces);
+            : new Board(_boardName, spaces);
     }
 
     public async Task<List<Board>> GetCustomBoards(Board defaultBoard, string? userId = null)

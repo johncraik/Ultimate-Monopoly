@@ -13,9 +13,8 @@ public class CustomBoard : AuditModel
     
     [Required]
     [MaxLength(38)]
+    //No nav prop foreign key - allows account deletion
     public string UserId { get; set; }
-    [ForeignKey(nameof(UserId))]
-    public AppUser User { get; set; }
     
     [Required]
     [MaxLength(128)]

@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Threading.Tasks;
+using JC.Web.UI.Helpers;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -46,6 +47,11 @@ namespace UltimateMonopoly.Areas.Identity.Pages.Account.Manage
         ///     directly from your code. This API may change or be removed in future releases.
         /// </summary>
         public string AuthenticatorUri { get; set; }
+
+        /// <summary>
+        ///     Server-rendered SVG markup of the authenticator QR code. Safe to render with @Html.Raw.
+        /// </summary>
+        public string QrCodeSvg { get; set; }
 
         /// <summary>
         ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
@@ -157,6 +163,7 @@ namespace UltimateMonopoly.Areas.Identity.Pages.Account.Manage
 
             var email = await _userManager.GetEmailAsync(user);
             AuthenticatorUri = GenerateQrCodeUri(email, unformattedKey);
+            QrCodeSvg = new QrCodeHelper().GenerateQrCode(AuthenticatorUri);
         }
 
         private string FormatKey(string unformattedKey)

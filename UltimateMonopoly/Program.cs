@@ -1,3 +1,5 @@
+using JC.Communication.Email.Models;
+using JC.Communication.Email.Models.Options;
 using JC.Communication.Extensions;
 using JC.Core.Extensions;
 using JC.Github.Extensions;
@@ -5,6 +7,7 @@ using JC.Identity.Extensions;
 using JC.MySql;
 using JC.SqlServer.Hangfire;
 using JC.Web.Extensions;
+using Microsoft.AspNetCore.Authorization;
 using UltimateMonopoly.Data;
 using UltimateMonopoly.Extensions;
 using UltimateMonopoly.Services.GameConfig;
@@ -24,6 +27,15 @@ builder.Services.AddCore<AppDbContext>();
 // Identity
 builder.Services.AddIdentity<AppUser, AppRole, AppDbContext>();
 
+// Global authorisation — every page requires an authenticated user by default.
+// Pages that must be public (Login, Register, password reset, etc.) opt out with [AllowAnonymous].
+builder.Services.AddAuthorization(options =>
+{
+    options.FallbackPolicy = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+});
+
 // Web (security headers, cookies, client profiling)
 builder.Services.AddWebDefaults(builder.Configuration);
 
@@ -31,7 +43,15 @@ builder.Services.AddWebDefaults(builder.Configuration);
 builder.Services.AddGithub<AppDbContext>(builder.Configuration);
 
 // Communication — Email
-builder.Services.AddEmail<AppDbContext>(builder.Configuration);
+builder.Services.AddEmail<AppDbContext>(builder.Configuration, options =>
+{
+    options.Provider = builder.Environment.IsDevelopment() 
+        ? EmailProvider.Console 
+        : EmailProvider.Microsoft;
+    options.LoggingMode = builder.Environment.IsDevelopment() 
+        ? EmailLoggingMode.FullLog
+        : EmailLoggingMode.ExcludeContent;
+});
 
 // Communication — Messaging
 builder.Services.AddMessaging<AppDbContext>();
@@ -40,11 +60,12 @@ builder.Services.AddMessaging<AppDbContext>();
 builder.Services.AddNotifications<AppDbContext>();
 
 // Background Jobs — Hangfire
-builder.Services.AddHangfireSqlServer(builder.Configuration, configureSqlStorage: opts =>
+builder.Services.AddHangfireSqlServer(builder.Configuration
+    /*, configureSqlStorage: opts =>
 {
     //TODO Remove:
     opts.SqlClientFactory = Microsoft.Data.SqlClient.SqlClientFactory.Instance;
-});
+}*/);
 
 builder.Services.AddServices();
 
@@ -65,6 +86,9 @@ await app.ConfigureAdminAndRolesAsync<AppUser, AppRole, AppDbContext, AppRoles>(
 // Short routes for Identity pages
 app.MapGet("/login", () => Results.Redirect("/Identity/Account/Login"));
 app.MapGet("/register", () => Results.Redirect("/Identity/Account/Register"));
+app.MapGet("/account", () => Results.Redirect("/Identity/Account/Manage"));
+app.MapGet("/social", () => Results.Redirect("/Social/Friends"));
+app.MapGet("/friends", () => Results.Redirect("/Social/Friends"));
 
 app.MapRazorPages();
 

@@ -1,0 +1,279 @@
+@page
+@model UltimateMonopoly.Areas.Social.Pages.Friends.IndexModel
+@{
+    ViewData["Title"] = "Friends";
+
+    string TabClass(string name) => Model.Tab == name ? "active" : "";
+    string PaneClass(string name) => Model.Tab == name ? "tab-pane fade show active" : "tab-pane fade";
+
+    string Relative(DateTime utc)
+    {
+        var delta = DateTime.UtcNow - utc;
+        return delta switch
+        {
+            { TotalMinutes: < 1 }  => "just now",
+            { TotalMinutes: < 60 } => $"{(int)delta.TotalMinutes}m ago",
+            { TotalHours:   < 24 } => $"{(int)delta.TotalHours}h ago",
+            { TotalDays:    < 7 }  => $"{(int)delta.TotalDays}d ago",
+            _                      => utc.ToString("d MMM")
+        };
+    }
+}
+
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+    <div>
+        <h1 class="mb-1">Friends</h1>
+        <p class="text-body-secondary mb-0">Your social board — invite players, chat, and grow your circle.</p>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.StatusMessage))
+{
+    <div class="alert alert-@(Model.StatusKind ?? "info") alert-dismissible fade show" role="alert">
+        @Model.StatusMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<ul class="nav nav-tabs sticky-tabs mb-4" id="friendsTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link @TabClass("friends")" data-bs-toggle="tab" data-bs-target="#tab-friends" type="button" role="tab">
+            Friends <span class="badge text-bg-secondary ms-1">@Model.Friends.Count</span>
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link @TabClass("requests")" data-bs-toggle="tab" data-bs-target="#tab-requests" type="button" role="tab">
+            Requests
+            @if (Model.IncomingRequests.Count > 0)
+            {
+                <span class="badge text-bg-info ms-1">@Model.IncomingRequests.Count</span>
+            }
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link @TabClass("add")" data-bs-toggle="tab" data-bs-target="#tab-add" type="button" role="tab">
+            Add Friend
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content">
+    @* ---------- Friends tab ---------- *@
+    <div class="@PaneClass("friends")" id="tab-friends" role="tabpanel">
+        <div class="d-flex justify-content-end mb-3">
+            <div class="btn-group" role="group" aria-label="View toggle">
+                <input type="radio" class="btn-check" name="view-toggle" id="view-cards" autocomplete="off" checked />
+                <label class="btn btn-outline-secondary btn-sm" for="view-cards">Cards</label>
+
+                <input type="radio" class="btn-check" name="view-toggle" id="view-list" autocomplete="off" />
+                <label class="btn btn-outline-secondary btn-sm" for="view-list">List</label>
+            </div>
+        </div>
+
+        @* Card view *@
+        <div data-friends-view="cards">
+            <div class="row g-3">
+                @foreach (var f in Model.Friends)
+                {
+                    <div class="col-md-6 col-xl-4">
+                        <div class="card h-100">
+                            <div class="card-body d-flex flex-column">
+                                <div class="d-flex align-items-start gap-3 mb-3">
+                                    <span class="friend-avatar bg-@f.AvatarColor">@f.Initials</span>
+                                    <div class="flex-grow-1 min-w-0">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <h5 class="card-title mb-0 text-truncate">@f.DisplayName</h5>
+                                            <span class="status-dot @(f.IsOnline ? "online" : "")" title="@(f.IsOnline ? "Online" : "Offline")"></span>
+                                        </div>
+                                        <div class="text-body-secondary small">@@@f.Username</div>
+                                    </div>
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-link text-body-secondary p-1 lh-1" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="More actions">
+                                            <span style="font-size: 1.25rem;">⋮</span>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li><a class="dropdown-item" href="#">View Profile</a></li>
+                                            <li><hr class="dropdown-divider" /></li>
+                                            <li><a class="dropdown-item text-warning" href="#">Remove Friend</a></li>
+                                            <li><a class="dropdown-item text-danger" href="#">Block</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <p class="card-text small text-body-secondary mb-3">
+                                    Last played: <strong class="text-body">@f.LastPlayedGame</strong><br />
+                                    @(f.IsOnline ? "Online now" : $"Seen {Relative(f.LastSeenUtc)}")
+                                </p>
+                                <div class="mt-auto d-flex gap-2">
+                                    <button class="btn btn-primary btn-sm flex-grow-1" type="button">Invite to Game</button>
+                                    <a class="btn btn-outline-info btn-sm" asp-page="./Chat" asp-route-friend="@f.Username">Message</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        @* List view *@
+        <div data-friends-view="list" hidden>
+            <div class="table-responsive">
+                <table class="table table-dark table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col">Friend</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Last played</th>
+                            <th scope="col">Last seen</th>
+                            <th scope="col" class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var f in Model.Friends)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="friend-avatar friend-avatar-sm bg-@f.AvatarColor">@f.Initials</span>
+                                        <div>
+                                            <div class="fw-semibold">@f.DisplayName</div>
+                                            <div class="small text-body-secondary">@@@f.Username</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="status-dot @(f.IsOnline ? "online" : "")"></span>
+                                    <span class="ms-1">@(f.IsOnline ? "Online" : "Offline")</span>
+                                </td>
+                                <td>@f.LastPlayedGame</td>
+                                <td>@(f.IsOnline ? "now" : Relative(f.LastSeenUtc))</td>
+                                <td class="text-end">
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <button class="btn btn-primary" type="button">Invite</button>
+                                        <a class="btn btn-outline-info" asp-page="./Chat" asp-route-friend="@f.Username">Message</a>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="More actions"></button>
+                                            <ul class="dropdown-menu dropdown-menu-end">
+                                                <li><a class="dropdown-item" href="#">View Profile</a></li>
+                                                <li><hr class="dropdown-divider" /></li>
+                                                <li><a class="dropdown-item text-warning" href="#">Remove Friend</a></li>
+                                                <li><a class="dropdown-item text-danger" href="#">Block</a></li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    @* ---------- Requests tab ---------- *@
+    <div class="@PaneClass("requests")" id="tab-requests" role="tabpanel">
+        <div class="row g-4">
+            <div class="col-lg-6">
+                <h5 class="mb-3">Incoming <span class="badge text-bg-info ms-1">@Model.IncomingRequests.Count</span></h5>
+                @if (Model.IncomingRequests.Count == 0)
+                {
+                    <p class="text-body-secondary">No pending requests.</p>
+                }
+                else
+                {
+                    <div class="d-flex flex-column gap-2">
+                        @foreach (var r in Model.IncomingRequests)
+                        {
+                            <div class="card">
+                                <div class="card-body d-flex align-items-center gap-3 py-2">
+                                    <span class="friend-avatar friend-avatar-sm bg-@r.AvatarColor">@r.Initials</span>
+                                    <div class="flex-grow-1 min-w-0">
+                                        <div class="fw-semibold text-truncate">@r.DisplayName</div>
+                                        <div class="small text-body-secondary">@@@r.Username · @Relative(r.RequestedAtUtc)</div>
+                                    </div>
+                                    <div class="d-flex gap-2">
+                                        <button class="btn btn-sm btn-success" type="button">Accept</button>
+                                        <button class="btn btn-sm btn-outline-secondary" type="button">Decline</button>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+
+            <div class="col-lg-6">
+                <h5 class="mb-3">Outgoing <span class="badge text-bg-secondary ms-1">@Model.OutgoingRequests.Count</span></h5>
+                @if (Model.OutgoingRequests.Count == 0)
+                {
+                    <p class="text-body-secondary">You haven't sent any requests.</p>
+                }
+                else
+                {
+                    <div class="d-flex flex-column gap-2">
+                        @foreach (var r in Model.OutgoingRequests)
+                        {
+                            <div class="card">
+                                <div class="card-body d-flex align-items-center gap-3 py-2">
+                                    <span class="friend-avatar friend-avatar-sm bg-@r.AvatarColor">@r.Initials</span>
+                                    <div class="flex-grow-1 min-w-0">
+                                        <div class="fw-semibold text-truncate">@r.DisplayName</div>
+                                        <div class="small text-body-secondary">@@@r.Username · sent @Relative(r.RequestedAtUtc)</div>
+                                    </div>
+                                    <button class="btn btn-sm btn-outline-danger" type="button">Cancel</button>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    @* ---------- Add Friend tab ---------- *@
+    <div class="@PaneClass("add")" id="tab-add" role="tabpanel">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Add a friend</h5>
+                <p class="card-text text-body-secondary small mb-3">
+                    Enter the exact username of the person you want to add. They'll receive a friend request.
+                </p>
+
+                <form method="post" asp-page-handler="AddFriend" novalidate>
+                    <div asp-validation-summary="ModelOnly" class="text-danger small mb-2"></div>
+                    <div class="d-flex gap-2">
+                        <input asp-for="Input.Username" type="text" class="form-control" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Enter exact username" />
+                        <button type="submit" class="btn btn-primary text-nowrap">Send Request</button>
+                    </div>
+                    <span asp-validation-for="Input.Username" class="text-danger small d-block mt-2"></span>
+                    <div class="form-text">Hint: try <code>alice</code>, <code>bob</code>, <code>charlie</code>, <code>david</code>, or <code>eve</code>.</div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (() => {
+            const cardsView = document.querySelector('[data-friends-view="cards"]');
+            const listView  = document.querySelector('[data-friends-view="list"]');
+            const cardsRadio = document.getElementById('view-cards');
+            const listRadio  = document.getElementById('view-list');
+            if (!cardsView || !listView || !cardsRadio || !listRadio) return;
+
+            const KEY = 'friends.view';
+            const apply = (mode) => {
+                const useList = mode === 'list';
+                cardsView.hidden = useList;
+                listView.hidden  = !useList;
+                cardsRadio.checked = !useList;
+                listRadio.checked  = useList;
+            };
+
+            apply(localStorage.getItem(KEY) || 'cards');
+            cardsRadio.addEventListener('change', () => { if (cardsRadio.checked) { apply('cards'); localStorage.setItem(KEY, 'cards'); } });
+            listRadio.addEventListener('change',  () => { if (listRadio.checked)  { apply('list');  localStorage.setItem(KEY, 'list');  } });
+        })();
+    </script>
+}

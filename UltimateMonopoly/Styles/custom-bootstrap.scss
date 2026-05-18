@@ -17,6 +17,44 @@ $danger:    #dc3545;
 $light:     #f8f9fa;
 $dark:      #212121;
 
+// Auxiliary theme colors — explicit hex so each can be tuned independently
+// of its base. Used as gradient stops and as standalone bg/text utilities.
+$success-light: #9be564;   // limey, vibrant green
+$danger-dark:   #7a1620;   // deep wine red
+$danger-light:  #f47c80;   // soft coral, bridges warning → danger gradient
+$info-dark:     #086d8a;   // deeper teal
+$light-dark:    #9a9da1;   // mid grey
+
+// Register every theme color (base + auxiliary) so Bootstrap generates the
+// matching .bg-*, .text-*, .btn-*, .btn-outline-* utilities for them.
+$theme-colors: (
+  "primary":       $primary,
+  "secondary":     $secondary,
+  "success":       $success,
+  "info":          $info,
+  "warning":       $warning,
+  "danger":        $danger,
+  "light":         $light,
+  "dark":          $dark,
+  "success-light": $success-light,
+  "danger-dark":   $danger-dark,
+  "danger-light":  $danger-light,
+  "info-dark":     $info-dark,
+  "light-dark":    $light-dark,
+);
+
+// Theme gradients — diagonal two-stop fills consumed by .btn-hero and other
+// accent surfaces. No `dark` entry per design.
+$theme-gradients: (
+  "primary":   linear-gradient(135deg, $primary,   $info),
+  "secondary": linear-gradient(135deg, $secondary, $primary),
+  "success":   linear-gradient(135deg, $success,   $success-light),
+  "danger":    linear-gradient(135deg, $danger,    $danger-dark),
+  "warning":   linear-gradient(135deg, $warning,   $danger-light),
+  "info":      linear-gradient(135deg, $info,      $info-dark),
+  "light":     linear-gradient(135deg, $light,     $light-dark),
+);
+
 // Dark mode body overrides
 $body-bg:                 #212121;
 $body-color:              #e0e0e0;
@@ -45,7 +83,7 @@ $link-color:              lighten($primary, 15%);
 $border-color:            #3a3a3a;
 
 // ------------------------------------------------------------------
-// Import Bootstrap (uses the overridden variables above)
+// Import Bootstrap (uses the overridden variables and merged maps above)
 // ------------------------------------------------------------------
 @import "../node_modules/bootstrap/scss/bootstrap";
 
@@ -69,4 +107,397 @@ html {
 // ------------------------------------------------------------------
 .card {
   box-shadow: $card-box-shadow;
+}
+
+// ------------------------------------------------------------------
+// .btn-nav — third button family alongside .btn-* and .btn-outline-*
+// Transparent background, animated underline on hover/active.
+// Generates .btn-nav (neutral, primary accent) plus .btn-nav-{color}
+// for every theme color so it composes with the rest of the system.
+// ------------------------------------------------------------------
+@mixin button-nav-variant($color, $accent: $color) {
+  --bs-btn-color: #{$color};
+  --bs-btn-bg: transparent;
+  --bs-btn-border-color: transparent;
+  --bs-btn-hover-color: #{$color};
+  --bs-btn-hover-bg: rgba(#{to-rgb($color)}, 0.10);
+  --bs-btn-hover-border-color: transparent;
+  --bs-btn-focus-shadow-rgb: #{to-rgb($accent)};
+  --bs-btn-active-color: #{$color};
+  --bs-btn-active-bg: rgba(#{to-rgb($color)}, 0.18);
+  --bs-btn-active-border-color: transparent;
+  --bs-btn-disabled-color: rgba(#{to-rgb($color)}, 0.5);
+  --bs-btn-disabled-bg: transparent;
+  --bs-btn-disabled-border-color: transparent;
+
+  position: relative;
+  font-weight: 500;
+
+  &::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    right: 50%;
+    bottom: 0.25rem;
+    height: 2px;
+    background-color: #{$accent};
+    // Reset Bootstrap's .dropdown-toggle caret styles so the underline stays
+    // clean when .btn-nav is also a dropdown toggle.
+    border: 0;
+    margin: 0;
+    vertical-align: baseline;
+    border-radius: 1px;
+    transition: left 0.2s ease, right 0.2s ease;
+    pointer-events: none;
+  }
+
+  &:hover::after,
+  &:focus-visible::after,
+  &.active::after,
+  &.show::after {
+    left: 0.75rem;
+    right: 0.75rem;
+  }
+}
+
+.btn-nav {
+  @include button-nav-variant($body-color, $primary);
+}
+
+@each $color, $value in $theme-colors {
+  .btn-nav-#{$color} {
+    @include button-nav-variant($value);
+  }
+}
+
+// On stacked mobile menus the underline looks like a stray dash — drop it,
+// left-align text, and stretch full-width so items match the auth row.
+@include media-breakpoint-down(lg) {
+  .navbar .btn-nav,
+  .navbar [class*="btn-nav-"] {
+    &::after { display: none; }
+    text-align: start;
+    width: 100%;
+  }
+}
+
+// ------------------------------------------------------------------
+// Navbar dropdown items — adopt the .btn-nav language (transparent,
+// underline from center on hover) so navbar menus feel like an extension
+// of the bar itself. Scoped to .navbar so other dropdowns (e.g. the
+// Manage mobile menu) keep Bootstrap's default behaviour.
+// ------------------------------------------------------------------
+@mixin dropdown-item-variant($color, $accent: $color) {
+  --bs-dropdown-link-color: #{$color};
+  --bs-dropdown-link-hover-color: #{$color};
+  --bs-dropdown-link-hover-bg: rgba(#{to-rgb($color)}, 0.10);
+  --bs-dropdown-link-active-color: #{$color};
+  --bs-dropdown-link-active-bg: rgba(#{to-rgb($color)}, 0.18);
+
+  &::after { background-color: #{$accent}; }
+}
+
+.navbar .dropdown-menu .dropdown-item {
+  position: relative;
+  font-weight: 500;
+  // Extra vertical breathing room so the underline isn't fighting the text.
+  padding-block: 0.625rem;
+
+  &::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    right: 50%;
+    bottom: 0.3rem;
+    height: 2px;
+    background-color: var(--bs-primary);
+    border-radius: 1px;
+    transition: left 0.2s ease, right 0.2s ease;
+    pointer-events: none;
+  }
+
+  &:hover::after,
+  &:focus::after,
+  &.active::after {
+    left: 0.75rem;
+    right: 0.75rem;
+  }
+}
+
+// Match the base selector's specificity (.navbar .dropdown-menu .dropdown-item)
+// so the variant's underline color and CSS variables win on source order.
+@each $color, $value in $theme-colors {
+  .navbar .dropdown-menu .dropdown-item-#{$color} {
+    @include dropdown-item-variant($value);
+  }
+}
+
+
+// ------------------------------------------------------------------
+// .btn-hero — gradient CTA buttons with a diagonal shine sweep on hover
+// and a layered shadow that lifts. One variant per entry in $theme-gradients.
+// Shadow tracks $card-box-shadow so heroes feel part of the same elevation
+// system as the rest of the dark theme.
+// ------------------------------------------------------------------
+
+// Stronger layered shadow used while a hero button is hovered/focused.
+$hero-box-shadow-hover: 0 8px 24px rgba($black, 0.7), 0 2px 8px rgba($black, 0.5);
+
+@mixin button-hero-variant($gradient, $base) {
+  $text: color-contrast($base);
+
+  --bs-btn-color: #{$text};
+  --bs-btn-bg: transparent;
+  --bs-btn-border-color: transparent;
+  --bs-btn-hover-color: #{$text};
+  --bs-btn-hover-bg: transparent;
+  --bs-btn-hover-border-color: transparent;
+  --bs-btn-active-color: #{$text};
+  --bs-btn-active-bg: transparent;
+  --bs-btn-active-border-color: transparent;
+  --bs-btn-focus-shadow-rgb: #{to-rgb($base)};
+  --bs-btn-disabled-color: #{$text};
+  --bs-btn-disabled-bg: transparent;
+  --bs-btn-disabled-border-color: transparent;
+
+  position: relative;
+  overflow: hidden;
+  background-image: #{$gradient};
+  border: 0;
+  font-weight: 600;
+  padding: 0.625rem 1.5rem;
+  box-shadow: $card-box-shadow;
+  transition: transform 0.2s ease, box-shadow 0.25s ease;
+
+  // Diagonal shine — slides from off-left to off-right across ~650ms on hover.
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      105deg,
+      transparent 30%,
+      rgba($white, 0.30) 50%,
+      transparent 70%
+    );
+    transform: translateX(-150%);
+    transition: transform 0.65s ease;
+    pointer-events: none;
+  }
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: $hero-box-shadow-hover;
+
+    &::before { transform: translateX(150%); }
+  }
+
+  &:active,
+  &.active,
+  &.show {
+    transform: translateY(0);
+    box-shadow: $card-box-shadow;
+  }
+
+  &:disabled,
+  &.disabled {
+    opacity: 0.65;
+    transform: none;
+    box-shadow: $card-box-shadow;
+    &::before { display: none; }
+  }
+}
+
+@each $name, $gradient in $theme-gradients {
+  .btn-hero-#{$name} {
+    @include button-hero-variant($gradient, map-get($theme-colors, $name));
+  }
+}
+
+// Respect reduced-motion preferences: kill the sweep and the lift.
+@media (prefers-reduced-motion: reduce) {
+  [class*="btn-hero-"] {
+    transition: none;
+    &:hover { transform: none; }
+    &::before { display: none; }
+  }
+}
+
+// ------------------------------------------------------------------
+// Extended palette utilities — Bootstrap exposes the full palette via
+// $colors ($blue, $purple, $teal, etc.) but only generates .bg-* utilities
+// for $theme-colors. Loop them so avatars, badges, accents can use them.
+// ------------------------------------------------------------------
+@each $name, $value in $colors {
+  .bg-#{$name} {
+    background-color: $value !important;
+  }
+  .text-#{$name} {
+    color: $value !important;
+  }
+}
+
+// ------------------------------------------------------------------
+// .nav-tabs.sticky-tabs — keeps tab strip pinned flush below .navbar-glass
+// as the page scrolls. --app-navbar-height is populated by a tiny script in
+// _Navbar.cshtml that measures the actual rendered nav height (fallback 4rem).
+// ------------------------------------------------------------------
+.nav-tabs.sticky-tabs {
+  position: sticky;
+  top: var(--app-navbar-height, 4rem);
+  z-index: 1020;   // below $zindex-fixed (1030) so navbar sits above it
+  background-color: rgba($body-bg, 0.85);
+  backdrop-filter: blur(10px) saturate(180%);
+  -webkit-backdrop-filter: blur(10px) saturate(180%);
+}
+
+// ------------------------------------------------------------------
+// Friends / chat — avatar circles, status dots, chat bubbles.
+// ------------------------------------------------------------------
+.friend-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  color: var(--bs-white);
+  font-weight: 600;
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+  user-select: none;
+
+  &.friend-avatar-sm {
+    width: 2rem;
+    height: 2rem;
+    font-size: 0.8rem;
+  }
+}
+
+.status-dot {
+  display: inline-block;
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 50%;
+  background-color: var(--bs-secondary);
+  box-shadow: 0 0 0 2px var(--bs-body-bg);
+
+  &.online {
+    background-color: var(--bs-success);
+  }
+}
+
+.chat-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 24rem;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.chat-row {
+  display: flex;
+  flex-direction: column;
+  max-width: 75%;
+
+  .chat-bubble {
+    padding: 0.625rem 0.875rem;
+    border-radius: 1rem;
+    line-height: 1.35;
+    word-wrap: break-word;
+  }
+
+  .chat-meta {
+    margin-top: 0.25rem;
+    font-size: 0.7rem;
+  }
+}
+
+.chat-row-them {
+  align-self: flex-start;
+  align-items: flex-start;
+
+  .chat-bubble {
+    background-color: var(--bs-body-tertiary);
+    color: var(--bs-body-color);
+    border-bottom-left-radius: 0.25rem;
+  }
+}
+
+.chat-row-me {
+  align-self: flex-end;
+  align-items: flex-end;
+
+  .chat-bubble {
+    background-color: var(--bs-primary);
+    color: var(--bs-white);
+    border-bottom-right-radius: 0.25rem;
+  }
+}
+
+// ------------------------------------------------------------------
+// .navbar-glass — sticky translucent top bar
+// ------------------------------------------------------------------
+.navbar-glass {
+  position: sticky;
+  top: 0;
+  z-index: 1030;
+  background-color: rgba($body-bg, 0.72);
+  backdrop-filter: blur(14px) saturate(180%);
+  -webkit-backdrop-filter: blur(14px) saturate(180%);
+  border-bottom: 1px solid var(--bs-border-color);
+
+  .navbar-brand {
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+}
+
+// ------------------------------------------------------------------
+// .nav-toggler-morph — three-bar burger that morphs to an X
+// Pairs with Bootstrap's data-bs-toggle="collapse" (uses aria-expanded).
+// ------------------------------------------------------------------
+.nav-toggler-morph {
+  border: 0;
+  padding: 0.5rem;
+  background: transparent;
+  box-shadow: none;
+
+  &:focus { box-shadow: none; }
+
+  .burger {
+    position: relative;
+    display: inline-block;
+    width: 1.5rem;
+    height: 1.25rem;
+    vertical-align: middle;
+
+    > span {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background-color: var(--bs-body-color);
+      border-radius: 1px;
+      transition: transform 0.25s ease, opacity 0.2s ease, top 0.25s ease;
+
+      &:nth-child(1) { top: 0; }
+      &:nth-child(2) { top: calc(50% - 1px); }
+      &:nth-child(3) { top: calc(100% - 2px); }
+    }
+  }
+
+  &[aria-expanded="true"] .burger {
+    > span:nth-child(1) {
+      top: calc(50% - 1px);
+      transform: rotate(45deg);
+    }
+    > span:nth-child(2) { opacity: 0; }
+    > span:nth-child(3) {
+      top: calc(50% - 1px);
+      transform: rotate(-45deg);
+    }
+  }
 }

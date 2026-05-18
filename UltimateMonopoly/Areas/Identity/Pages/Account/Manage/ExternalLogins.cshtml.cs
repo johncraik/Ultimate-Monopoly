@@ -2,6 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 #nullable disable
 
+// External logins are disabled — every handler short-circuits to ./Index (profile).
+// Existing flow preserved below the redirects for when providers are wired up.
+#pragma warning disable CS0162 // Unreachable code detected
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -58,6 +62,8 @@ namespace UltimateMonopoly.Areas.Identity.Pages.Account.Manage
 
         public async Task<IActionResult> OnGetAsync()
         {
+            return RedirectToPage("./Index");
+
             var user = await _userManager.GetUserAsync(User);
             if (user == null)
             {
@@ -81,6 +87,8 @@ namespace UltimateMonopoly.Areas.Identity.Pages.Account.Manage
 
         public async Task<IActionResult> OnPostRemoveLoginAsync(string loginProvider, string providerKey)
         {
+            return RedirectToPage("./Index");
+
             var user = await _userManager.GetUserAsync(User);
             if (user == null)
             {
@@ -101,6 +109,8 @@ namespace UltimateMonopoly.Areas.Identity.Pages.Account.Manage
 
         public async Task<IActionResult> OnPostLinkLoginAsync(string provider)
         {
+            return RedirectToPage("./Index");
+
             // Clear the existing external cookie to ensure a clean login process
             await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
 
@@ -112,6 +122,8 @@ namespace UltimateMonopoly.Areas.Identity.Pages.Account.Manage
 
         public async Task<IActionResult> OnGetLinkLoginCallbackAsync()
         {
+            return RedirectToPage("./Index");
+
             var user = await _userManager.GetUserAsync(User);
             if (user == null)
             {

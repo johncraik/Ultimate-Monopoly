@@ -1,19 +1,60 @@
+@inject SignInManager<AppUser> SignInManager
 @{
-    if (ViewData.TryGetValue("ParentLayout", out var parentLayout) && parentLayout != null)
+    Layout = ViewData.TryGetValue("ParentLayout", out var parentLayout) && parentLayout != null
+        ? parentLayout.ToString()
+        : "/Areas/Identity/Pages/_Layout.cshtml";
+
+    var hasExternalLogins = (await SignInManager.GetExternalAuthenticationSchemesAsync()).Any();
+
+    var navItems = new List<(string Page, string Label, string ActiveClass)>
     {
-        Layout = parentLayout.ToString();
-    }
-    else
+        ("./Index", "Profile", ManageNavPages.IndexNavClass(ViewContext)),
+        ("./Email", "Email", ManageNavPages.EmailNavClass(ViewContext)),
+        ("./ChangePassword", "Password", ManageNavPages.ChangePasswordNavClass(ViewContext))
+    };
+
+    if (hasExternalLogins)
     {
-        Layout = "/Areas/Identity/Pages/_Layout.cshtml";
+        navItems.Add(("./ExternalLogins", "External Logins", ManageNavPages.ExternalLoginsNavClass(ViewContext)));
     }
+
+    navItems.Add(("./TwoFactorAuthentication", "Two-Factor Auth", ManageNavPages.TwoFactorAuthenticationNavClass(ViewContext)));
+    navItems.Add(("./PersonalData", "Personal Data", ManageNavPages.PersonalDataNavClass(ViewContext)));
+
+    var currentLabel = navItems.FirstOrDefault(i => i.ActiveClass == "active").Label ?? "Account Settings";
 }
 
 <h2 class="mb-4">Account Settings</h2>
 
+<div class="d-lg-none mb-4">
+    <div class="dropdown">
+        <button class="btn btn-outline-secondary dropdown-toggle w-100 text-start d-flex justify-content-between align-items-center"
+                type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <span>@currentLabel</span>
+        </button>
+        <ul class="dropdown-menu w-100">
+            @foreach (var item in navItems)
+            {
+                <li><a class="dropdown-item @(item.ActiveClass == "active" ? "active" : null)" asp-page="@item.Page">@item.Label</a></li>
+            }
+        </ul>
+    </div>
+</div>
+
 <div class="row">
-    <div class="col-lg-3 mb-4">
-        <partial name="_ManageNav" />
+    <div class="col-lg-3 mb-4 d-none d-lg-block">
+        <div class="card">
+            <div class="card-body p-2">
+                <ul class="nav nav-pills flex-column">
+                    @foreach (var item in navItems)
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link @item.ActiveClass" asp-page="@item.Page">@item.Label</a>
+                        </li>
+                    }
+                </ul>
+            </div>
+        </div>
     </div>
     <div class="col-lg-9">
         @RenderBody()

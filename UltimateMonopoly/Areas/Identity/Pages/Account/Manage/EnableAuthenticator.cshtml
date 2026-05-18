@@ -15,9 +15,21 @@
                 Download an authenticator app (e.g. Google Authenticator, Microsoft Authenticator).
             </li>
             <li class="list-group-item bg-transparent border-secondary">
-                Scan the QR code or enter this key: <kbd>@Model.SharedKey</kbd>
-                <div id="qrCode" class="mt-2"></div>
-                <div id="qrCodeData" data-url="@Model.AuthenticatorUri"></div>
+                Scan the QR code with your authenticator app, or enter the setup key manually.
+
+                <div class="text-center my-3">
+                    <div class="d-inline-block bg-white p-3 rounded" style="max-width: 240px;">
+                        @Html.Raw(Model.QrCodeSvg)
+                    </div>
+                </div>
+
+                <small class="text-body-secondary d-block mb-1">Setup key (click to copy):</small>
+                <pre id="shared-key"
+                     class="bg-body-secondary text-body p-3 rounded mb-0 user-select-all"
+                     style="cursor: pointer;"
+                     role="button"
+                     tabindex="0"
+                     title="Click to copy"><code>@Model.SharedKey</code></pre>
             </li>
             <li class="list-group-item bg-transparent border-secondary">
                 Enter the 6-digit code from your app below.
@@ -38,4 +50,30 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        (() => {
+            const el = document.getElementById('shared-key');
+            if (!el) return;
+            const codeEl = el.querySelector('code') ?? el;
+            const original = codeEl.textContent;
+
+            const copy = async () => {
+                try {
+                    await navigator.clipboard.writeText(original.trim());
+                    codeEl.textContent = 'Copied!';
+                    setTimeout(() => { codeEl.textContent = original; }, 1200);
+                } catch {
+                    // Clipboard API unavailable (e.g. non-secure context) — silently no-op.
+                }
+            };
+
+            el.addEventListener('click', copy);
+            el.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    copy();
+                }
+            });
+        })();
+    </script>
 }

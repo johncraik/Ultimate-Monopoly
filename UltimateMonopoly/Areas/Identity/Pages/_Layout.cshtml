@@ -7,27 +7,9 @@
     <link rel="stylesheet" href="~/css/site.css" />
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark border-bottom border-secondary mb-4">
-        <div class="container">
-            <a class="navbar-brand" href="/">Ultimate Monopoly</a>
-            <div class="ms-auto d-flex gap-2">
-                @if (User.Identity?.IsAuthenticated == true)
-                {
-                    <a href="/" class="btn btn-outline-light btn-sm">Back to App</a>
-                    <form asp-area="Identity" asp-page="/Account/Logout" method="post">
-                        <button type="submit" class="btn btn-outline-danger btn-sm">Logout</button>
-                    </form>
-                }
-                else
-                {
-                    <a asp-area="Identity" asp-page="/Account/Login" class="btn btn-outline-light btn-sm">Login</a>
-                    <a asp-area="Identity" asp-page="/Account/Register" class="btn btn-primary btn-sm">Register</a>
-                }
-            </div>
-        </div>
-    </nav>
+    <partial name="_Navbar" />
 
-    <main class="container pb-5">
+    <main class="container-lg pb-5">
         @RenderBody()
     </main>
 

@@ -1,19 +1,7 @@
 namespace UltimateMonopoly.Models;
 
-public class Board
+public class Board(string name, List<BoardSpace> spaces)
 {
-    public string Name { get; }
-    public List<BoardSpace> Spaces { get; }
-
-    public Board(List<BoardSpace> spaces)
-    {
-        Name = "Monopoly Board";
-        Spaces = spaces;
-    }
-
-    public Board(string name, List<BoardSpace> spaces)
-    {
-        Name = name;
-        Spaces = spaces;
-    }
+    public string Name { get; } = name;
+    public List<BoardSpace> Spaces { get; } = spaces;
 }

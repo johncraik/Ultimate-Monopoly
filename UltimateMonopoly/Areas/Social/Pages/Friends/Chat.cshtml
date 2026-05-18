@@ -1,0 +1,55 @@
+@page "{friend?}"
+@model UltimateMonopoly.Areas.Social.Pages.Friends.ChatModel
+@{
+    ViewData["Title"] = $"Chat with {Model.FriendDisplayName}";
+
+    string Relative(DateTime utc)
+    {
+        var delta = DateTime.UtcNow - utc;
+        return delta switch
+        {
+            { TotalMinutes: < 1 }  => "just now",
+            { TotalMinutes: < 60 } => $"{(int)delta.TotalMinutes}m ago",
+            { TotalHours:   < 24 } => $"{(int)delta.TotalHours}h ago",
+            { TotalDays:    < 7 }  => $"{(int)delta.TotalDays}d ago",
+            _                      => utc.ToString("d MMM HH:mm")
+        };
+    }
+}
+
+<div class="mb-3">
+    <a asp-page="./Index" class="btn btn-sm btn-outline-secondary">&larr; Back to Friends</a>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex align-items-center gap-3">
+        <span class="friend-avatar bg-@Model.FriendAvatarColor">@Model.FriendInitials</span>
+        <div class="flex-grow-1 min-w-0">
+            <div class="d-flex align-items-center gap-2">
+                <h5 class="mb-0 text-truncate">@Model.FriendDisplayName</h5>
+                <span class="status-dot @(Model.FriendOnline ? "online" : "")" title="@(Model.FriendOnline ? "Online" : "Offline")"></span>
+            </div>
+            <div class="small text-body-secondary">@@@Model.FriendUsername</div>
+        </div>
+        <button class="btn btn-primary btn-sm" type="button">Invite to Game</button>
+    </div>
+
+    <div class="card-body chat-thread">
+        @foreach (var m in Model.Messages)
+        {
+            <div class="chat-row @(m.FromMe ? "chat-row-me" : "chat-row-them")">
+                <div class="chat-bubble">
+                    @m.Body
+                </div>
+                <div class="chat-meta small text-body-secondary">@Relative(m.SentUtc)</div>
+            </div>
+        }
+    </div>
+
+    <div class="card-footer">
+        <form class="d-flex gap-2" onsubmit="event.preventDefault();">
+            <input type="text" class="form-control" placeholder="Message @Model.FriendDisplayName…" autocomplete="off" />
+            <button type="submit" class="btn btn-primary">Send</button>
+        </form>
+    </div>
+</div>

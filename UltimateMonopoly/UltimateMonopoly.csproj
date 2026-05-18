@@ -30,8 +30,9 @@
     </ItemGroup>
 
     <ItemGroup>
+      <Folder Include="Areas\Social\Pages\" />
+      <Folder Include="Areas\Social\Services\" />
       <Folder Include="Data\Migrations\" />
-      <Folder Include="Models\DataModels\" />
       <Folder Include="Models\ViewModels\" />
     </ItemGroup>
 
