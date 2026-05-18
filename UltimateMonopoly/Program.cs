@@ -6,6 +6,9 @@ using JC.MySql;
 using JC.SqlServer.Hangfire;
 using JC.Web.Extensions;
 using UltimateMonopoly.Data;
+using UltimateMonopoly.Extensions;
+using UltimateMonopoly.Services.GameConfig;
+using UltimateMonopoly.Services.Imports;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -37,7 +40,13 @@ builder.Services.AddMessaging<AppDbContext>();
 builder.Services.AddNotifications<AppDbContext>();
 
 // Background Jobs — Hangfire
-builder.Services.AddHangfireSqlServer(builder.Configuration);
+builder.Services.AddHangfireSqlServer(builder.Configuration, configureSqlStorage: opts =>
+{
+    //TODO Remove:
+    opts.SqlClientFactory = Microsoft.Data.SqlClient.SqlClientFactory.Instance;
+});
+
+builder.Services.AddServices();
 
 var app = builder.Build();
 
@@ -47,11 +56,8 @@ app.UseIdentity();
 app.UseWebDefaults();
 app.UseGithubWebhooks();
 
-// Auto-migrate in development
-if (app.Environment.IsDevelopment())
-{
-    await app.Services.MigrateDatabaseAsync<AppDbContext>();
-}
+// Auto-migrate
+await app.Services.MigrateDatabaseAsync<AppDbContext>();
 
 // Seed admin and roles
 await app.ConfigureAdminAndRolesAsync<AppUser, AppRole, AppDbContext, AppRoles>();
@@ -62,4 +68,16 @@ app.MapGet("/register", () => Results.Redirect("/Identity/Account/Register"));
 
 app.MapRazorPages();
 
+//Create defaults:
+await SetupDefaults();
+
 app.Run();
+
+
+async Task SetupDefaults()
+{
+    await using var scope = app.Services.CreateAsyncScope();
+    var boardCache = scope.ServiceProvider.GetRequiredService<BoardCacheService>();
+    
+    await boardCache.GetDefaultBoard();
+}

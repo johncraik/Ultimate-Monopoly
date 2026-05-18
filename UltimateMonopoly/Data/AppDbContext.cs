@@ -13,6 +13,8 @@ using JC.Github.Extensions;
 using JC.Github.Models;
 using JC.Identity.Data;
 using Microsoft.EntityFrameworkCore;
+using UltimateMonopoly.Models;
+using UltimateMonopoly.Models.DataModels.Boards;
 
 namespace UltimateMonopoly.Data;
 
@@ -22,6 +24,9 @@ public class AppDbContext : IdentityDataDbContext<AppUser, AppRole>,
     public AppDbContext(DbContextOptions<AppDbContext> options, IUserInfo userInfo)
         : base(options, userInfo) { }
 
+    public DbSet<CustomBoard> CustomBoards { get; set; }
+    public DbSet<CustomBoardSpace> CustomBoardSpaces { get; set; }
+    
     // Github
     public DbSet<ReportedIssue> ReportedIssues { get; set; }
     public DbSet<IssueComment> IssueComments { get; set; }
