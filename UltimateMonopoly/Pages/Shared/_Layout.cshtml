@@ -1,3 +1,4 @@
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 <!DOCTYPE html>
 <html lang="en" data-bs-theme="dark">
 <head>
@@ -5,7 +6,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - Ultimate Monopoly</title>
     <link rel="stylesheet" href="~/css/site.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css" />
     <link rel="stylesheet" href="https://cdn.syncfusion.com/ej2/33.2.6/bootstrap5-dark.css" />
+    @{
+        var afTokens = Antiforgery.GetAndStoreTokens(Context);
+    }
+    <meta name="csrf-header" content="@afTokens.HeaderName" />
+    <meta name="csrf-token" content="@afTokens.RequestToken" />
 </head>
 <body>
     <partial name="_Navbar" />
@@ -15,10 +22,12 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/scripts/navbar.js" asp-append-version="true"></script>
     @if (User.Identity?.IsAuthenticated == true)
     {
         <script src="~/scripts/signalr.min.js" asp-append-version="true"></script>
         <script src="~/scripts/presence.js" asp-append-version="true"></script>
+        <script src="~/scripts/notifications.js" asp-append-version="true"></script>
     }
     <script src="https://cdn.syncfusion.com/ej2/33.2.6/dist/ej2.min.js"></script>
     @await RenderSectionAsync("Scripts", required: false)

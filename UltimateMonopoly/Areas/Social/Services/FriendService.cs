@@ -1,3 +1,5 @@
+using JC.Communication.Notifications.Models;
+using JC.Communication.Notifications.Services;
 using JC.Core.Enums;
 using JC.Core.Extensions;
 using JC.Core.Models;
@@ -7,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using UltimateMonopoly.Data;
 using UltimateMonopoly.Models.DataModels.Social;
 using UltimateMonopoly.Models.ViewModels.Social;
+using UltimateMonopoly.Services;
 
 namespace UltimateMonopoly.Areas.Social.Services;
 
@@ -16,35 +19,25 @@ public class FriendService
     private readonly AppDbContext _context;
     private readonly IUserInfo _userInfo;
     private readonly PresenceService _presence;
-    private readonly LinkGenerator _linkGenerator;
+    private readonly UrlLinkService _urlLinkService;
+    private readonly NotificationSender _notifications;
     private readonly ILogger<FriendService> _logger;
 
     public FriendService(IRepositoryManager repos,
         AppDbContext context,
         IUserInfo userInfo,
         PresenceService presence,
-        LinkGenerator linkGenerator,
+        UrlLinkService urlLinkService,
+        NotificationSender notifications,
         ILogger<FriendService> logger)
     {
         _repos = repos;
         _context = context;
         _userInfo = userInfo;
         _presence = presence;
-        _linkGenerator = linkGenerator;
+        _urlLinkService = urlLinkService;
+        _notifications = notifications;
         _logger = logger;
-    }
-
-    private string? GetImgUrl(string? imgName)
-    {
-        string? imgUrl = null;
-        if (!string.IsNullOrEmpty(imgName))
-        {
-            imgUrl = _linkGenerator.GetPathByPage(
-                page: "/Profile/Index",
-                handler: "AvatarImage",
-                values: new { area = "Identity", name = imgName });
-        }
-        return imgUrl;
     }
     
 
@@ -87,7 +80,7 @@ public class FriendService
             var lastSeen = lastActive.TryGetValue(friendUserId, out var ts) ? ts : null;
             var isOnline = _presence.IsOnline(friendUserId);
 
-            var imgUrl = GetImgUrl(user.AvatarImageName);
+            var imgUrl = _urlLinkService.GetImgUrl(user.AvatarImageName);
             result.Add(new FriendViewModel(
                 currentUserId,
                 friend,
@@ -125,7 +118,7 @@ public class FriendService
             if(!users.TryGetValue(outgoing ? request.ToUserId : createdId, out var user))
                 continue;
             
-            var imgUrl = GetImgUrl(user.AvatarImageName);
+            var imgUrl = _urlLinkService.GetImgUrl(user.AvatarImageName);
             var requestViewModel = new FriendRequestViewModel(_userInfo.UserId, request, user, imgUrl);
             if(outgoing)
                 outgoingRequests.Add(requestViewModel);
@@ -138,6 +131,24 @@ public class FriendService
             IncomingRequests = incomingRequests,
             OutgoingRequests = outgoingRequests
         };
+    }
+
+
+    public async Task<bool> TryRemoveFriend(string friendId)
+    {
+        var userExists = await _context.Users.AnyAsync(u => u.Id == friendId && u.IsEnabled);
+        if (!userExists) return false;
+        
+        var friend = await _repos.GetRepository<Friend>()
+            .AsQueryable().FilterDeleted(DeletedQueryType.OnlyActive)
+            .FirstOrDefaultAsync(f => (f.CreatedById == _userInfo.UserId && f.FriendUserId == friendId) 
+                                      || (f.FriendUserId == _userInfo.UserId && f.CreatedById == friendId));
+        if (friend == null) return true;
+        
+        friend.Remove();
+        await _repos.GetRepository<Friend>()
+            .SoftDeleteAsync(friend);
+        return true;
     }
     
     
@@ -174,6 +185,7 @@ public class FriendService
         
         //Check if already friends:
         var friends = await _context.Friends.AnyAsync(f => !f.IsDeleted
+                                                           && f.DateRemovedUtc == null
                                                            && ((f.CreatedById == _userInfo.UserId && f.FriendUserId == user.Id)
                                                                || (f.FriendUserId == _userInfo.UserId && f.CreatedById == user.Id)));
         if (friends) return new FriendRequestResult(false, "Already friends.");
@@ -189,6 +201,18 @@ public class FriendService
         var request = new FriendRequest(user.Id);
         await _repos.GetRepository<FriendRequest>()
             .AddAsync(request);
+
+        var senderName = string.IsNullOrWhiteSpace(_userInfo.DisplayName) ? _userInfo.Username : _userInfo.DisplayName;
+        var notification = await _notifications.SendNotification(
+            userId: user.Id,
+            title: "New Friend Request",
+            body: $"{senderName} sent you a friend request.",
+            type: NotificationType.Message,
+            link: "/social/friends?tab=requests");
+        if (!notification.IsValid)
+            _logger.LogWarning("Failed to send friend-request notification to {UserId}: {Error}",
+                user.Id, notification.ErrorMessage);
+
         return new FriendRequestResult(true, null);
     }
 
@@ -197,12 +221,28 @@ public class FriendService
         var request = await _context.FriendRequests.FilterDeleted(DeletedQueryType.OnlyActive)
             .FirstOrDefaultAsync(r => r.Id == requestId && r.IsAccepted == null && r.ToUserId == _userInfo.UserId);
         if (request == null) return false;
-        
+
+        var originalSenderId = request.CreatedById ?? throw new InvalidOperationException("User ID not set");
+
         request.Accept();
         var friend = new Friend();
-        friend.Add(request.CreatedById ?? throw new InvalidOperationException("User ID not set"));
+        friend.Add(originalSenderId);
 
-        return await ProcessFriendRequest(request, friend);        
+        var ok = await ProcessFriendRequest(request, friend);
+        if (!ok) return false;
+
+        var accepterName = string.IsNullOrWhiteSpace(_userInfo.DisplayName) ? _userInfo.Username : _userInfo.DisplayName;
+        var notification = await _notifications.SendNotification(
+            userId: originalSenderId,
+            title: "Friend Request Accepted",
+            body: $"{accepterName} accepted your friend request.",
+            type: NotificationType.Success,
+            link: "/social/friends");
+        if (!notification.IsValid)
+            _logger.LogWarning("Failed to send friend-accepted notification to {UserId}: {Error}",
+                originalSenderId, notification.ErrorMessage);
+
+        return true;
     }
 
     public async Task<bool> TryDeclineFriendRequest(string requestId)

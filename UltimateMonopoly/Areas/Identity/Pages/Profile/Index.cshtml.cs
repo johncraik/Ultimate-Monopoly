@@ -1,17 +1,30 @@
+using JC.Core.Models;
+using JC.Core.Models.Pagination;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using UltimateMonopoly.Areas.Identity.Services;
+using UltimateMonopoly.Areas.Social.Services;
 using UltimateMonopoly.Data;
+using UltimateMonopoly.Models.ViewModels.Social;
 
 namespace UltimateMonopoly.Areas.Identity.Pages.Profile;
 
 public class IndexModel : PageModel
 {
-    private readonly ProfileService _profile;
+    private const ushort BlockedPageSize = 50;
 
-    public IndexModel(ProfileService profile)
+    private readonly ProfileService _profile;
+    private readonly IUserInfo _userInfo;
+    private readonly BlockAndReportService _blockAndReport;
+
+    public IndexModel(
+        ProfileService profile,
+        IUserInfo userInfo,
+        BlockAndReportService blockAndReport)
     {
         _profile = profile;
+        _userInfo = userInfo;
+        _blockAndReport = blockAndReport;
     }
 
     [BindProperty]
@@ -20,7 +33,14 @@ public class IndexModel : PageModel
     [BindProperty(SupportsGet = true)]
     public string Tab { get; set; } = "image";
 
+    [BindProperty(SupportsGet = true, Name = "page")]
+    public ushort PageNumber { get; set; } = 1;
+
     public IReadOnlyList<string> AvailableImageNames { get; private set; } = [];
+
+    public PagedList<UserProfileViewModel>? BlockedUsers { get; private set; }
+
+    public string Initial { get; private set; } = "U";
 
     [TempData] public string? StatusMessage { get; set; }
     [TempData] public string? StatusKind { get; set; }
@@ -32,6 +52,16 @@ public class IndexModel : PageModel
         Input.AvatarColour = profile.AvatarColour;
         Input.AvatarImageName = profile.AvatarImageName;
         AvailableImageNames = _profile.GetAvailableAvatarImageNames();
+
+        var name = !string.IsNullOrWhiteSpace(_userInfo.DisplayName)
+            ? _userInfo.DisplayName
+            : _userInfo.Username;
+        Initial = !string.IsNullOrWhiteSpace(name)
+            ? char.ToUpperInvariant(name[0]).ToString()
+            : "?";
+
+        if (PageNumber < 1) PageNumber = 1;
+        BlockedUsers = await _blockAndReport.GetBlockedUsers(PageNumber, BlockedPageSize);
     }
 
     public async Task<IActionResult> OnPostAsync()
@@ -73,6 +103,14 @@ public class IndexModel : PageModel
         return RedirectToPage(new { tab = Tab });
     }
 
+    public async Task<IActionResult> OnPostUnblockAsync(string userId)
+    {
+        var ok = await _blockAndReport.TryUnblockUser(userId);
+        StatusMessage = ok ? "User unblocked." : "Could not unblock user.";
+        StatusKind = ok ? "success" : "danger";
+        return RedirectToPage(new { tab = "blocked" });
+    }
+
     public IActionResult OnGetAvatarImage(string name)
     {
         var path = _profile.GetAvatarImagePath(name);
@@ -83,8 +121,9 @@ public class IndexModel : PageModel
 
     private static string NormaliseTab(string? tab) => tab switch
     {
-        "colour" => "colour",
-        _ => "image"
+        "colour"  => "colour",
+        "blocked" => "blocked",
+        _         => "image"
     };
 
     public class InputModel

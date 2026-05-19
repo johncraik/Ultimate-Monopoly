@@ -4,7 +4,7 @@ using UltimateMonopoly.Models.DataModels.Social;
 
 namespace UltimateMonopoly.Models.ViewModels.Social;
 
-public class FriendViewModel : FriendBaseViewModel
+public class FriendViewModel : UserProfileViewModel
 {
     public string FriendModelId { get; }
     public string FriendId { get; }
@@ -52,25 +52,5 @@ public class FriendViewModel : FriendBaseViewModel
         NumberOfWins = user.NumberOfWins;
         NumberOfLosses = user.NumberOfLosses;
         NumberOfDraws = user.NumberOfDraws;
-    }
-}
-
-public class FriendBaseViewModel
-{
-    public string Username { get; }
-    public string DisplayName { get; }
-    public string Initial { get; }
-
-    public string? AvatarColour { get; }
-    public string? AvatarImageUrl { get; }
-
-    public FriendBaseViewModel(AppUser user, string? imgUrl)
-    {
-        Username = user.UserName ?? "Unknown";
-        DisplayName = user.DisplayName ?? Username;
-        Initial = DisplayName.Length > 0 ? $"{DisplayName[0]}".ToUpperInvariant() : "U";
-
-        AvatarColour = user.AvatarColour;
-        AvatarImageUrl = imgUrl;
     }
 }

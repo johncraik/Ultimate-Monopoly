@@ -2,7 +2,7 @@
 @{
     Layout = ViewData.TryGetValue("ParentLayout", out var parentLayout) && parentLayout != null
         ? parentLayout.ToString()
-        : "/Areas/Identity/Pages/_Layout.cshtml";
+        : "/Pages/Shared/_Layout.cshtml";
 
     var hasExternalLogins = (await SignInManager.GetExternalAuthenticationSchemesAsync()).Any();
 

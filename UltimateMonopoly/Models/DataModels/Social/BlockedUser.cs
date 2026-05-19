@@ -16,8 +16,17 @@ public class BlockedUser : AuditModel
     [Required]
     [MaxLength(38)]
     //No nav prop foreign key - allows account deletion
-    public string BlockedUserId { get; set; }
+    public string BlockedUserId { get; private set; }
 
     [NotMapped]
     public DateTime DateBlockedUtc => CreatedUtc;
+
+    public BlockedUser()
+    {
+    }
+
+    public BlockedUser(string userId)
+    {
+        BlockedUserId = userId;
+    }
 }

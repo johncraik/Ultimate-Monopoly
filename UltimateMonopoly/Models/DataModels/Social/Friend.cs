@@ -27,8 +27,8 @@ public class Friend : AuditModel
            FriendUserId = friendUserId; 
     }
     
-    public void Remove(DateTime dateRemovedUtc)
+    public void Remove()
     {
-        DateRemovedUtc ??= dateRemovedUtc;
+        DateRemovedUtc ??= DateTime.UtcNow;
     }
 }

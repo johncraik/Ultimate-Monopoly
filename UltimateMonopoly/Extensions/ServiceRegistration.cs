@@ -36,8 +36,11 @@ public static class ServiceRegistration
             opts.Cron = "*/5 * * * *";
         });
 
+        services.TryAddScoped<UrlLinkService>();
+
         // Social — friends
         services.TryAddScoped<FriendService>();
+        services.TryAddScoped<BlockAndReportService>();
 
         // Identity — profile
         services.TryAddScoped<ProfileService>();

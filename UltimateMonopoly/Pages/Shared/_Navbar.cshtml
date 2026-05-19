@@ -1,6 +1,14 @@
+@using JC.Communication.Notifications.Helpers
+@using JC.Communication.Notifications.Services
+@using JC.Core.Extensions
+@using JC.Core.Models
 @using Microsoft.AspNetCore.Identity
+@using UltimateMonopoly.Areas.Identity.Services
 @using UltimateMonopoly.Data
 @inject SignInManager<AppUser> SignInManager
+@inject NotificationCache NotificationCache
+@inject ProfileService ProfileService
+@inject IUserInfo UserInfo
 
 <nav class="navbar navbar-expand-lg navbar-glass mb-4">
     <div class="container-lg">
@@ -25,22 +33,112 @@
 
             @if (SignInManager.IsSignedIn(User))
             {
-                <div class="dropdown">
-                    <button class="btn btn-nav-info dropdown-toggle" type="button"
-                            data-bs-toggle="dropdown" aria-expanded="false">
-                        My Account
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-lg-end">
-                        <li><a class="dropdown-item" href="/profile">Profile</a></li>
-                        <li><a class="dropdown-item" href="/account">Settings</a></li>
-                        <li><hr class="dropdown-divider" /></li>
-                        <li>
-                            <form asp-area="Identity" asp-page="/Account/Logout" method="post" class="m-0">
-                                <button type="submit" class="dropdown-item dropdown-item-danger">Logout</button>
-                            </form>
-                        </li>
-                    </ul>
+                var notifications = (await NotificationCache.GetNotificationsAsync())
+                    .Where(n => !n.IsRead)
+                    .ToList();
+                var unreadCount = notifications.Count;
+                var badgeText = unreadCount > 99 ? "99+" : unreadCount.ToString();
+
+                <div class="d-flex align-items-center gap-2">
+                    <div class="dropdown" id="notification-dropdown">
+                        <button class="btn p-0 border-0 rounded-circle bg-info text-white d-flex align-items-center justify-content-center position-relative" type="button"
+                                data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" aria-label="Notifications"
+                                style="width: 2.5rem; height: 2.5rem;">
+                            <i class="bi bi-bell fs-5"></i>
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger @(unreadCount == 0 ? "d-none" : "")"
+                                  data-notification-badge>
+                                @badgeText
+                                <span class="visually-hidden">unread notifications</span>
+                            </span>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end p-0 shadow-lg" style="width: 22rem;">
+                            <div class="px-3 py-2 border-bottom d-flex align-items-center justify-content-between">
+                                <strong>Notifications</strong>
+                                <span class="badge text-bg-secondary @(unreadCount == 0 ? "d-none" : "")" data-notification-count>@unreadCount</span>
+                            </div>
+
+                            <div class="overflow-auto" style="max-height: 25rem;" data-notification-list>
+                                @if (unreadCount == 0)
+                                {
+                                    <div class="px-3 py-4 text-center text-body-secondary" data-notification-empty>
+                                        <i class="bi bi-bell-slash fs-2 d-block mb-2"></i>
+                                        You're all caught up!
+                                    </div>
+                                }
+                                else
+                                {
+                                    foreach (var n in notifications)
+                                    {
+                                        var icon = n.Style?.CustomIconClass ?? NotificationUIHelper.GetIconClass(n.Type);
+                                        var colour = n.Style?.CustomColourClass ?? NotificationUIHelper.GetColourClass(n.Type);
+                                        var hasLink = !string.IsNullOrEmpty(n.UrlLink);
+
+                                        <div class="d-flex align-items-start gap-2 px-3 py-2 border-bottom" data-notification-id="@n.Id">
+                                            <i class="bi @icon text-@colour fs-5 flex-shrink-0 mt-1"></i>
+                                            <div class="flex-grow-1 min-w-0">
+                                                @if (hasLink)
+                                                {
+                                                    <a href="@n.UrlLink" class="text-decoration-none text-body d-block">
+                                                        <div class="fw-semibold text-truncate">@n.Title</div>
+                                                        <div class="small text-body-secondary">@n.Body</div>
+                                                        <div class="small text-body-tertiary">@n.CreatedUtc.ToRelativeTime()</div>
+                                                    </a>
+                                                }
+                                                else
+                                                {
+                                                    <div class="fw-semibold text-truncate">@n.Title</div>
+                                                    <div class="small text-body-secondary">@n.Body</div>
+                                                    <div class="small text-body-tertiary">@n.CreatedUtc.ToRelativeTime()</div>
+                                                }
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-link p-0 text-body-secondary flex-shrink-0"
+                                                    data-notification-dismiss="@n.Id" aria-label="Dismiss notification" title="Dismiss">
+                                                <i class="bi bi-x-lg"></i>
+                                            </button>
+                                        </div>
+                                    }
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    @{
+                        var profile = await ProfileService.GetAsync();
+                        var avatarBg = string.IsNullOrEmpty(profile.AvatarColour) ? "#121212" : profile.AvatarColour;
+                        var displayName = !string.IsNullOrWhiteSpace(UserInfo.DisplayName)
+                            ? UserInfo.DisplayName
+                            : UserInfo.Username;
+                        var initial = !string.IsNullOrWhiteSpace(displayName)
+                            ? char.ToUpperInvariant(displayName[0]).ToString()
+                            : "?";
+                    }
+                    <div class="dropdown">
+                        <button class="btn p-0 border-0 rounded-circle overflow-hidden d-flex align-items-center justify-content-center text-white" type="button"
+                                data-bs-toggle="dropdown" aria-expanded="false" aria-label="My Account"
+                                style="background-color: @avatarBg; width: 2.5rem; height: 2.5rem;">
+                            @if (!string.IsNullOrEmpty(profile.AvatarImageName))
+                            {
+                                <img src="@Url.Page("/Profile/Index", "AvatarImage", new { area = "Identity", name = profile.AvatarImageName })"
+                                     alt="My profile" class="mw-100 mh-100 p-1" />
+                            }
+                            else
+                            {
+                                <span class="small fw-semibold">@initial</span>
+                            }
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-lg-end">
+                            <li><a class="dropdown-item" href="/profile">Profile</a></li>
+                            <li><a class="dropdown-item" href="/account">Settings</a></li>
+                            <li><hr class="dropdown-divider" /></li>
+                            <li>
+                                <form asp-area="Identity" asp-page="/Account/Logout" method="post" class="m-0">
+                                    <button type="submit" class="dropdown-item dropdown-item-danger">Logout</button>
+                                </form>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
+
             }
             else
             {
@@ -52,18 +150,3 @@
         </div>
     </div>
 </nav>
-
-<!-- Measures the navbar's actual rendered height and exposes it as a CSS var
-   so .sticky-tabs (and any other below-the-bar pinning) can sit flush. -->
-<script>
-    (() => {
-        const root = document.documentElement;
-        const nav  = document.querySelector('.navbar-glass');
-        if (!nav) return;
-        const update = () => root.style.setProperty('--app-navbar-height', nav.offsetHeight + 'px');
-        update();
-        window.addEventListener('resize', update);
-        document.fonts?.ready?.then(update);
-        new ResizeObserver(update).observe(nav);
-    })();
-</script>

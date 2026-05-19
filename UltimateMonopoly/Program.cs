@@ -24,8 +24,12 @@ var builder = WebApplication.CreateBuilder(args);
 Syncfusion.Licensing.SyncfusionLicenseProvider.RegisterLicense(
     builder.Configuration["SYNCFUSION_KEY"]);
 
-// Razor Pages
+// Razor Pages + API controllers
 builder.Services.AddRazorPages();
+builder.Services.AddControllers();
+
+// Antiforgery — expose a header so AJAX calls can send the token
+builder.Services.AddAntiforgery(opts => opts.HeaderName = "RequestVerificationToken");
 
 // SignalR
 builder.Services.AddSignalR();
@@ -111,6 +115,7 @@ app.MapGet("/social", () => Results.Redirect("/Social/Friends"));
 app.MapGet("/friends", () => Results.Redirect("/Social/Friends"));
 
 app.MapRazorPages();
+app.MapControllers();
 app.MapHub<PresenceHub>("/hubs/presence");
 
 // Profile cookie — 90-day encrypted cookie holding the user's avatar choices

@@ -3,7 +3,7 @@ using UltimateMonopoly.Models.DataModels.Social;
 
 namespace UltimateMonopoly.Models.ViewModels.Social;
 
-public class FriendRequestViewModel : FriendBaseViewModel
+public class FriendRequestViewModel : UserProfileViewModel
 {
     public string RequestId { get; }
     public bool IsOutgoing { get; }

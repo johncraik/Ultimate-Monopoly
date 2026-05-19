@@ -163,7 +163,7 @@ namespace UltimateMonopoly.Areas.Identity.Pages.Account.Manage
 
             var email = await _userManager.GetEmailAsync(user);
             AuthenticatorUri = GenerateQrCodeUri(email, unformattedKey);
-            QrCodeSvg = new QrCodeHelper().GenerateQrCode(AuthenticatorUri);
+            QrCodeSvg = new QrCodeHelper(QrCodeFormat.Svg, pixelsPerModule: 5).GenerateQrCode(AuthenticatorUri);
         }
 
         private string FormatKey(string unformattedKey)
