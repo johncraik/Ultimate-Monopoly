@@ -3,6 +3,7 @@ using JC.Core.Models;
 using JC.Web.Security.Services;
 using Microsoft.EntityFrameworkCore;
 using UltimateMonopoly.Data;
+using UltimateMonopoly.Models.ViewModels.Social;
 using UltimateMonopoly.Services;
 
 namespace UltimateMonopoly.Areas.Identity.Services;
@@ -21,17 +22,20 @@ public class ProfileService
     private readonly AppDbContext _context;
     private readonly IUserInfo _userInfo;
     private readonly ICookieService _cookies;
+    private readonly UrlLinkService _urlLinkService;
 
     public ProfileService(
         FilePathProvider filePathProvider,
         AppDbContext context,
         IUserInfo userInfo,
-        [FromKeyedServices(ICookieService.EncryptedCookieDIKey)] ICookieService cookies)
+        [FromKeyedServices(ICookieService.EncryptedCookieDIKey)] ICookieService cookies,
+        UrlLinkService urlLinkService)
     {
         _filePathProvider = filePathProvider;
         _context = context;
         _userInfo = userInfo;
         _cookies = cookies;
+        _urlLinkService = urlLinkService;
     }
 
     public List<string> GetAvatarImagePaths()
@@ -55,6 +59,19 @@ public class ProfileService
             _filePathProvider.GetFilePath(FilePathProvider.FileCategory.ProfileImg),
             name + ImgFileType);
         return File.Exists(path) ? path : null;
+    }
+
+    public Task<UserProfileViewModel?> GetCurrentUserProfileViewModelAsync()
+        => GetUserProfileViewModelAsync(_userInfo.UserId
+            ?? throw new InvalidOperationException("No authenticated user"));
+
+    public async Task<UserProfileViewModel?> GetUserProfileViewModelAsync(string userId)
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId && u.IsEnabled);
+        if (user == null) return null;
+
+        var imgUrl = _urlLinkService.GetImgUrl(user.AvatarImageName);
+        return new UserProfileViewModel(user, imgUrl);
     }
 
     public async Task<UserProfile> GetAsync()

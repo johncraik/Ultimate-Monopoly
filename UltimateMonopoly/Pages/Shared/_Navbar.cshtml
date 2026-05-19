@@ -1,14 +1,12 @@
 @using JC.Communication.Notifications.Helpers
 @using JC.Communication.Notifications.Services
 @using JC.Core.Extensions
-@using JC.Core.Models
 @using Microsoft.AspNetCore.Identity
 @using UltimateMonopoly.Areas.Identity.Services
 @using UltimateMonopoly.Data
 @inject SignInManager<AppUser> SignInManager
 @inject NotificationCache NotificationCache
 @inject ProfileService ProfileService
-@inject IUserInfo UserInfo
 
 <nav class="navbar navbar-expand-lg navbar-glass mb-4">
     <div class="container-lg">
@@ -103,28 +101,12 @@
                     </div>
 
                     @{
-                        var profile = await ProfileService.GetAsync();
-                        var avatarBg = string.IsNullOrEmpty(profile.AvatarColour) ? "#121212" : profile.AvatarColour;
-                        var displayName = !string.IsNullOrWhiteSpace(UserInfo.DisplayName)
-                            ? UserInfo.DisplayName
-                            : UserInfo.Username;
-                        var initial = !string.IsNullOrWhiteSpace(displayName)
-                            ? char.ToUpperInvariant(displayName[0]).ToString()
-                            : "?";
+                        var currentUser = await ProfileService.GetCurrentUserProfileViewModelAsync();
                     }
                     <div class="dropdown">
-                        <button class="btn p-0 border-0 rounded-circle overflow-hidden d-flex align-items-center justify-content-center text-white" type="button"
-                                data-bs-toggle="dropdown" aria-expanded="false" aria-label="My Account"
-                                style="background-color: @avatarBg; width: 2.5rem; height: 2.5rem;">
-                            @if (!string.IsNullOrEmpty(profile.AvatarImageName))
-                            {
-                                <img src="@Url.Page("/Profile/Index", "AvatarImage", new { area = "Identity", name = profile.AvatarImageName })"
-                                     alt="My profile" class="mw-100 mh-100 p-1" />
-                            }
-                            else
-                            {
-                                <span class="small fw-semibold">@initial</span>
-                            }
+                        <button class="btn p-0 border-0 rounded-circle" type="button"
+                                data-bs-toggle="dropdown" aria-expanded="false" aria-label="My Account">
+                            <profile-circle user="currentUser" size="Md" />
                         </button>
                         <ul class="dropdown-menu dropdown-menu-lg-end">
                             <li><a class="dropdown-item" href="/profile">Profile</a></li>

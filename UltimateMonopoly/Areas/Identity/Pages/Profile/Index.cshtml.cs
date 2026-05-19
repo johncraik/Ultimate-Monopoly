@@ -1,4 +1,3 @@
-using JC.Core.Models;
 using JC.Core.Models.Pagination;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -14,16 +13,13 @@ public class IndexModel : PageModel
     private const ushort BlockedPageSize = 50;
 
     private readonly ProfileService _profile;
-    private readonly IUserInfo _userInfo;
     private readonly BlockAndReportService _blockAndReport;
 
     public IndexModel(
         ProfileService profile,
-        IUserInfo userInfo,
         BlockAndReportService blockAndReport)
     {
         _profile = profile;
-        _userInfo = userInfo;
         _blockAndReport = blockAndReport;
     }
 
@@ -40,7 +36,7 @@ public class IndexModel : PageModel
 
     public PagedList<UserProfileViewModel>? BlockedUsers { get; private set; }
 
-    public string Initial { get; private set; } = "U";
+    public UserProfileViewModel? CurrentUser { get; private set; }
 
     [TempData] public string? StatusMessage { get; set; }
     [TempData] public string? StatusKind { get; set; }
@@ -52,13 +48,7 @@ public class IndexModel : PageModel
         Input.AvatarColour = profile.AvatarColour;
         Input.AvatarImageName = profile.AvatarImageName;
         AvailableImageNames = _profile.GetAvailableAvatarImageNames();
-
-        var name = !string.IsNullOrWhiteSpace(_userInfo.DisplayName)
-            ? _userInfo.DisplayName
-            : _userInfo.Username;
-        Initial = !string.IsNullOrWhiteSpace(name)
-            ? char.ToUpperInvariant(name[0]).ToString()
-            : "?";
+        CurrentUser = await _profile.GetCurrentUserProfileViewModelAsync();
 
         if (PageNumber < 1) PageNumber = 1;
         BlockedUsers = await _blockAndReport.GetBlockedUsers(PageNumber, BlockedPageSize);
@@ -122,6 +112,7 @@ public class IndexModel : PageModel
     private static string NormaliseTab(string? tab) => tab switch
     {
         "colour"  => "colour",
+        "stats"   => "stats",
         "blocked" => "blocked",
         _         => "image"
     };

@@ -3,7 +3,7 @@
     var name = Model.DisplayName ?? Model.Username;
 }
 <ul class="dropdown-menu dropdown-menu-end">
-    <li><a class="dropdown-item" href="#">View Profile</a></li>
+    <li><a class="dropdown-item" asp-page="./Profile" asp-route-userId="@Model.FriendId">View Profile</a></li>
     <li><hr class="dropdown-divider" /></li>
     <li>
         <form method="post" asp-page-handler="Remove" class="m-0">

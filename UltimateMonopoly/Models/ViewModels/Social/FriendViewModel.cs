@@ -14,11 +14,6 @@ public class FriendViewModel : UserProfileViewModel
     public string LastSeen { get; }
     public bool IsOnline { get; }
 
-    public uint NumberOfWins { get; }
-    public uint NumberOfLosses { get; }
-    public uint NumberOfDraws { get; }
-    public uint NumberOfGamesPlayed => NumberOfWins + NumberOfLosses + NumberOfDraws;
-
     public FriendViewModel(string currentUserId, Friend friend, AppUser user, string? imgUrl, DateTime? lastSeenUtc, bool isOnline)
         : base(user, imgUrl)
     {
@@ -48,9 +43,5 @@ public class FriendViewModel : UserProfileViewModel
             ? "Online"
             : lastSeenUtc?.ToRelativeTime() ?? "Never seen";
         IsOnline = isOnline;
-        
-        NumberOfWins = user.NumberOfWins;
-        NumberOfLosses = user.NumberOfLosses;
-        NumberOfDraws = user.NumberOfDraws;
     }
 }

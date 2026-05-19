@@ -11,6 +11,11 @@ public class UserProfileViewModel
 
     public string? AvatarColour { get; }
     public string? AvatarImageUrl { get; }
+    
+    public uint NumberOfWins { get; }
+    public uint NumberOfLosses { get; }
+    public uint NumberOfDraws { get; }
+    public uint NumberOfGamesPlayed => NumberOfWins + NumberOfLosses + NumberOfDraws;
 
     public UserProfileViewModel(AppUser user, string? imgUrl)
     {
@@ -21,5 +26,9 @@ public class UserProfileViewModel
 
         AvatarColour = user.AvatarColour;
         AvatarImageUrl = imgUrl;
+        
+        NumberOfWins = user.NumberOfWins;
+        NumberOfLosses = user.NumberOfLosses;
+        NumberOfDraws = user.NumberOfDraws;
     }
 }

@@ -6,22 +6,11 @@
     string TabClass(string name) => Model.Tab == name ? "active" : "";
     string PaneClass(string name) => Model.Tab == name ? "tab-pane fade show active" : "tab-pane fade";
 
-    var avatarBg = string.IsNullOrEmpty(Model.Input.AvatarColour) ? "#121212" : Model.Input.AvatarColour;
+    var avatarBg = string.IsNullOrEmpty(Model.Input.AvatarColour) ? "var(--bs-dark)" : Model.Input.AvatarColour;
 }
 
 <div class="d-flex align-items-center flex-wrap gap-3 mb-4">
-    <div class="rounded-circle overflow-hidden d-flex align-items-center justify-content-center flex-shrink-0 text-white"
-         data-avatar-preview style="background-color: @avatarBg; width: 5rem; height: 5rem;">
-        @if (!string.IsNullOrEmpty(Model.Input.AvatarImageName))
-        {
-            <img src="@Url.Page("Index", "AvatarImage", new { name = Model.Input.AvatarImageName })"
-                 alt="Your avatar" class="mw-100 mh-100 p-2" />
-        }
-        else
-        {
-            <span class="fs-2 fw-semibold">@Model.Initial</span>
-        }
-    </div>
+    <profile-circle user="Model.CurrentUser" size="Lg" preview="true" />
     <div class="flex-grow-1">
         <h1 class="mb-1">Profile</h1>
         <p class="text-body-secondary mb-0">Customise how you appear in games.</p>
@@ -53,15 +42,17 @@
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button type="button" class="nav-link @TabClass("blocked")" data-bs-toggle="tab" data-bs-target="#tab-blocked" data-tab-value="blocked" role="tab">
+                <button type="button" class="nav-link @TabClass("stats")" data-bs-toggle="tab" data-bs-target="#tab-stats" data-tab-value="stats" data-hide-update="true" role="tab">
+                    Statistics
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button type="button" class="nav-link @TabClass("blocked")" data-bs-toggle="tab" data-bs-target="#tab-blocked" data-tab-value="blocked" data-hide-update="true" role="tab">
                     Blocked Users
                 </button>
             </li>
         </ul>
-        @if (Model.Tab != "blocked")
-        {
-            <button type="submit" class="btn btn-primary">Update</button>
-        }
+        <button type="submit" id="updateProfileBtn" class="btn btn-primary @(Model.Tab is "stats" or "blocked" ? "d-none" : "")">Update</button>
     </div>
 
     <div class="tab-content">
@@ -145,6 +136,18 @@
             </div>
         </div>
 
+        @* ---------- Statistics tab ---------- *@
+        <div class="@PaneClass("stats")" id="tab-stats" role="tabpanel">
+            @if (Model.CurrentUser is null)
+            {
+                <p class="text-body-secondary">Could not load your stats.</p>
+            }
+            else
+            {
+                <partial name="_GameStatsCards" model="Model.CurrentUser" />
+            }
+        </div>
+
         @* ---------- Blocked Users tab ---------- *@
         <div class="@PaneClass("blocked")" id="tab-blocked" role="tabpanel">
             @if (Model.BlockedUsers is null || Model.BlockedUsers.Count == 0)
@@ -159,16 +162,7 @@
                         <div class="col-12 col-md-6">
                             <div class="card">
                                 <div class="card-body d-flex align-items-center gap-3 py-2">
-                                    <span class="friend-avatar friend-avatar-sm overflow-hidden" style="background-color: @(b.AvatarColour ?? "#6c757d");">
-                                        @if (!string.IsNullOrEmpty(b.AvatarImageUrl))
-                                        {
-                                            <img src="@b.AvatarImageUrl" alt="@b.Initial" class="mw-100 mh-100" />
-                                        }
-                                        else
-                                        {
-                                            @b.Initial
-                                        }
-                                    </span>
+                                    <profile-circle user="b" size="Sm" />
                                     <div class="flex-grow-1 min-w-0">
                                         <div class="fw-semibold text-truncate">@b.DisplayName</div>
                                         <div class="small text-body-secondary">@b.Username</div>

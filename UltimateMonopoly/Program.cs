@@ -56,7 +56,11 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddWebDefaults(builder.Configuration);
 
 // Github
-builder.Services.AddGithub<AppDbContext>(builder.Configuration);
+builder.Services.AddGithub<AppDbContext>(builder.Configuration, options =>
+{
+    options.GithubRepoOwner = "johncraik";
+    options.GithubRepoName = "Ultimate-Monopoly";
+});
 
 // Communication — Email
 builder.Services.AddEmail<AppDbContext>(builder.Configuration, options =>

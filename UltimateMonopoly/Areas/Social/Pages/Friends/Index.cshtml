@@ -66,16 +66,7 @@
                         <div class="card h-100">
                             <div class="card-body d-flex flex-column">
                                 <div class="d-flex align-items-start gap-3 mb-3">
-                                    <span class="friend-avatar overflow-hidden" style="background-color: @(f.AvatarColour ?? "#6c757d");">
-                                        @if (!string.IsNullOrEmpty(f.AvatarImageUrl))
-                                        {
-                                            <img src="@f.AvatarImageUrl" alt="@f.Initial" class="mw-100 mh-100" />
-                                        }
-                                        else
-                                        {
-                                            @f.Initial
-                                        }
-                                    </span>
+                                    <profile-circle user="f" size="Md" />
                                     <div class="flex-grow-1 min-w-0">
                                         <div class="d-flex align-items-center gap-2">
                                             <h5 class="card-title mb-0 text-truncate">@(f.DisplayName)</h5>
@@ -124,16 +115,7 @@
                             <tr>
                                 <td>
                                     <div class="d-flex align-items-center gap-2">
-                                        <span class="friend-avatar friend-avatar-sm overflow-hidden" style="background-color: @(f.AvatarColour ?? "#6c757d");">
-                                            @if (!string.IsNullOrEmpty(f.AvatarImageUrl))
-                                            {
-                                                <img src="@f.AvatarImageUrl" alt="@f.Username" class="mw-100 mh-100" />
-                                            }
-                                            else
-                                            {
-                                                @f.Initial
-                                            }
-                                        </span>
+                                        <profile-circle user="f" size="Sm" />
                                         <div>
                                             <div class="fw-semibold">@(f.DisplayName)</div>
                                             <div class="small text-body-secondary">@@@f.Username</div>
@@ -180,16 +162,7 @@
                         {
                             <div class="card">
                                 <div class="card-body d-flex align-items-center gap-3 py-2">
-                                    <span class="friend-avatar friend-avatar-sm overflow-hidden" style="background-color: @(r.AvatarColour ?? "#6c757d");">
-                                        @if (!string.IsNullOrEmpty(r.AvatarImageUrl))
-                                        {
-                                            <img src="@r.AvatarImageUrl" alt="@r.Initial" class="mw-100 mh-100" />
-                                        }
-                                        else
-                                        {
-                                            @r.Initial
-                                        }
-                                    </span>
+                                    <profile-circle user="r" size="Sm" />
                                     <div class="flex-grow-1 min-w-0">
                                         <div class="fw-semibold text-truncate">@r.DisplayName</div>
                                         <div class="small text-body-secondary">@r.Username · @r.RequestDate</div>
@@ -224,16 +197,7 @@
                         {
                             <div class="card">
                                 <div class="card-body d-flex align-items-center gap-3 py-2">
-                                    <span class="friend-avatar friend-avatar-sm overflow-hidden" style="background-color: @(r.AvatarColour ?? "#6c757d");">
-                                        @if (!string.IsNullOrEmpty(r.AvatarImageUrl))
-                                        {
-                                            <img src="@r.AvatarImageUrl" alt="@r.Initial" class="mw-100 mh-100" />
-                                        }
-                                        else
-                                        {
-                                            @r.Initial
-                                        }
-                                    </span>
+                                    <profile-circle user="r" size="Sm" />
                                     <div class="flex-grow-1 min-w-0">
                                         <div class="fw-semibold text-truncate">@r.DisplayName</div>
                                         <div class="small text-body-secondary">@r.Username · sent @r.RequestDate</div>
