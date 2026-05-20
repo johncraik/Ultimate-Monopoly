@@ -31,6 +31,9 @@ public class Game : AuditModel
     public GameState State { get; private set; }
     public GameOutcome Outcome { get; private set; }
     public GameRoundingRule RoundingRule { get; private set; }
+    
+    public List<GamePlayer> Players { get; set; } 
+    
 
     //EF Core constructor
     public Game()

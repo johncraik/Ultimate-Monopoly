@@ -67,6 +67,26 @@ keeps their number.
 
 ---
 
+## Movement
+
+1. **Starting direction.** Every player begins the game travelling clockwise,
+   as in standard Monopoly. A player's direction changes only when a rule or
+   card dictates — most commonly by rolling a double (see Double Dice Rolls).
+
+2. **Direction of travel.** A player always moves in the direction they are
+   currently facing. This applies to every kind of movement alike — their own
+   roll, third-die movement, and card effects — so different players may be
+   travelling in opposite directions at the same time.
+
+3. **Landing on a space performs its action.** Any movement that brings a
+   player onto a space performs that space's action for that player — their own
+   roll, third-die movement, the forward/back movement of a double, card-driven
+   movement, and so on. The only exception is swapping places with another
+   player: a player moved onto a space by a swap does not perform that space's
+   action.
+
+---
+
 ## Double Dice Rolls
 
 A *double* is when the two **main** dice show the same value. Only the two main
@@ -99,7 +119,8 @@ travel and **back** means the reverse of their direction of travel.
   spaces and performs that space's action. The roller does **not** receive the
   extra roll for the double, their turn ends, and they miss their next turn.
 
-- **Double 6.** The rolling player moves back 12 spaces.
+- **Double 6.** The rolling player moves back 12 spaces and performs that
+  space's action.
 
 ### General rules for doubles
 
@@ -230,6 +251,26 @@ roll.
 
 ---
 
+## Jail
+
+1. **Leaving jail.** A player may leave jail in the usual Monopoly ways: by
+   rolling a double, by playing a card that releases them, or by paying the
+   jail fee. A double rolled to leave jail is treated as a normal double — the
+   player leaves jail, moves, and then changes direction, with the usual double
+   rules applying.
+
+2. **Three-turn limit.** A player may remain in jail for at most three turns.
+   If they have not left by other means, they must leave on their third turn,
+   paying the jail fee to do so.
+
+3. **The jail fee escalates.** The fee to leave jail starts at £50 and grows by
+   50% for each turn the player has spent in jail — £50 on the first turn, £75
+   on the second, £113 on the third (each turn's fee is the previous fee plus
+   50%, rounded up to the nearest pound). Leaving sooner is therefore cheaper.
+   The fee resets to £50 the next time the player is jailed.
+
+---
+
 ## Free Parking
 
 Fines are paid into Free Parking (see Default Monopoly Rules, rule 5), so the
@@ -286,3 +327,158 @@ properties.
 
 3. **Purging other players.** A card may give its holder the option to purge
    1–2 of another player's properties, if the card states so.
+
+---
+
+## Loans
+
+A player who runs short of money may borrow from the bank.
+
+1. **When a loan may be taken.** A player may take out a loan whenever they
+   cannot afford to pay what they owe from the money in their account. They are
+   not required to mortgage their properties first — taking out a loan and
+   mortgaging are alternatives, and the player may choose either.
+
+2. **Loan amount covers the shortfall.** The loan is exactly the amount the
+   player needs to cover the shortfall in their account, rounded up to the
+   nearest £50.
+
+3. **Keep up to £200.** A player may keep a maximum of £200 in their account
+   when taking out a loan — only money above £200 is put toward the payment
+   (e.g. a player has £250 and must pay £800: they keep £200, so just £50 of
+   their cash goes toward the payment, leaving them £750 short, so a loan of
+   £750 is taken out).
+
+4. **Maximum of three loans.** A player may have at most 3 outstanding loans at
+   any time.
+
+5. **Repayment on passing GO or Free Parking.** Each time a player passes GO or
+   Free Parking they repay a minimum of 5% of the loan, rounded up according to
+   the game's rounding rule. The 5% is based on the amount originally borrowed,
+   not the outstanding balance, and it compounds — passing both GO and Free
+   Parking on the same pass repays 10%. A player may take out a loan to cover a
+   loan repayment.
+
+6. **Paying more, or paying early.** A player may repay more than the minimum
+   5% when passing GO or Free Parking, and may repay any amount during their
+   own turn.
+
+7. **Instalments are never capped.** Every loan instalment — including the last
+   — is a full 5% of the original amount borrowed, rounded up according to the
+   game's rounding rule (as in rule 5). The final instalment is not reduced to
+   match the balance still owed, so a player may repay slightly more than they
+   borrowed. As a loan carries no interest, this small overpayment is the only
+   cost of borrowing.
+
+---
+
+## Mortgaging
+
+1. **Repayment on passing GO.** Each time a player passes GO they must repay
+   10% of the purchase cost of every property they have mortgaged.
+
+2. **Applies to forced mortgages.** This repayment applies to every mortgaged
+   property, including any the player was forced to mortgage.
+
+3. **Only properties still mortgaged at GO count.** The 10% is charged only on
+   properties that are still mortgaged at the moment the player passes GO —
+   whether they pass GO during their own turn's movement or during their
+   third-die movement. A property that has been unmortgaged before GO is passed
+   is not charged.
+
+---
+
+## Reserved Properties
+
+A mechanic that governs the *first* colour set each player completes. Until
+every player is able to complete a set at roughly the same time, no player may
+actually hold one — a player who would complete a set instead *reserves* the
+final property. Once every player has their first set, the mechanic is spent
+(see rule 6).
+
+1. **Everyone gets a set together.** No player may take a complete colour set
+   until every player is able to take one within a turn or two of each other,
+   whether that set is achieved through a deal or through reserved properties.
+
+2. **Reserving the final property.** If a player lands on the last property
+   they need to complete a set — already owning every other property in that
+   set — they may reserve that property for 50% of its purchase price.
+
+3. **A reserved property is inert.** While a property is reserved, its owner
+   cannot collect rent on it, and no other player may buy it.
+
+4. **Unreserving.** A player may unreserve a property — adding it to their
+   owned properties to complete the set — only once every other player also has
+   a set, or has a reserved property they are able to unreserve. Unreserving
+   costs the full purchase price of the property.
+
+5. **A player short of funds does not block others.** If a player cannot afford
+   to unreserve their property, that does not prevent other players from
+   unreserving theirs or from completing sets through deals.
+
+6. **The mechanic ends once everyone has a set.** Reserved properties apply
+   only while no player holds a set. Once every player has received at least
+   one complete set, reserved properties are no longer part of the game.
+
+---
+
+## Stations
+
+1. **Station price scales with stations owned.** The price of a station rises
+   with the number of stations the buyer already owns. On top of the £200 base
+   cost, the buyer pays a surcharge equal to the rent they would collect for
+   the *combined* number of stations — those already owned plus the one being
+   bought:
+
+   - **1st station** — £200 (base cost only; no surcharge).
+   - **2nd station** — £200 base + £50 rent = **£250**.
+   - **3rd station** — £200 base + £100 rent = **£300**.
+   - **4th station** — £200 base + £200 rent = **£400**.
+
+2. **Only currently owned stations count.** The surcharge is based on the
+   stations the buyer owns at the time of purchase — not any stations they
+   owned previously and have since lost.
+
+3. **No surcharge for non-purchase acquisitions.** A player pays no surcharge
+   for a station gained through Free Parking, a card, or a deal — the scaling
+   price applies only to buying a station outright.
+
+---
+
+## Building Rules
+
+1. **Double hotels.** Once a player has built a hotel on every property in a
+   set, they may build a *double hotel* on one of those properties. A double
+   hotel costs the price of 5 houses.
+
+2. **One double hotel per set.** A double hotel may be built on any colour set,
+   and a player may build them on as many of their sets as they like — but only
+   one property per set may hold a double hotel.
+
+3. **Half-price building on a full street.** A *street* is every set on one
+   side of the board. A player qualifies for half-price building by owning a
+   complete street before any of its sets has been built on — neither currently
+   nor at any earlier point in the game. Once qualified, the player builds on
+   every set in that street at half the normal building cost, and keeps the
+   discount for as long as they continue to own the whole street. If they cease
+   to own any set in the street, the discount is lost.
+
+---
+
+## Bankruptcy
+
+A game is won by the last player who has not gone bankrupt.
+
+1. **Going bankrupt.** A player goes bankrupt when they cannot pay what they
+   owe and have no way left to raise the money — nothing left to mortgage and
+   unable to take out another loan (see Default Monopoly Rules, rule 8). A
+   player may also declare bankruptcy voluntarily at any time — in effect, an
+   "I quit" option.
+
+2. **Assets return to the bank.** On bankruptcy, all of the player's money and
+   properties return to the bank — never to another player.
+
+3. **A creditor is still paid.** If the player was bankrupted by a debt owed to
+   another player — rent or a fine — that player receives the full amount of
+   the rent or fine, paid by the bank (since the bankrupt player's assets have
+   gone to the bank, not to them).
