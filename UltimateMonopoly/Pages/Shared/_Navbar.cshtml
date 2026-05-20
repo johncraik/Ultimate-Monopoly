@@ -24,8 +24,31 @@
             @* TODO: replace href="#" once these pages exist *@
             <ul class="navbar-nav mx-lg-auto mb-2 mb-lg-0 gap-lg-1">
                 <li class="nav-item"><a class="btn btn-nav" href="#">New Game</a></li>
-                <li class="nav-item"><a class="btn btn-nav" href="#">Load Game</a></li>
-                <li class="nav-item"><a class="btn btn-nav" asp-area="Social" asp-page="/Friends/Index">Friends</a></li>
+
+                <li class="nav-item dropdown">
+                    <button class="btn btn-nav dropdown-toggle" type="button"
+                            data-bs-toggle="dropdown" aria-expanded="false">Games</button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#">Load Game</a></li>
+                        <li><a class="dropdown-item" href="#">Completed Games</a></li>
+                    </ul>
+                </li>
+
+                <li class="nav-item dropdown">
+                    <button class="btn btn-nav dropdown-toggle" type="button"
+                            data-bs-toggle="dropdown" aria-expanded="false">Friends</button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" asp-area="Social" asp-page="/Friends/Index" asp-route-tab="friends">All Friends</a></li>
+                        <li><a class="dropdown-item" href="#">Messages</a></li>
+                        <li><hr class="dropdown-divider" /></li>
+                        <li><a class="dropdown-item" asp-area="Social" asp-page="/Friends/Index" asp-route-tab="add">Add Friend</a></li>
+                        <li><a class="dropdown-item" asp-area="Social" asp-page="/Friends/Index" asp-route-tab="requests">Friend Requests</a></li>
+                        <li><hr class="dropdown-divider" /></li>
+                        <li><a class="dropdown-item" asp-area="Identity" asp-page="/Profile/Index" asp-route-tab="blocked">Blocked Users</a></li>
+                    </ul>
+                </li>
+
+                <li class="nav-item"><a class="btn btn-nav" href="#">Leaderboard</a></li>
                 <li class="nav-item"><a class="btn btn-nav" asp-area="" asp-page="/Boards/Index">My Boards</a></li>
             </ul>
 

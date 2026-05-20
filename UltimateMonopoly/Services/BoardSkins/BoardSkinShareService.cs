@@ -7,6 +7,7 @@ using UltimateMonopoly.Data;
 using UltimateMonopoly.Models.DataModels.Boards;
 using UltimateMonopoly.Models.DataModels.Social;
 using UltimateMonopoly.Models.ViewModels.BoardSkins;
+using UltimateMonopoly.Services.GameConfig;
 
 namespace UltimateMonopoly.Services.BoardSkins;
 
@@ -16,16 +17,19 @@ public class BoardSkinShareService
     private readonly AppDbContext _context;
     private readonly IUserInfo _userInfo;
     private readonly ILogger<BoardSkinShareService> _logger;
+    private readonly BoardCacheService _boardCacheService;
 
     public BoardSkinShareService(IRepositoryManager repos,
         AppDbContext context,
         IUserInfo userInfo,
-        ILogger<BoardSkinShareService> logger)
+        ILogger<BoardSkinShareService> logger,
+        BoardCacheService boardCacheService)
     {
         _repos = repos;
         _context = context;
         _userInfo = userInfo;
         _logger = logger;
+        _boardCacheService = boardCacheService;
     }
 
 
@@ -127,6 +131,11 @@ public class BoardSkinShareService
             
             await _repos.SaveChangesAsync();
             await _repos.CommitTransactionAsync();
+
+            foreach (var userId in userIds)
+            {
+                _boardCacheService.Invalidate(userId);
+            }
             return true;
         }
         catch (Exception ex)
@@ -149,6 +158,8 @@ public class BoardSkinShareService
         
         await _repos.GetRepository<SharedBoardSkin>()
             .SoftDeleteAsync(shareLink);
+        
+        _boardCacheService.Invalidate(_userInfo.UserId);
         return true;
     }
 }

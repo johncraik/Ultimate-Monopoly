@@ -1,4 +1,5 @@
 using UltimateMonopoly.Enums;
+using UltimateMonopoly.Enums.Players;
 
 namespace UltimateMonopoly.Helpers;
 
@@ -229,4 +230,47 @@ public static class IndexHelper
     /// <c>true</c> if the provided <paramref name="index"/> matches the "Go to Jail" spaceType; otherwise, <c>false</c>.
     /// </returns>
     public static bool IsGoToJail(this ushort index) => index == GoToJailSpace;
+
+
+
+    public static (ushort Index, ushort GoPasses) MoveIndex(ushort index, ushort spaces, PlayerDirection direction)
+    {
+        var desiredIndex = (direction switch
+        {
+            PlayerDirection.Forward => index + spaces,
+            PlayerDirection.Backward => index - spaces,
+            _ => throw new ArgumentOutOfRangeException()
+        });
+        
+        if (desiredIndex is JailSpace or >= 0 and < PhysicalBoardSize)
+            return ((ushort)desiredIndex, 0);
+
+        ushort goPasses = 0;
+        while (desiredIndex is < 0 or >= PhysicalBoardSize)
+        {
+            desiredIndex = direction switch
+            {
+                PlayerDirection.Forward => desiredIndex - PhysicalBoardSize,
+                PlayerDirection.Backward => desiredIndex + PhysicalBoardSize,
+                _ => throw new ArgumentOutOfRangeException(nameof(direction), direction, null)
+            };
+            goPasses++;
+        }
+        
+        return ((ushort)desiredIndex, goPasses);
+    }
+
+    public static (ushort Index, bool PassesGo) AdvanceIndex(ushort currentIndex, ushort desiredIndex, PlayerDirection direction)
+    {
+        if(desiredIndex > PhysicalBoardSize && desiredIndex != JailSpace)
+            throw new ArgumentOutOfRangeException(nameof(desiredIndex), "Desired index cannot exceed physical board size.");
+        
+        var passesGo = direction switch
+        {
+            PlayerDirection.Forward => desiredIndex <= currentIndex,
+            PlayerDirection.Backward => desiredIndex >= currentIndex,
+            _ => throw new ArgumentOutOfRangeException(nameof(direction), direction, null)
+        };
+        return (desiredIndex, passesGo);
+    }
 }

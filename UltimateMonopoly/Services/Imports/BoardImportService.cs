@@ -1,3 +1,5 @@
+using JC.Core.Enums;
+using JC.Core.Extensions;
 using JC.Core.Models;
 using JC.Core.Services.DataRepositories;
 using Microsoft.EntityFrameworkCore;
@@ -69,9 +71,9 @@ public class BoardImportService
     {
         userId ??= _userInfo.UserId;
         var customBoards = await _repos.GetRepository<BoardSkin>()
-            .AsQueryable()
+            .AsQueryable().FilterDeleted(DeletedQueryType.OnlyActive)
             .Include(b => b.Spaces)
-            .Where(b => b.UserId == userId && !b.IsDeleted)
+            .Where(b => b.UserId == userId || b.SharedWith.Any(sbs => !sbs.IsDeleted && sbs.UserId == userId))
             .ToListAsync();
 
         var boards = (from customBoard in customBoards
