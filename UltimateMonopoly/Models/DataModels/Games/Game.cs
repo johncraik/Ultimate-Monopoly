@@ -1,12 +1,14 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using JC.Core.Models.Auditing;
+using Microsoft.EntityFrameworkCore;
 using UltimateMonopoly.Enums.Games;
 using UltimateMonopoly.Models.DataModels.Boards;
 using UltimateMonopoly.Services.GameConfig;
 
 namespace UltimateMonopoly.Models.DataModels.Games;
 
+[Index(nameof(CreatedById), nameof(State))]
 public class Game : AuditModel
 {
     [Key]
@@ -24,6 +26,15 @@ public class Game : AuditModel
     
     [NotMapped]
     public Board? GameBoard { get; private set; }
+    
+    [Required]
+    [MaxLength(_joinCodeLength)]
+    public string JoinCode { get; private set; }
+
+    [NotMapped] 
+    public const string JoinCodePrefix = "MP";
+    [NotMapped]
+    private const int _joinCodeLength = 7;
     
     [MaxLength(128)]
     public string Name { get; private set; }
@@ -52,6 +63,14 @@ public class Game : AuditModel
         State = GameState.Setup;
         Outcome = GameOutcome.None;
         RoundingRule = roundingRule;
+    }
+
+    public void SetJoinCode(string code)
+    {
+        if(!string.IsNullOrWhiteSpace(JoinCode))
+            return;
+        
+        JoinCode = JoinCodePrefix + code;
     }
 
     public async Task SetBoard(BoardCacheService cache)

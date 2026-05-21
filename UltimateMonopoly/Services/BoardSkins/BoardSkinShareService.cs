@@ -14,22 +14,22 @@ namespace UltimateMonopoly.Services.BoardSkins;
 public class BoardSkinShareService
 {
     private readonly IRepositoryManager _repos;
-    private readonly AppDbContext _context;
     private readonly IUserInfo _userInfo;
     private readonly ILogger<BoardSkinShareService> _logger;
     private readonly BoardCacheService _boardCacheService;
+    private readonly UserService _userService;
 
     public BoardSkinShareService(IRepositoryManager repos,
-        AppDbContext context,
         IUserInfo userInfo,
         ILogger<BoardSkinShareService> logger,
-        BoardCacheService boardCacheService)
+        BoardCacheService boardCacheService,
+        UserService userService)
     {
         _repos = repos;
-        _context = context;
         _userInfo = userInfo;
         _logger = logger;
         _boardCacheService = boardCacheService;
+        _userService = userService;
     }
 
 
@@ -79,8 +79,7 @@ public class BoardSkinShareService
         var distinct = userIds.Distinct().ToList();                                                                                                                                                                                            
         if (distinct.Count == 0) return true;                                                                                                                                                                                                  
                                                                                                                                                                                                                                              
-        var validCount = await _context.Users                                                                                                                                                                                                  
-            .CountAsync(u => u.IsEnabled && distinct.Contains(u.Id));                                                                                                                                                                          
+        var validCount = await _userService.CountValidUserIds(distinct);                                                                                                                                                                                                                                                                                                                                             
         if(validCount != distinct.Count) return false;
 
         var friendCount = await _repos.GetRepository<Friend>()                                                                                                                                                                                     

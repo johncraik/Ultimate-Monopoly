@@ -2,10 +2,11 @@
 
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using JC.Core.Models.Auditing;
 
 namespace UltimateMonopoly.Models.DataModels.Games;
 
-public class GameSnapshot
+public class GameSnapshot : AuditModel
 {
     [Key]
     [MaxLength(38)]

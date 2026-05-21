@@ -15,6 +15,7 @@ using JC.Identity.Data;
 using Microsoft.EntityFrameworkCore;
 using UltimateMonopoly.Models;
 using UltimateMonopoly.Models.DataModels.Boards;
+using UltimateMonopoly.Models.DataModels.Games;
 using UltimateMonopoly.Models.DataModels.Social;
 
 namespace UltimateMonopoly.Data;
@@ -28,6 +29,12 @@ public class AppDbContext : IdentityDataDbContext<AppUser, AppRole>,
     public DbSet<BoardSkin> BoardSkins { get; set; }
     public DbSet<BoardSkinSpace> BoardSkinSpaces { get; set; }
     public DbSet<SharedBoardSkin> SharedBoardSkins { get; set; }
+    
+    //Games
+    public DbSet<Game> Games { get; set; }
+    public DbSet<GamePlayer> GamePlayers { get; set; }
+    public DbSet<GameTurn> GameTurns { get; set; }
+    public DbSet<GameSnapshot> GameSnapshots { get; set; }
     
     // Social
     public DbSet<Friend> Friends { get; set; }

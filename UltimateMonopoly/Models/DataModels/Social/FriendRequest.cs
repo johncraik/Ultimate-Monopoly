@@ -1,9 +1,12 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using JC.Core.Models.Auditing;
+using Microsoft.EntityFrameworkCore;
 
 namespace UltimateMonopoly.Models.DataModels.Social;
 
+[Index(nameof(CreatedById))]
+[Index(nameof(ToUserId))]
 public class FriendRequest : AuditModel
 {
     [Key]

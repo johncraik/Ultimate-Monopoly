@@ -117,6 +117,7 @@ app.MapGet("/account", () => Results.Redirect("/Identity/Account/Manage"));
 app.MapGet("/profile", () => Results.Redirect("/Identity/Profile"));
 app.MapGet("/social", () => Results.Redirect("/Social/Friends"));
 app.MapGet("/friends", () => Results.Redirect("/Social/Friends"));
+app.MapGet("/join", () => Results.Redirect("/Game/Join"));
 
 app.MapRazorPages();
 app.MapControllers();

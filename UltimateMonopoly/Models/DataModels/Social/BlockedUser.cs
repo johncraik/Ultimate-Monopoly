@@ -1,9 +1,12 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using JC.Core.Models.Auditing;
+using Microsoft.EntityFrameworkCore;
 
 namespace UltimateMonopoly.Models.DataModels.Social;
 
+[Index(nameof(CreatedById), nameof(BlockedUserId))]
+[Index(nameof(BlockedUserId))]
 public class BlockedUser : AuditModel
 {
     [Key]

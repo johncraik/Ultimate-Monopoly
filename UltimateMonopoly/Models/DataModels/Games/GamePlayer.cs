@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using JC.Core.Models.Auditing;
 using Microsoft.EntityFrameworkCore;
 using UltimateMonopoly.Enums.Players;
 using UltimateMonopoly.Helpers;
@@ -8,7 +9,9 @@ using UltimateMonopoly.Helpers.RuleSet;
 namespace UltimateMonopoly.Models.DataModels.Games;
 
 [PrimaryKey(nameof(GameId), nameof(UserId))]
-public class GamePlayer
+[Index(nameof(GameId), nameof(Dice1), nameof(Dice2), IsUnique = true)]
+[Index(nameof(UserId))]
+public class GamePlayer : AuditModel
 {
     [Required]
     [MaxLength(38)]
@@ -24,10 +27,10 @@ public class GamePlayer
     [Range(0, 7)]
     public ushort OrderId { get; private set; }
     
-    [Range(0, 6)]
-    public ushort Dice1 { get; private set; }
-    [Range(0, 6)]
-    public ushort Dice2 { get; private set; }
+    [Range(1, 6)]
+    public ushort? Dice1 { get; private set; }
+    [Range(1, 6)]
+    public ushort? Dice2 { get; private set; }
     
     
     //See Game Engine Doc - Moved to separate model, persisted in JSON in game snapshot:
@@ -73,7 +76,7 @@ public class GamePlayer
 
     public bool SetOrderId(ushort orderId)
     {
-        if(orderId > 7)
+        if(orderId > RuleDictionary.MaximumPlayers - 1)
             return false;
         
         OrderId = orderId;
@@ -82,7 +85,7 @@ public class GamePlayer
     
     public bool SetDiceNumber(ushort dice1, ushort dice2)
     {
-        if (dice1 > 6 || dice2 > 6)
+        if ((dice1 < 1 || dice1 > 6) || (dice2 < 1 || dice2 > 6))
             return false;
         
         Dice1 = dice1;

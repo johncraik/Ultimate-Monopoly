@@ -1,0 +1,37 @@
+@page "{id?}"
+@model UltimateMonopoly.Pages.Game.Join
+@{
+    ViewData["Title"] = "Join Game";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-7 col-lg-5">
+        @if (Model.ShowCodeEntry)
+        {
+            <div class="card">
+                <div class="card-header fw-semibold">Join a Game</div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+                    {
+                        <div class="alert alert-danger">@Model.ErrorMessage</div>
+                    }
+                    <form method="post">
+                        <label class="form-label" asp-for="Code">Join Code</label>
+                        <input class="form-control text-uppercase" asp-for="Code"
+                               placeholder="e.g. MP4K7Q2" autocomplete="off" />
+                        <button type="submit" class="btn btn-primary w-100 mt-3">Join Game</button>
+                    </form>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white fw-semibold">Unable to Join Game</div>
+                <div class="card-body">
+                    <p class="card-text mb-0">@Model.ErrorMessage</p>
+                </div>
+            </div>
+        }
+    </div>
+</div>

@@ -3,10 +3,15 @@ namespace UltimateMonopoly.Services;
 public class UrlLinkService
 {
     private readonly LinkGenerator _linkGenerator;
+    private readonly IConfiguration _config;
+    private readonly string _baseUrl;
 
-    public UrlLinkService(LinkGenerator linkGenerator)
+    public UrlLinkService(LinkGenerator linkGenerator,
+        IConfiguration config)
     {
         _linkGenerator = linkGenerator;
+        _config = config;
+        _baseUrl = _config["BaseUrl"] ?? "http://localhost:5146/";
     }
     
     public string? GetImgUrl(string? imgName)
@@ -20,5 +25,14 @@ public class UrlLinkService
                 values: new { area = "Identity", name = imgName });
         }
         return imgUrl;
+    }
+
+    public string GetUrlLink(string path)
+    {
+        if (_baseUrl.EndsWith('/') && path.StartsWith('/'))
+            path = path[1..];
+        else if(!_baseUrl.EndsWith('/') && !path.StartsWith('/'))
+            path = $"/{path}";
+        return $"{_baseUrl}{path}";
     }
 }

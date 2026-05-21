@@ -1,9 +1,11 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using JC.Core.Models.Auditing;
+using Microsoft.EntityFrameworkCore;
 
 namespace UltimateMonopoly.Models.DataModels.Games;
 
+[Index(nameof(GameId), nameof(TurnNumber))]
 public class GameTurn : AuditModel
 {
     [Key]

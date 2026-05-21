@@ -13,6 +13,7 @@
   "type": "commonjs",
   "dependencies": {
     "bootstrap": "^5.3.8",
-    "sass": "^1.99.0"
+    "sass": "^1.99.0",
+    "sortablejs": "^1.15.7"
   }
 }

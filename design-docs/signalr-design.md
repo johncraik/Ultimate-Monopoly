@@ -77,3 +77,27 @@ The tablet consumes all setup events to keep the player list live.
 - **Late joins / spectating** — can a user scan the QR after the game has started?
 - **Kicking a player** during setup — UI and event (`PlayerLeft` covers the wire, but the action is not yet specified).
 - **Multiple host views** — what happens if the creator opens the game view on two devices simultaneously? Probably fine (both join the group), but worth confirming.
+
+
+---
+
+# Screen Design
+
+--------------------------------------
+| [Game Name / Header]               |
+| [Info about the game (rounding, board)] |
+| -----------------------------------|
+| [Player]         |   [QR CODE (centred)]  |
+| [Player]         |                 |
+| [Player, etc]    |                 |
+| -----------------------------------|
+| [Start Game] | [Cancel Game] |
+--------------------------------------
+
+
+Player Cards:
+----------------------------------
+| [Profile Circle] [Display Name] | [Kick]|
+| [Dice Numbers] ("Not Set" if null) |
+---------------------------------------
+

@@ -14,22 +14,22 @@ namespace UltimateMonopoly.Areas.Social.Services;
 public class BlockAndReportService
 {
     private readonly IRepositoryManager _repos;
-    private readonly AppDbContext _context;
     private readonly IUserInfo _userInfo;
     private readonly UrlLinkService _urlLinkService;
     private readonly ILogger<BlockAndReportService> _logger;
+    private readonly UserService _userService;
 
     public BlockAndReportService(IRepositoryManager repos,
-        AppDbContext context,
         IUserInfo userInfo,
         UrlLinkService urlLinkService,
-        ILogger<BlockAndReportService> logger)
+        ILogger<BlockAndReportService> logger,
+        UserService userService)
     {
         _repos = repos;
-        _context = context;
         _userInfo = userInfo;
         _urlLinkService = urlLinkService;
         _logger = logger;
+        _userService = userService;
     }
 
     public async Task<PagedList<UserProfileViewModel>> GetBlockedUsers(ushort pageNumber, ushort pageSize)
@@ -40,8 +40,7 @@ public class BlockAndReportService
             .ToListAsync();
         
         var userIds = blockedUsers.Select(b => b.BlockedUserId).Distinct().ToList();
-        var users = await _context.Users.Where(u => u.IsEnabled && userIds.Contains(u.Id))
-            .ToDictionaryAsync(u => u.Id);
+        var users = await _userService.GetUserDictionary(userIds);
 
         var blockedViewModels = new List<UserProfileViewModel>();
         foreach (var bu in blockedUsers)
@@ -56,14 +55,23 @@ public class BlockAndReportService
             .ToPagedList(pageNumber, pageSize);
     }
 
+    public async Task<bool> CheckIfBlocksExist(string userId, IEnumerable<string> conflictingUserIds)
+    {
+        var list = conflictingUserIds.ToList();
+        return await _repos.GetRepository<BlockedUser>()
+            .AsQueryable().FilterDeleted(DeletedQueryType.OnlyActive)
+            .AnyAsync(b => (b.CreatedById == userId && list.Contains(b.BlockedUserId)) 
+                           || (list.Contains(b.CreatedById!) && b.BlockedUserId == userId));
+    }
+    
     
     private async Task<BlockedUser?> GetBlockedUser(string userId) 
         => await _repos.GetRepository<BlockedUser>()
             .AsQueryable().FilterDeleted(DeletedQueryType.OnlyActive)
             .FirstOrDefaultAsync(b => b.CreatedById == _userInfo.UserId && b.BlockedUserId == userId);
-    
+
     private async Task<bool> CheckUserId(string userId)
-        => userId != _userInfo.UserId && await _context.Users.AnyAsync(u => u.Id == userId && u.IsEnabled);
+        => userId != _userInfo.UserId && await _userService.ValidUser(userId);
     
     public async Task<bool> TryBlockUser(string userId)
     {

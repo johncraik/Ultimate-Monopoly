@@ -93,7 +93,12 @@ public class BoardSkinService
         return boardSkin == null ? null : new BoardSkinViewModel(boardSkin);
     }
 
-
+    public async Task<bool> ValidBoardSkin(string id)
+        => await _repos.GetRepository<BoardSkin>()
+            .AsQueryable().FilterDeleted(DeletedQueryType.OnlyActive)
+            .AnyAsync(b => b.Id == id && (b.UserId == _userInfo.UserId 
+                                          || b.SharedWith.Any(s => !s.IsDeleted && s.UserId == _userInfo.UserId)));
+    
     private async Task ValidateBoardSkin(BoardSkin boardSkin, ModelStateWrapper modelState)
     {
         if(boardSkin.UserId != _userInfo.UserId)
@@ -141,8 +146,6 @@ public class BoardSkinService
         _boardCacheService.Invalidate(_userInfo.UserId);
         return true;
     }
-
-    public record SaveSkinResult(bool Success, string? Id);
 
     public async Task<SaveSkinResult> TrySaveSkin(string? skinId, string? name, string? description,
         ModelStateWrapper modelState)

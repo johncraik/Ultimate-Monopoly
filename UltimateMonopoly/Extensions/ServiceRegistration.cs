@@ -1,14 +1,17 @@
 using JC.BackgroundJobs.Extensions;
 using JC.Core.Extensions;
+using JC.Github.Models;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using UltimateMonopoly.Areas.Identity.Services;
 using UltimateMonopoly.Areas.Social.Services;
 
 using UltimateMonopoly.Models.DataModels.Boards;
+using UltimateMonopoly.Models.DataModels.Games;
 using UltimateMonopoly.Models.DataModels.Social;
 using UltimateMonopoly.Services;
 using UltimateMonopoly.Services.BoardSkins;
 using UltimateMonopoly.Services.GameConfig;
+using UltimateMonopoly.Services.Games;
 using UltimateMonopoly.Services.Imports;
 
 namespace UltimateMonopoly.Extensions;
@@ -24,9 +27,14 @@ public static class ServiceRegistration
             typeof(Friend),
             typeof(FriendRequest),
             typeof(BlockedUser),
-            typeof(ReportedUser));
+            typeof(ReportedUser),
+            typeof(Game),
+            typeof(GamePlayer),
+            typeof(GameTurn),
+            typeof(GameSnapshot));
 
         services.TryAddSingleton<FilePathProvider>();
+        services.TryAddScoped<UserService>();
 
         services.TryAddScoped<BoardImportService>();
         services.TryAddScoped<BoardCacheService>();
@@ -48,6 +56,9 @@ public static class ServiceRegistration
 
         // Identity — profile
         services.TryAddScoped<ProfileService>();
+        
+        // Games
+        services.TryAddScoped<GameSetupService>();
 
         return services;
     }

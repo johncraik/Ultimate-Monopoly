@@ -1,10 +1,12 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using JC.Core.Models.Auditing;
+using Microsoft.EntityFrameworkCore;
 using UltimateMonopoly.Data;
 
 namespace UltimateMonopoly.Models.DataModels.Boards;
 
+[Index(nameof(UserId))]
 public class BoardSkin : AuditModel
 {
     [Key]

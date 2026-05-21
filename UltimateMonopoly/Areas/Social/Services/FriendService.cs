@@ -7,6 +7,7 @@ using JC.Core.Services.DataRepositories;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using UltimateMonopoly.Data;
+using UltimateMonopoly.Models;
 using UltimateMonopoly.Models.DataModels.Social;
 using UltimateMonopoly.Models.ViewModels.Social;
 using UltimateMonopoly.Services;
@@ -16,28 +17,28 @@ namespace UltimateMonopoly.Areas.Social.Services;
 public class FriendService
 {
     private readonly IRepositoryManager _repos;
-    private readonly AppDbContext _context;
     private readonly IUserInfo _userInfo;
     private readonly PresenceService _presence;
     private readonly UrlLinkService _urlLinkService;
     private readonly NotificationSender _notifications;
     private readonly ILogger<FriendService> _logger;
+    private readonly UserService _userService;
 
     public FriendService(IRepositoryManager repos,
-        AppDbContext context,
         IUserInfo userInfo,
         PresenceService presence,
         UrlLinkService urlLinkService,
         NotificationSender notifications,
-        ILogger<FriendService> logger)
+        ILogger<FriendService> logger,
+        UserService userService)
     {
         _repos = repos;
-        _context = context;
         _userInfo = userInfo;
         _presence = presence;
         _urlLinkService = urlLinkService;
         _notifications = notifications;
         _logger = logger;
+        _userService = userService;
     }
     
 
@@ -61,10 +62,7 @@ public class FriendService
             .Distinct()
             .ToList();
 
-        var users = await _context.Users
-            .Where(u => friendUserIds.Contains(u.Id))
-            .ToDictionaryAsync(u => u.Id);
-
+        var users = await _userService.GetUserDictionary(friendUserIds);
         var lastActive = await _presence.GetLastActiveUtcAsync(friendUserIds);
 
         var result = new List<FriendViewModel>(friends.Count);
@@ -99,14 +97,14 @@ public class FriendService
 
     public async Task<FriendRequestLists> GetFriendRequests()
     {
-        var allRequests = await _context.FriendRequests.FilterDeleted(DeletedQueryType.OnlyActive)
+        var allRequests = await _repos.GetRepository<FriendRequest>()
+            .AsQueryable().FilterDeleted(DeletedQueryType.OnlyActive)
             .Where(r => r.IsAccepted == null && (r.CreatedById == _userInfo.UserId || r.ToUserId == _userInfo.UserId))
             .ToListAsync();
 
         var userIds = allRequests.Select(r => r.CreatedById == _userInfo.UserId ? r.ToUserId : r.CreatedById)
             .Distinct().ToList();
-        var users = await _context.Users.Where(u => u.IsEnabled && userIds.Contains(u.Id))
-            .ToDictionaryAsync(u => u.Id);
+        var users = await _userService.GetUserDictionary(userIds!);
         
         var incomingRequests = new List<FriendRequestViewModel>();
         var outgoingRequests = new List<FriendRequestViewModel>();
@@ -136,7 +134,7 @@ public class FriendService
 
     public async Task<bool> TryRemoveFriend(string friendId)
     {
-        var userExists = await _context.Users.AnyAsync(u => u.Id == friendId && u.IsEnabled);
+        var userExists = await _userService.ValidUser(friendId);
         if (!userExists) return false;
         
         var friend = await _repos.GetRepository<Friend>()
@@ -152,13 +150,10 @@ public class FriendService
     }
     
     
-    public record FriendRequestResult(bool Success, string? ErrorMessage);
-
     public async Task<FriendRequestResult> TrySendFriendRequest(string friendUsername)
     {
         //Get The user:
-        var user = await _context.Users.Where(u => u.IsEnabled)
-            .FirstOrDefaultAsync(u => u.UserName != null && u.UserName.ToLower() == friendUsername.ToLower());
+        var user = await _userService.GetUserByUsername(friendUsername);
         if (user == null) return new FriendRequestResult(false, "No user exists with this username.");
         
         //Check if self:
@@ -166,7 +161,8 @@ public class FriendService
             return new FriendRequestResult(false, "Cannot send friend request to yourself.");
         
         //Check if pending:
-        var pendingRequests = await _context.FriendRequests.FilterDeleted(DeletedQueryType.OnlyActive)
+        var pendingRequests = await _repos.GetRepository<FriendRequest>()
+            .AsQueryable().FilterDeleted(DeletedQueryType.OnlyActive)
             .Where(f => f.IsAccepted == null 
                         && ((f.CreatedById == user.Id && f.ToUserId == _userInfo.UserId) 
                             || (f.ToUserId == user.Id && f.CreatedById == _userInfo.UserId)))
@@ -184,16 +180,18 @@ public class FriendService
         }
         
         //Check if already friends:
-        var friends = await _context.Friends.AnyAsync(f => !f.IsDeleted
-                                                           && f.DateRemovedUtc == null
-                                                           && ((f.CreatedById == _userInfo.UserId && f.FriendUserId == user.Id)
-                                                               || (f.FriendUserId == _userInfo.UserId && f.CreatedById == user.Id)));
+        var friends = await _repos.GetRepository<Friend>()
+            .AsQueryable().FilterDeleted(DeletedQueryType.OnlyActive)
+            .AnyAsync(f => f.DateRemovedUtc == null 
+                           && ((f.CreatedById == _userInfo.UserId && f.FriendUserId == user.Id) 
+                               || (f.FriendUserId == _userInfo.UserId && f.CreatedById == user.Id)));
         if (friends) return new FriendRequestResult(false, "Already friends.");
         
         //Check if blocked:
-        var isBlocked = await _context.BlockedUsers.AnyAsync(b => !b.IsDeleted 
-                                                                  && ((b.BlockedUserId == user.Id && b.CreatedById == _userInfo.UserId) 
-                                                                      || (b.CreatedById == user.Id && b.BlockedUserId == _userInfo.UserId)));
+        var isBlocked = await _repos.GetRepository<BlockedUser>()
+            .AsQueryable().FilterDeleted(DeletedQueryType.OnlyActive)
+            .AnyAsync(b => (b.BlockedUserId == user.Id && b.CreatedById == _userInfo.UserId) 
+                           || (b.CreatedById == user.Id && b.BlockedUserId == _userInfo.UserId));
         if (isBlocked) 
             //Message is ambiguous so that it is not revealed that someone blocked you
             return new FriendRequestResult(false, "No user exists with this username.");
@@ -218,7 +216,8 @@ public class FriendService
 
     public async Task<bool> TryAcceptFriendRequest(string requestId)
     {
-        var request = await _context.FriendRequests.FilterDeleted(DeletedQueryType.OnlyActive)
+        var request = await _repos.GetRepository<FriendRequest>()
+            .AsQueryable().FilterDeleted(DeletedQueryType.OnlyActive)
             .FirstOrDefaultAsync(r => r.Id == requestId && r.IsAccepted == null && r.ToUserId == _userInfo.UserId);
         if (request == null) return false;
 
@@ -247,7 +246,8 @@ public class FriendService
 
     public async Task<bool> TryDeclineFriendRequest(string requestId)
     {
-        var request = await _context.FriendRequests.FilterDeleted(DeletedQueryType.OnlyActive)
+        var request = await _repos.GetRepository<FriendRequest>()
+            .AsQueryable().FilterDeleted(DeletedQueryType.OnlyActive)
             .FirstOrDefaultAsync(r => r.Id == requestId && r.IsAccepted == null && r.ToUserId == _userInfo.UserId);
         if (request == null) return false;
         

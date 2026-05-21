@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 namespace UltimateMonopoly.Models.DataModels.Boards;
 
 [PrimaryKey(nameof(BoardSkinId), nameof(UserId))]
+[Index(nameof(UserId))]
 public class SharedBoardSkin : AuditModel
 {
     [Required]

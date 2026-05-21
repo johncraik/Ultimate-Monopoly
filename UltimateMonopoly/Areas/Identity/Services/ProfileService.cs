@@ -19,23 +19,26 @@ public class ProfileService
     private readonly string[] _avatarImageNames = ["car", "dog", "cat", "van", "horse", "wheel_barrow"];
 
     private readonly FilePathProvider _filePathProvider;
-    private readonly AppDbContext _context;
     private readonly IUserInfo _userInfo;
     private readonly ICookieService _cookies;
     private readonly UrlLinkService _urlLinkService;
+    private readonly UserService _userService;
+    private readonly AppDbContext _context;
 
     public ProfileService(
         FilePathProvider filePathProvider,
-        AppDbContext context,
         IUserInfo userInfo,
         [FromKeyedServices(ICookieService.EncryptedCookieDIKey)] ICookieService cookies,
-        UrlLinkService urlLinkService)
+        UrlLinkService urlLinkService,
+        UserService userService,
+        AppDbContext context)
     {
         _filePathProvider = filePathProvider;
-        _context = context;
         _userInfo = userInfo;
         _cookies = cookies;
         _urlLinkService = urlLinkService;
+        _userService = userService;
+        _context = context;
     }
 
     public List<string> GetAvatarImagePaths()
@@ -67,7 +70,7 @@ public class ProfileService
 
     public async Task<UserProfileViewModel?> GetUserProfileViewModelAsync(string userId)
     {
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId && u.IsEnabled);
+        var user = await _userService.GetUserById(userId);
         if (user == null) return null;
 
         var imgUrl = _urlLinkService.GetImgUrl(user.AvatarImageName);
@@ -85,11 +88,11 @@ public class ProfileService
         if (cached is not null)
             _cookies.TryDeleteCookie(CookieName);
 
-        var profile = await _context.Users
-            .Where(u => u.Id == userId)
-            .Select(u => new UserProfile(u.AvatarColour, u.AvatarImageName))
-            .FirstAsync();
-
+        var user = await _userService.GetUserById(userId, null);
+        if (user == null)
+            return new UserProfile(null, null);
+        
+        var profile = new UserProfile(user.AvatarColour, user.AvatarImageName);
         WriteCookie(userId, profile);
         return profile;
     }
@@ -101,7 +104,7 @@ public class ProfileService
         if (updated.AvatarImageName is not null && !_avatarImageNames.Contains(updated.AvatarImageName))
             return false;
 
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+        var user = await _userService.GetUserById(userId, null);
         if (user == null) return false;
         
         var updatedColour = user.SetAvatarColour(updated.AvatarColour);
