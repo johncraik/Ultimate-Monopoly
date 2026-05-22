@@ -2,6 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UltimateMonopoly", "UltimateMonopoly\UltimateMonopoly.csproj", "{FC5ACBC5-8DD1-4BB2-B98E-240C55239AF2}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MP.GameEngine", "MP.GameEngine\MP.GameEngine.csproj", "{0A3AA0FB-23EE-4640-8947-5778F1549D52}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +14,9 @@ Global
 		{FC5ACBC5-8DD1-4BB2-B98E-240C55239AF2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FC5ACBC5-8DD1-4BB2-B98E-240C55239AF2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FC5ACBC5-8DD1-4BB2-B98E-240C55239AF2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0A3AA0FB-23EE-4640-8947-5778F1549D52}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0A3AA0FB-23EE-4640-8947-5778F1549D52}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0A3AA0FB-23EE-4640-8947-5778F1549D52}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0A3AA0FB-23EE-4640-8947-5778F1549D52}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

@@ -2,8 +2,6 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using JC.Core.Models.Auditing;
 using Microsoft.EntityFrameworkCore;
-using UltimateMonopoly.Enums.Players;
-using UltimateMonopoly.Helpers;
 using UltimateMonopoly.Helpers.RuleSet;
 
 namespace UltimateMonopoly.Models.DataModels.Games;
@@ -32,28 +30,6 @@ public class GamePlayer : AuditModel
     [Range(1, 6)]
     public ushort? Dice2 { get; private set; }
     
-    
-    //See Game Engine Doc - Moved to separate model, persisted in JSON in game snapshot:
-    
-    // [Range(0, 100)]
-    // public ushort BoardIndex { get; private set; }
-    // public PlayerDirection Direction { get; private set; }
-    //
-    // public uint Money { get; private set; } = RuleDictionary.StartingMoney;
-    //
-    //
-    // [NotMapped]
-    // public bool DiceNumberSet => Dice1 != 0 && Dice2 != 0;
-    //
-    // [NotMapped]
-    // public (ushort Dice1, ushort Dice2) DiceNumber => (Dice1, Dice2);
-    //
-    // [Range(RuleDictionary.DefaultJailCost, uint.MaxValue)]
-    // public uint JailCost { get; private set; }
-    //
-    // [Range(RuleDictionary.DefaultTripleBonus, uint.MaxValue)]
-    // public uint TripleBonus { get; private set; }
-    
 
     public GamePlayer()
     {
@@ -63,15 +39,6 @@ public class GamePlayer : AuditModel
     {
         GameId = gameId;
         UserId = userId;
-        
-        //See Game Engine Doc - Moved to separate model, persisted in JSON in game snapshot:
-        
-        // BoardIndex = 0;
-        // Direction = PlayerDirection.Forward;
-        //
-        // Money = RuleDictionary.StartingMoney;
-        // JailCost = RuleDictionary.DefaultJailCost;
-        // TripleBonus = RuleDictionary.DefaultTripleBonus;
     }
 
     public bool SetOrderId(ushort orderId)
@@ -92,53 +59,4 @@ public class GamePlayer : AuditModel
         Dice2 = dice2;
         return true;
     }
-    
-    
-
-    //See Game Engine Doc - Moved to separate model, persisted in JSON in game snapshot:
-    
-    // public (ushort Index, ushort GoPasses) Move(ushort spaces)
-    // {
-    //     (BoardIndex, var goPasses) = IndexHelper.MoveIndex(BoardIndex, spaces, Direction);
-    //     return (BoardIndex, goPasses);
-    // }
-    //
-    // public (ushort Index, bool PassGo) Advance(ushort desiredIndex)
-    // {
-    //     (BoardIndex, var passGo) = IndexHelper.AdvanceIndex(BoardIndex, desiredIndex, Direction);
-    //     return (BoardIndex, passGo);
-    // }
-    //
-    // public void ChangeDirection()
-    // {
-    //     Direction = Direction switch
-    //     {
-    //         PlayerDirection.Forward => PlayerDirection.Backward,
-    //         PlayerDirection.Backward => PlayerDirection.Forward,
-    //         _ => throw new ArgumentOutOfRangeException()
-    //     };
-    // }
-    //
-    // public void AddMoney(uint amount) => Money += amount;
-    //
-    // public bool TakeMoney(uint amount)
-    // {
-    //     if(Money < amount)
-    //         return false;
-    //     
-    //     Money -= amount;
-    //     return true;
-    // }
-    //
-    //
-    // public void LeaveJail()
-    // {
-    //     JailCost += (uint)(JailCost * RuleDictionary.JailCostMultiplier);
-    // }
-    //
-    // public void ResetJailCost() => JailCost = RuleDictionary.DefaultJailCost;
-    //
-    // public void ClaimTripleBonus() => TripleBonus += RuleDictionary.TripleBonusIncrease;
-    //
-    // public void ResetTripleBonus() => TripleBonus = RuleDictionary.DefaultTripleBonus;
 }

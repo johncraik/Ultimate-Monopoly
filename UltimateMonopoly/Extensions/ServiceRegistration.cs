@@ -1,3 +1,4 @@
+using JC.BackgroundJobs.Extensions;
 using JC.Core.Extensions;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using UltimateMonopoly.Models.DataModels.Boards;
@@ -39,10 +40,10 @@ public static class ServiceRegistration
 
         // Social — presence tracking
         services.TryAddSingleton<PresenceService>();
-        // services.AddHangfireJob<PresenceFlushJob>(opts =>
-        // {
-        //     opts.Cron = "*/5 * * * *";
-        // });
+        services.AddHangfireJob<PresenceFlushJob>(opts =>
+        {
+            opts.Cron = "*/5 * * * *";
+        });
 
         services.TryAddScoped<UrlLinkService>();
 
@@ -55,7 +56,7 @@ public static class ServiceRegistration
         
         // Games
         services.TryAddScoped<GameSetupService>();
-        services.TryAddScoped<GameListService>();
+        services.TryAddScoped<GameService>();
         services.TryAddScoped<PlayerProfileService>();
 
         return services;

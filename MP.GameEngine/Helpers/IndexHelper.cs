@@ -1,7 +1,7 @@
-using UltimateMonopoly.Enums;
-using UltimateMonopoly.Enums.Players;
+using MP.GameEngine.Enums;
+using MP.GameEngine.Enums.Players;
 
-namespace UltimateMonopoly.Helpers;
+namespace MP.GameEngine.Helpers;
 
 public static class IndexHelper
 {
@@ -28,22 +28,30 @@ public static class IndexHelper
     public static readonly ushort[] ComChestIndexes = [2, 17, 33];
     public static readonly ushort[] CardIndexes = [..ChanceIndexes, ..ComChestIndexes];
     
-    public static readonly ushort[] StationIndexes = [5, 15, 25, 35];
-    public static readonly ushort[] UtilityIndexes = [12, 28];
-    
-    public static readonly ushort[] PropertyIndexes =
+    public static readonly ushort[] BuildablePropertyIndexes =
     [
-        ..PropertyColourHelper.BrownPropIndexes,
-        ..PropertyColourHelper.BluePropIndexes,
-        ..PropertyColourHelper.PinkPropIndexes,
-        ..PropertyColourHelper.OrangePropIndexes,
-        ..PropertyColourHelper.RedPropIndexes,
-        ..PropertyColourHelper.YellowPropIndexes,
-        ..PropertyColourHelper.GreenPropIndexes,
-        ..PropertyColourHelper.DarkBluePropIndexes
+        ..PropertySetHelper.BrownPropIndexes,
+        ..PropertySetHelper.BluePropIndexes,
+        ..PropertySetHelper.PinkPropIndexes,
+        ..PropertySetHelper.OrangePropIndexes,
+        ..PropertySetHelper.RedPropIndexes,
+        ..PropertySetHelper.YellowPropIndexes,
+        ..PropertySetHelper.GreenPropIndexes,
+        ..PropertySetHelper.DarkBluePropIndexes
     ];
 
-
+    public static readonly ushort[] NonBuildablePropertyIndexes =
+    [
+        ..PropertySetHelper.StationIndexes,
+        ..PropertySetHelper.UtilityIndexes
+    ];
+    
+    public static readonly ushort[] AllPropertyIndexes =
+    [
+        ..BuildablePropertyIndexes,
+        ..NonBuildablePropertyIndexes
+    ];
+    
     /// <summary>
     /// Resolves the desired index of a specific board spaceType based on its type.
     /// </summary>
@@ -60,9 +68,9 @@ public static class IndexHelper
     public static ushort? ResolveIndex(ushort desiredIndex, BoardSpaceType spaceType)
         => spaceType switch
         {
-            BoardSpaceType.Property => !PropertyIndexes.Contains(desiredIndex) ? null : desiredIndex,
-            BoardSpaceType.Station => !StationIndexes.Contains(desiredIndex) ? null : desiredIndex,
-            BoardSpaceType.Utility => !UtilityIndexes.Contains(desiredIndex) ? null : desiredIndex,
+            BoardSpaceType.Property => !BuildablePropertyIndexes.Contains(desiredIndex) ? null : desiredIndex,
+            BoardSpaceType.Station => !PropertySetHelper.StationIndexes.Contains(desiredIndex) ? null : desiredIndex,
+            BoardSpaceType.Utility => !PropertySetHelper.UtilityIndexes.Contains(desiredIndex) ? null : desiredIndex,
             BoardSpaceType.Tax => !TaxIndexes.Contains(desiredIndex) ? null : desiredIndex,
             BoardSpaceType.Chance => !ChanceIndexes.Contains(desiredIndex) ? null : desiredIndex,
             BoardSpaceType.ComChest => !ComChestIndexes.Contains(desiredIndex) ? null : desiredIndex,
@@ -98,7 +106,7 @@ public static class IndexHelper
     /// <returns>
     /// <c>true</c> if the specified <paramref name="index"/> matches a property spaceType; otherwise, <c>false</c>.
     /// </returns>
-    public static bool IsProperty(this ushort index) => PropertyIndexes.Contains(index);
+    public static bool IsProperty(this ushort index) => BuildablePropertyIndexes.Contains(index);
 
     /// <summary>
     /// Determines whether the specified index corresponds to a station spaceType on the board.
@@ -108,7 +116,7 @@ public static class IndexHelper
     /// <c>true</c> if the specified <paramref name="index"/> matches any station spaceType index;
     /// otherwise, <c>false</c>.
     /// </returns>
-    public static bool IsStation(this ushort index) => StationIndexes.Contains(index);
+    public static bool IsStation(this ushort index) => PropertySetHelper.StationIndexes.Contains(index);
 
     /// <summary>
     /// Checks whether the specified index corresponds to a utility spaceType on the board.
@@ -117,7 +125,7 @@ public static class IndexHelper
     /// <returns>
     /// True if the given <paramref name="index"/> matches one of the predefined utility spaceType indexes; otherwise, false.
     /// </returns>
-    public static bool IsUtility(this ushort index) => UtilityIndexes.Contains(index);
+    public static bool IsUtility(this ushort index) => PropertySetHelper.UtilityIndexes.Contains(index);
 
 
     /// <summary>

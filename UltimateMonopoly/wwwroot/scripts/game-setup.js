@@ -24,7 +24,7 @@
     // ---- Drag reorder (host only) ----
     const list = document.querySelector('[data-player-list]');
     const reorderForm = document.querySelector('[data-reorder-form]');
-    if (!list || !reorderForm || list.dataset.canReorder !== 'true' || typeof Sortable === 'undefined') return;
+    if (!list || !reorderForm || typeof Sortable === 'undefined') return;
 
     Sortable.create(list, {
         animation: 180,

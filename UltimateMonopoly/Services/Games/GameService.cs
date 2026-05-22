@@ -3,18 +3,18 @@ using JC.Core.Extensions;
 using JC.Core.Models;
 using JC.Core.Services.DataRepositories;
 using Microsoft.EntityFrameworkCore;
-using UltimateMonopoly.Enums.Games;
+using MP.GameEngine.Enums.Games;
 using UltimateMonopoly.Models.DataModels.Games;
 using UltimateMonopoly.Models.ViewModels.Games;
 
 namespace UltimateMonopoly.Services.Games;
 
-public class GameListService
+public class GameService
 {
     private readonly IRepositoryManager _repos;
     private readonly IUserInfo _userInfo;
 
-    public GameListService(IRepositoryManager repos,
+    public GameService(IRepositoryManager repos,
         IUserInfo userInfo)
     {
         _repos = repos;
@@ -105,4 +105,10 @@ public class GameListService
         => await QueryGames(asNoTracking, true, true, includeTurns, includeSnapshots, true, state)
             .Select(g => new GameViewModel(g, _userInfo.UserId))
             .ToListAsync();
+
+
+    public async Task<bool> CheckUserInGame(string gameId, string userId)
+        => await _repos.GetRepository<GamePlayer>()
+            .AsQueryable().FilterDeleted(DeletedQueryType.OnlyActive)
+            .AnyAsync(p => !p.Game.IsDeleted && p.GameId == gameId && p.UserId == userId);
 }

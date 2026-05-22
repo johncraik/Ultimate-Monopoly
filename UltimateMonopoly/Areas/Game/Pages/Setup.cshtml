@@ -7,7 +7,7 @@
 <style>
     .qr-code svg { width: 100%; height: auto; display: block; }
 
-    [data-can-reorder="true"] .player-card { cursor: grab; }
+    .player-card { cursor: grab; }
     .player-card-ghost { opacity: 0.4; }
     .player-card-drag {
         cursor: grabbing;
@@ -37,56 +37,12 @@
         <div class="card h-100">
             <div class="card-header d-flex align-items-center justify-content-between">
                 <span class="fw-semibold">Players</span>
-                <span class="badge text-bg-secondary">@Model.Players.Count / 8</span>
+                <span class="badge text-bg-secondary"><span data-player-count>@Model.Players.Count</span> / 8</span>
             </div>
-            <div class="card-body d-flex flex-column gap-2"
-                 data-player-list data-can-reorder="@Model.ViewerIsHost.ToString().ToLowerInvariant()">
+            <div class="card-body d-flex flex-column gap-2" data-player-list data-game-id="@Model.GameId">
                 @foreach (var p in Model.Players)
                 {
-                    <div class="card player-card @(p.IsHost ? "border-primary" : "")"
-                         data-player-card data-user-id="@p.Profile.UserId">
-                        <div class="card-body d-flex align-items-center gap-3 py-2">
-                            <profile-circle user="p.Profile" size="Md" />
-                            <div class="flex-grow-1 min-w-0">
-                                <div class="fw-semibold text-truncate">
-                                    @p.Profile.DisplayName
-                                    @if (p.IsHost)
-                                    {
-                                        <span class="badge text-bg-primary ms-1">Host</span>
-                                    }
-                                </div>
-                                <div class="small text-body-secondary">
-                                    Dice Numbers:
-                                    @if (p.Dice1 is null || p.Dice2 is null)
-                                    {
-                                        <span class="badge text-bg-warning">Not Set</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge text-bg-secondary">@p.Dice1 | @p.Dice2</span>
-                                    }
-                                </div>
-                            </div>
-
-                            <button type="button" class="btn btn-sm btn-outline-info"
-                                    data-bs-toggle="modal" data-bs-target="#setDiceModal"
-                                    data-set-dice
-                                    data-user-id="@p.Profile.UserId"
-                                    data-name="@p.Profile.DisplayName"
-                                    data-dice1="@(p.Dice1?.ToString() ?? string.Empty)"
-                                    data-dice2="@(p.Dice2?.ToString() ?? string.Empty)">
-                                Set Dice
-                            </button>
-
-                            @if (Model.ViewerIsHost && !p.IsHost)
-                            {
-                                <form method="post" asp-page-handler="Kick" class="m-0">
-                                    <input type="hidden" name="targetUserId" value="@p.Profile.UserId" />
-                                    <button type="submit" class="btn btn-sm btn-outline-danger">Kick</button>
-                                </form>
-                            }
-                        </div>
-                    </div>
+                    <partial name="_PlayerCard" model="p" />
                 }
             </div>
         </div>
@@ -120,10 +76,7 @@
     </div>
 </div>
 
-@if (Model.ViewerIsHost)
-{
-    <form method="post" asp-page-handler="Reorder" class="d-none" data-reorder-form></form>
-}
+<form method="post" asp-page-handler="Reorder" class="d-none" data-reorder-form></form>
 
 @* ---------- Set Dice modal ---------- *@
 <div class="modal fade" id="setDiceModal" tabindex="-1">
@@ -172,4 +125,5 @@
 @section Scripts {
     <script src="~/scripts/Sortable.min.js" asp-append-version="true"></script>
     <script src="~/scripts/game-setup.js" asp-append-version="true"></script>
+    <script src="~/scripts/SignalR/game-setup-hub.js" asp-append-version="true"></script>
 }

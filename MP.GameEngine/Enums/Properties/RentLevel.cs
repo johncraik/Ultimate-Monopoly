@@ -1,11 +1,10 @@
-namespace UltimateMonopoly.Enums;
+namespace MP.GameEngine.Enums.Properties;
 
 public enum RentLevel
 {
+    //ALL
     SINGLE,
-    
-    //Set-Props and Utility ONLY
-    SET,
+    SET,    //Set-Props or own all stations/utilities
     
     //Set-Props ONLY
     ONE_HOUSE,
@@ -15,9 +14,7 @@ public enum RentLevel
     HOTEL,
     DOUBLE_HOTEL,
     
-    
     //Stations ONLY
     DOUBLE,
-    TRIPLE,
-    QUADRUPLE
+    TRIPLE
 }

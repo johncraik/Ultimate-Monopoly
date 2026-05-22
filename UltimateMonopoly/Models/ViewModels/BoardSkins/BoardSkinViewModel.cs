@@ -1,5 +1,5 @@
-using UltimateMonopoly.Enums;
-using UltimateMonopoly.Helpers;
+using MP.GameEngine.Enums;
+using MP.GameEngine.Helpers;
 using UltimateMonopoly.Models.DataModels.Boards;
 
 namespace UltimateMonopoly.Models.ViewModels.BoardSkins;

@@ -1,6 +1,6 @@
 using System.ComponentModel;
 
-namespace UltimateMonopoly.Enums.Games;
+namespace MP.GameEngine.Enums.Games;
 
 public enum GameRoundingRule
 {

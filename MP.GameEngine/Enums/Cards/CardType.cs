@@ -1,6 +1,6 @@
 using JC.Core.Extensions;
 
-namespace UltimateMonopoly.Enums;
+namespace MP.GameEngine.Enums.Cards;
 
 public enum CardType
 {

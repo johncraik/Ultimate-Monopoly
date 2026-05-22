@@ -7,6 +7,7 @@ using JC.Core.Services.DataRepositories;
 using Microsoft.EntityFrameworkCore;
 using UltimateMonopoly.Models;
 using UltimateMonopoly.Models.DataModels.Social;
+using UltimateMonopoly.Models.ViewModels;
 using UltimateMonopoly.Models.ViewModels.Social;
 
 namespace UltimateMonopoly.Services.Friends;

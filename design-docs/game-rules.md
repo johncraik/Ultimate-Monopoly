@@ -297,13 +297,14 @@ properties.
      Free Parking.
 
    A property is *eligible to hand in* only if it is **not** part of a complete
-   set the player has built on (a set with houses or hotels on it) **and** no
-   property from its set has been handed in before.
+   set the player has built on (a set with houses or hotels on it) **and** the
+   player has not previously handed in a property from its set.
 
-3. **Hand-ins are tracked per set.** Handing in a property marks its entire set
-   as used — e.g. handing in Pall Mall marks pink, so no pink property may be
-   handed in for the rest of the game. All stations form one group; all
-   utilities form another.
+3. **Hand-ins are tracked per set, per player.** When a player hands a property
+   in, that property's entire set is marked used *for that player* — e.g.
+   handing in Pall Mall marks pink, so that player may not hand in any pink
+   property for the rest of the game. Other players are unaffected. All
+   stations form one group; all utilities form another.
 
 4. **Cards may change the payout.** Cards held by the landing player or by other
    players can alter the money outcome — a player might collect nothing, collect
@@ -458,10 +459,12 @@ final property. Once every player has their first set, the mechanic is spent
 3. **Half-price building on a full street.** A *street* is every set on one
    side of the board. A player qualifies for half-price building by owning a
    complete street before any of its sets has been built on — neither currently
-   nor at any earlier point in the game. Once qualified, the player builds on
-   every set in that street at half the normal building cost, and keeps the
-   discount for as long as they continue to own the whole street. If they cease
-   to own any set in the street, the discount is lost.
+   nor at any earlier point during their ownership of it. Built-on history is
+   per-ownership: it resets when a property changes hands, so building done
+   under a previous owner does not disqualify a later one. Once qualified, the
+   player builds on every set in that street at half the normal building cost,
+   and keeps the discount for as long as they continue to own the whole street.
+   If they cease to own any set in the street, the discount is lost.
 
 ---
 

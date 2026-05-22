@@ -1,13 +1,47 @@
 (() => {
     'use strict';
 
-    // ---- Floating status alert: auto-dismiss after 5s ----
-    const floatingAlert = document.querySelector('[data-floating-alert] .alert');
-    if (floatingAlert) {
-        setTimeout(() => {
-            bootstrap.Alert.getOrCreateInstance(floatingAlert).close();
-        }, 5000);
+    // ---- Floating status alerts: auto-dismiss after 5s ----
+    function autoDismiss(alertEl) {
+        setTimeout(() => bootstrap.Alert.getOrCreateInstance(alertEl).close(), 5000);
     }
+
+    const serverAlert = document.querySelector('[data-floating-alert] .alert');
+    if (serverAlert) autoDismiss(serverAlert);
+
+    const alertClasses = {
+        success: 'alert-success',
+        danger: 'alert-danger',
+        warning: 'alert-warning',
+        info: 'alert-info'
+    };
+
+    // Exposed so live (SignalR) updates can raise the same toast as a POST.
+    window.showFloatingAlert = (message, type = 'info') => {
+        let host = document.querySelector('[data-floating-alert]');
+        if (!host) {
+            host = document.createElement('div');
+            host.className = 'position-fixed top-0 end-0 p-3';
+            host.style.zIndex = '1090';
+            host.dataset.floatingAlert = '';
+            document.body.appendChild(host);
+        }
+
+        const alertEl = document.createElement('div');
+        alertEl.className = `alert ${alertClasses[type] || alertClasses.info} alert-dismissible fade show`;
+        alertEl.setAttribute('role', 'alert');
+        alertEl.textContent = message;
+
+        const close = document.createElement('button');
+        close.type = 'button';
+        close.className = 'btn-close';
+        close.dataset.bsDismiss = 'alert';
+        close.setAttribute('aria-label', 'Close');
+        alertEl.appendChild(close);
+
+        host.appendChild(alertEl);
+        autoDismiss(alertEl);
+    };
 
     const nav = document.querySelector('[data-game-nav]');
     const modalEl = document.getElementById('navConfirmModal');

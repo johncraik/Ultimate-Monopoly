@@ -65,6 +65,7 @@
         <Folder Include="Areas\Identity\Pages\Profile\" />
         <Folder Include="Areas\Social\Pages\" />
         <Folder Include="Data\Migrations\" />
+        <Folder Include="wwwroot\scripts\InGame\" />
     </ItemGroup>
 
     <ItemGroup>
@@ -95,6 +96,10 @@
         <Reference Include="JC.Web">
             <HintPath>..\..\JC.Web.dll</HintPath>
         </Reference>
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\MP.GameEngine\MP.GameEngine.csproj" />
     </ItemGroup>
 
 </Project>

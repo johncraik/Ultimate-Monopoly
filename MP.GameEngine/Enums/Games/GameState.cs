@@ -1,4 +1,4 @@
-namespace UltimateMonopoly.Enums.Games;
+namespace MP.GameEngine.Enums.Games;
 
 public enum GameState
 {

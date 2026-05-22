@@ -3,12 +3,14 @@ using JC.Core.Extensions;
 using JC.Core.Models;
 using JC.Core.Services.DataRepositories;
 using JC.Web.UI.Helpers;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
-using UltimateMonopoly.Enums.Games;
+using MP.GameEngine.Enums.Games;
 using UltimateMonopoly.Helpers;
 using UltimateMonopoly.Helpers.RuleSet;
-using UltimateMonopoly.Models;
+using UltimateMonopoly.Hubs;
 using UltimateMonopoly.Models.DataModels.Games;
+using UltimateMonopoly.Models.ViewModels;
 using UltimateMonopoly.Services.BoardSkins;
 using UltimateMonopoly.Services.Friends;
 
@@ -23,6 +25,7 @@ public class GameSetupService
     private readonly BoardSkinService _boardSkinService;
     private readonly UrlLinkService _urlLinkService;
     private readonly BlockAndReportService _blockAndReportService;
+    private readonly IHubContext<GameSetupHub> _setupHub;
 
 
     public GameSetupService(IRepositoryManager repos,
@@ -31,7 +34,8 @@ public class GameSetupService
         ILogger<GameSetupService> logger,
         BoardSkinService boardSkinService,
         UrlLinkService urlLinkService,
-        BlockAndReportService blockAndReportService)
+        BlockAndReportService blockAndReportService,
+        IHubContext<GameSetupHub> setupHub)
     {
         _repos = repos;
         _userInfo = userInfo;
@@ -40,6 +44,7 @@ public class GameSetupService
         _boardSkinService = boardSkinService;
         _urlLinkService = urlLinkService;
         _blockAndReportService = blockAndReportService;
+        _setupHub = setupHub;
     }
 
 
@@ -176,6 +181,9 @@ public class GameSetupService
         
         await _repos.GetRepository<GamePlayer>()
             .AddAsync(player);
+
+        await _setupHub.Clients.Group(GameSetupHub.GroupName(game.Id))
+            .SendAsync("PlayerJoined", userId);
         return new JoinGameResult(true, GameId: game.Id);
     }
 
@@ -199,8 +207,11 @@ public class GameSetupService
         
         var valid = await _userService.ValidUser(userId);
         if (!valid) return false;
-        
-        return await TryRemovePlayerFromGame(game, userId);
+
+        var removed = await TryRemovePlayerFromGame(game, userId);
+        if (removed)
+            await _setupHub.Clients.User(userId).SendAsync("Kicked");
+        return removed;
     }
 
     private async Task<bool> TryRemovePlayerFromGame(Game game, string userId)
@@ -225,6 +236,9 @@ public class GameSetupService
             
             await _repos.SaveChangesAsync();
             await _repos.CommitTransactionAsync();
+
+            await _setupHub.Clients.Group(GameSetupHub.GroupName(game.Id))
+                .SendAsync("PlayerLeft", userId);
             return true;
         }
         catch (Exception ex)
@@ -264,13 +278,16 @@ public class GameSetupService
         {
             await _repos.GetRepository<GamePlayer>()
                 .UpdateAsync(player);
-            return true;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to set player dice numbers for game {GameId} and user {UserId}", gameId, userId);
             return false;
         }
+
+        await _setupHub.Clients.Group(GameSetupHub.GroupName(gameId))
+            .SendAsync("PlayerDiceSet", userId, dice1, dice2);
+        return true;
     }
 
 
@@ -285,8 +302,12 @@ public class GameSetupService
         var allPlayers = game.Players.Where(p => !p.IsDeleted).ToList();
         if (allPlayers.Count != playerIds.Count || allPlayers.Any(p => !playerIds.Contains(p.UserId)))
             return false;
-        
-        return await TryReorderPlayers(playerIds, allPlayers, true);
+
+        var ok = await TryReorderPlayers(playerIds, allPlayers, true);
+        if (ok)
+            await _setupHub.Clients.Group(GameSetupHub.GroupName(gameId))
+                .SendAsync("SeatOrderChanged", playerIds);
+        return ok;
     }
 
     private async Task<bool> TryReorderPlayers(IEnumerable<string> playerIds, IEnumerable<GamePlayer> allPlayers, bool saveNow)

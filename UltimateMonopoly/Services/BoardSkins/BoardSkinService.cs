@@ -5,9 +5,10 @@ using JC.Core.Services.DataRepositories;
 using JC.Web.UI.Helpers;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
-using UltimateMonopoly.Enums;
+using MP.GameEngine.Enums;
 using UltimateMonopoly.Models;
 using UltimateMonopoly.Models.DataModels.Boards;
+using UltimateMonopoly.Models.ViewModels;
 using UltimateMonopoly.Models.ViewModels.BoardSkins;
 using UltimateMonopoly.Services.GameConfig;
 

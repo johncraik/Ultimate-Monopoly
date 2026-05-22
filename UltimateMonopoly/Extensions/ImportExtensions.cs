@@ -1,4 +1,4 @@
-using UltimateMonopoly.Enums;
+using MP.GameEngine.Enums;
 
 namespace UltimateMonopoly.Extensions;
 

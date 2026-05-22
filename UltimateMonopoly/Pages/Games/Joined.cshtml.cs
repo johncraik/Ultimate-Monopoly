@@ -7,17 +7,17 @@ namespace UltimateMonopoly.Pages.Games;
 
 public class JoinedModel : PageModel
 {
-    private readonly GameListService _gameList;
+    private readonly GameService _game;
 
-    public JoinedModel(GameListService gameList)
+    public JoinedModel(GameService game)
     {
-        _gameList = gameList;
+        _game = game;
     }
 
     public List<GameViewModel> Games { get; private set; } = [];
 
     public async Task OnGetAsync()
     {
-        Games = await _gameList.GetAllGamesJoined();
+        Games = await _game.GetAllGamesJoined();
     }
 }

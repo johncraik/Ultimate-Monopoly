@@ -2,8 +2,9 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using JC.Core.Extensions;
 using JC.Core.Models.Auditing;
-using UltimateMonopoly.Enums;
-using UltimateMonopoly.Helpers;
+using MP.GameEngine.Enums;
+using MP.GameEngine.Enums.Properties;
+using MP.GameEngine.Helpers;
 
 namespace UltimateMonopoly.Models.DataModels.Boards;
 
@@ -25,7 +26,7 @@ public class BoardSkinSpace : AuditModel
     
     public ushort Index { get; private set; }
     public BoardSpaceType SpaceType { get; private set; }
-    public PropertyColour? PropertyColour { get; private set; }
+    public PropertySet? PropertyColour { get; private set; }
 
     public bool SetSpaceProperties(ushort desiredIndex, BoardSpaceType spaceType)
     {
@@ -33,7 +34,7 @@ public class BoardSkinSpace : AuditModel
         //Cannot customise card spaces
         if (index == null || index.Value.IsCard()) return false;
         
-        var colour = PropertyColourHelper.ResolveColour(index.Value);
+        var colour = PropertySetHelper.ResolveColour(index.Value);
         //Prevent setting properties if no colour and is a property:
         if (colour == null && index.Value.IsProperty()) return false;
         

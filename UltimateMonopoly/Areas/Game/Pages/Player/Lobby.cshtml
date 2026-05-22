@@ -5,7 +5,7 @@
 }
 
 <div class="row justify-content-center">
-    <div class="col-md-7 col-lg-5">
+    <div class="col-md-7 col-lg-5" data-lobby data-game-id="@Model.GameId" data-user-id="@Model.UserId">
 
         <div class="text-center mb-4">
             <h1 class="h3 mb-1">@Model.GameName</h1>
@@ -27,14 +27,16 @@
                     <div class="fw-semibold text-truncate fs-5">@Model.Profile?.DisplayName</div>
                     <div class="small text-body-secondary">
                         Dice Numbers:
-                        @if (Model.Dice1 is null || Model.Dice2 is null)
-                        {
-                            <span class="badge text-bg-warning">Not Set</span>
-                        }
-                        else
-                        {
-                            <span class="badge text-bg-secondary">@Model.Dice1 | @Model.Dice2</span>
-                        }
+                        <span data-dice-display>
+                            @if (Model.Dice1 is null || Model.Dice2 is null)
+                            {
+                                <span class="badge text-bg-warning">Not Set</span>
+                            }
+                            else
+                            {
+                                <span class="badge text-bg-secondary">@Model.Dice1 | @Model.Dice2</span>
+                            }
+                        </span>
                     </div>
                 </div>
             </div>
@@ -89,3 +91,7 @@
 
     </div>
 </div>
+
+@section Scripts {
+    <script src="~/scripts/SignalR/game-lobby-hub.js" asp-append-version="true"></script>
+}

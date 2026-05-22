@@ -1,0 +1,48 @@
+@model UltimateMonopoly.Models.ViewModels.PlayerCard
+
+<div class="card player-card @(Model.IsHost ? "border-primary" : "")"
+     data-player-card data-user-id="@Model.Profile.UserId">
+    <div class="card-body d-flex align-items-center gap-3 py-2">
+        <profile-circle user="Model.Profile" size="Md" />
+        <div class="flex-grow-1 min-w-0">
+            <div class="fw-semibold text-truncate">
+                @Model.Profile.DisplayName
+                @if (Model.IsHost)
+                {
+                    <span class="badge text-bg-primary ms-1">Host</span>
+                }
+            </div>
+            <div class="small text-body-secondary">
+                Dice Numbers:
+                <span data-dice-display>
+                    @if (Model.Dice1 is null || Model.Dice2 is null)
+                    {
+                        <span class="badge text-bg-warning">Not Set</span>
+                    }
+                    else
+                    {
+                        <span class="badge text-bg-secondary">@Model.Dice1 | @Model.Dice2</span>
+                    }
+                </span>
+            </div>
+        </div>
+
+        <button type="button" class="btn btn-sm btn-outline-info"
+                data-bs-toggle="modal" data-bs-target="#setDiceModal"
+                data-set-dice
+                data-user-id="@Model.Profile.UserId"
+                data-name="@Model.Profile.DisplayName"
+                data-dice1="@(Model.Dice1?.ToString() ?? string.Empty)"
+                data-dice2="@(Model.Dice2?.ToString() ?? string.Empty)">
+            Set Dice
+        </button>
+
+        @if (!Model.IsHost)
+        {
+            <form method="post" asp-page-handler="Kick" class="m-0">
+                <input type="hidden" name="targetUserId" value="@Model.Profile.UserId" />
+                <button type="submit" class="btn btn-sm btn-outline-danger">Kick</button>
+            </form>
+        }
+    </div>
+</div>

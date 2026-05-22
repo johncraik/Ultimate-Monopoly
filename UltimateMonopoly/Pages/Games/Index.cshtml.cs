@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using UltimateMonopoly.Enums.Games;
+using MP.GameEngine.Enums.Games;
 using UltimateMonopoly.Services.BoardSkins;
 using UltimateMonopoly.Services.Games;
 

@@ -1,6 +1,7 @@
-using UltimateMonopoly.Enums;
+using MP.GameEngine.Enums;
+using MP.GameEngine.Enums.Properties;
+using MP.GameEngine.Helpers;
 using UltimateMonopoly.Extensions;
-using UltimateMonopoly.Helpers;
 using UltimateMonopoly.Models.DataModels.Boards;
 using UltimateMonopoly.Models.ImportModels;
 
@@ -12,7 +13,7 @@ public class BoardSpace
     
     public ushort Index { get; private set; }
     public BoardSpaceType SpaceType { get; private set; }
-    public PropertyColour? PropertyColour { get; private set; }
+    public PropertySet? PropertyColour { get; private set; }
     
     public ushort? PurchaseCost { get; }
     public bool IsPurchasable => PurchaseCost != null && !Index.IsCorner() && !Index.IsCard() && !Index.IsTax();
@@ -67,7 +68,7 @@ public class BoardSpace
         var index = IndexHelper.ResolveIndex(import.Index, (BoardSpaceType)spaceType);
         if (index == null) return false;
         
-        var colour = PropertyColourHelper.ResolveColour(index.Value);
+        var colour = PropertySetHelper.ResolveColour(index.Value);
         if (colour == null && index.Value.IsProperty()) return false;
         
         Index = index.Value;
@@ -104,7 +105,7 @@ public class BoardSpace
                 rentDict.TryAdd(RentLevel.SINGLE, rents[0]);
                 rentDict.TryAdd(RentLevel.DOUBLE, rents[1]);
                 rentDict.TryAdd(RentLevel.TRIPLE, rents[2]);
-                rentDict.TryAdd(RentLevel.QUADRUPLE, rents[3]);
+                rentDict.TryAdd(RentLevel.SET, rents[3]);
                 break;
             case BoardSpaceType.Utility:
                 if(rents.Length != 2) return false;
@@ -112,7 +113,7 @@ public class BoardSpace
                 rents = rents.OrderBy(r => r).ToArray();
                 
                 rentDict.TryAdd(RentLevel.SINGLE, rents[0]);
-                rentDict.TryAdd(RentLevel.DOUBLE, rents[1]);
+                rentDict.TryAdd(RentLevel.SET, rents[1]);
                 break;
             case BoardSpaceType.Tax:
             case BoardSpaceType.Chance:

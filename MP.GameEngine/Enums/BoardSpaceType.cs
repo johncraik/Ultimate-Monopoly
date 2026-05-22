@@ -1,4 +1,4 @@
-namespace UltimateMonopoly.Enums;
+namespace MP.GameEngine.Enums;
 
 public enum BoardSpaceType
 {
@@ -14,3 +14,5 @@ public enum BoardSpaceType
     FreeParking,
     GoToJail
 }
+
+public enum SpaceShape { Rect, Square }

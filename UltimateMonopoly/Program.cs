@@ -10,6 +10,7 @@ using JC.SqlServer.Hangfire;
 using JC.Web.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using JC.Web.Security.Models;
+using UltimateMonopoly.Authorization;
 using UltimateMonopoly.Data;
 using UltimateMonopoly.Extensions;
 using UltimateMonopoly.Hubs;
@@ -77,13 +78,13 @@ builder.Services.AddMessaging<AppDbContext>();
 // Communication — Notifications
 builder.Services.AddNotifications<AppDbContext>();
 
-// Background Jobs — Hangfire
-// builder.Services.AddHangfireSqlServer(builder.Configuration
-//     /*, configureSqlStorage: opts =>
-// {
-//     //TODO Remove:
-//     opts.SqlClientFactory = Microsoft.Data.SqlClient.SqlClientFactory.Instance;
-// }*/);
+//Background Jobs — Hangfire
+builder.Services.AddHangfireSqlServer(builder.Configuration
+    /*, configureSqlStorage: opts =>
+{
+    //TODO Remove:
+    opts.SqlClientFactory = Microsoft.Data.SqlClient.SqlClientFactory.Instance;
+}*/);
 
 builder.Services.AddServices();
 
@@ -95,12 +96,12 @@ app.UseIdentity();
 app.UseWebDefaults();
 app.UseGithubWebhooks();
 
-// Hangfire dashboard — SystemAdmin only
-// app.UseHangfireDashboard("/hangfire", new DashboardOptions
-// {
-//     DashboardTitle = "Ultimate Monopoly — Background Jobs",
-//     Authorization = [new HangfireDashboardAuthFilter()]
-// });
+//Hangfire dashboard — SystemAdmin only
+app.UseHangfireDashboard("/hangfire", new DashboardOptions
+{
+    DashboardTitle = "Ultimate Monopoly — Background Jobs",
+    Authorization = [new HangfireDashboardAuthFilter()]
+});
 
 // Auto-migrate
 await app.Services.MigrateDatabaseAsync<AppDbContext>();
@@ -120,6 +121,7 @@ app.MapGet("/join", () => Results.Redirect("/Games/Join"));
 app.MapRazorPages();
 app.MapControllers();
 app.MapHub<PresenceHub>("/hubs/presence");
+app.MapHub<GameSetupHub>("/hubs/game-setup");
 
 // Profile cookie — 90-day encrypted cookie holding the user's avatar choices
 app.PopulateEncryptedCookieProfiles(

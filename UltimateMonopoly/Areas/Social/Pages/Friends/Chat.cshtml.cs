@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using UltimateMonopoly.Models.ViewModels;
 
 namespace UltimateMonopoly.Areas.Social.Pages.Friends;
 
@@ -41,6 +42,4 @@ public class ChatModel : PageModel
             new(FromMe: false, FriendDisplayName, "👍",                                                            now.AddMinutes(-18))
         ];
     }
-
-    public record ChatMessage(bool FromMe, string AuthorDisplay, string Body, DateTime SentUtc);
 }

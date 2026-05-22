@@ -1,8 +1,8 @@
-using UltimateMonopoly.Enums;
 
-namespace UltimateMonopoly.Helpers;
+using MP.GameEngine.Enums.Properties;
+namespace MP.GameEngine.Helpers;
 
-public static class PropertyColourHelper
+public static class PropertySetHelper
 {
     public static readonly ushort[] BrownPropIndexes = [1, 3];
     public static readonly ushort[] BluePropIndexes = [6, 8, 9];
@@ -12,32 +12,41 @@ public static class PropertyColourHelper
     public static readonly ushort[] YellowPropIndexes = [26, 27, 29];
     public static readonly ushort[] GreenPropIndexes = [31, 32, 34];
     public static readonly ushort[] DarkBluePropIndexes = [37, 39];
+    
+    public static readonly ushort[] StationIndexes = [5, 15, 25, 35];
+    public static readonly ushort[] UtilityIndexes = [12, 28];
 
-    public static PropertyColour? ResolveColour(ushort index)
+    public static PropertySet? ResolveColour(ushort index)
     {
         if (BrownPropIndexes.Contains(index))
-            return PropertyColour.Brown;
+            return PropertySet.Brown;
         
         if (BluePropIndexes.Contains(index))
-            return PropertyColour.Blue;
+            return PropertySet.Blue;
 
         if (PinkPropIndexes.Contains(index))
-            return PropertyColour.Pink;
+            return PropertySet.Pink;
 
         if (OrangePropIndexes.Contains(index))
-            return PropertyColour.Orange;
+            return PropertySet.Orange;
 
         if (RedPropIndexes.Contains(index))
-            return PropertyColour.Red;
+            return PropertySet.Red;
         
         if (YellowPropIndexes.Contains(index))
-            return PropertyColour.Yellow;
+            return PropertySet.Yellow;
         
         if (GreenPropIndexes.Contains(index))
-            return PropertyColour.Green;
+            return PropertySet.Green;
         
         if (DarkBluePropIndexes.Contains(index))
-            return PropertyColour.DarkBlue;
+            return PropertySet.DarkBlue;
+        
+        if(StationIndexes.Contains(index))
+            return PropertySet.Station;
+        
+        if(UtilityIndexes.Contains(index))
+            return PropertySet.Utility;
         
         return null;
     }

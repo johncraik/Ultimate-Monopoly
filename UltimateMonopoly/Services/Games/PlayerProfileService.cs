@@ -3,7 +3,7 @@ using JC.Core.Extensions;
 using JC.Core.Models;
 using JC.Core.Services.DataRepositories;
 using Microsoft.EntityFrameworkCore;
-using UltimateMonopoly.Enums.Games;
+using MP.GameEngine.Enums.Games;
 using UltimateMonopoly.Models.DataModels.Games;
 
 namespace UltimateMonopoly.Services.Games;

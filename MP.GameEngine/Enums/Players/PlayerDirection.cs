@@ -1,4 +1,4 @@
-namespace UltimateMonopoly.Enums.Players;
+namespace MP.GameEngine.Enums.Players;
 
 public enum PlayerDirection
 {

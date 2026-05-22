@@ -5,6 +5,8 @@ using JC.Web.UI.HTML;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using UltimateMonopoly.Models.DataModels.Games;
+using UltimateMonopoly.Models.ViewModels;
 using UltimateMonopoly.Models.ViewModels.Social;
 using UltimateMonopoly.Services;
 using UltimateMonopoly.Services.Games;
@@ -30,13 +32,10 @@ public class SetupModel : PageModel
         _userInfo = userInfo;
     }
 
-    public record PlayerCard(ushort OrderId, UserProfileViewModel Profile, ushort? Dice1, ushort? Dice2, bool IsHost);
-
     public string GameId { get; private set; } = string.Empty;
     public string GameName { get; private set; } = string.Empty;
     public string RoundingRuleText { get; private set; } = string.Empty;
     public string BoardName { get; private set; } = "Default board";
-    public bool ViewerIsHost { get; private set; }
     public string JoinQrSvg { get; private set; } = string.Empty;
     public string JoinCode { get; private set; } = string.Empty;
     public List<PlayerCard> Players { get; private set; } = [];
@@ -48,6 +47,18 @@ public class SetupModel : PageModel
 
     public async Task<IActionResult> OnGetAsync(string id)
         => await LoadAsync(id) ? Page() : NotFound();
+
+    public async Task<IActionResult> OnGetPlayerCardAsync(string id, string userId)
+    {
+        var game = await _gameSetup.GetSetupGame(id);
+        if (game is null) return NotFound();
+
+        var player = game.Players.FirstOrDefault(p => !p.IsDeleted && p.UserId == userId);
+        if (player is null) return NotFound();
+
+        var card = await BuildCard(player, game.CreatedById);
+        return card is null ? NotFound() : Partial("_PlayerCard", card);
+    }
 
     public async Task<IActionResult> OnPostKickAsync(string id, string targetUserId)
     {
@@ -99,7 +110,6 @@ public class SetupModel : PageModel
         RoundingRuleText = game.RoundingRule.GetDescription();
         BoardName = game.BoardSkin?.Name ?? "Default board";
         JoinCode = game.JoinCode;
-        ViewerIsHost = game.CreatedById == _userInfo.UserId;
 
         var players = game.Players
             .Where(p => !p.IsDeleted)
@@ -108,14 +118,21 @@ public class SetupModel : PageModel
 
         foreach (var p in players)
         {
-            var profile = await _profiles.GetUserProfileViewModelAsync(p.UserId);
-            if (profile is null) continue;
-            Players.Add(new PlayerCard(p.OrderId, profile, p.Dice1, p.Dice2, p.UserId == game.CreatedById));
+            var card = await BuildCard(p, game.CreatedById);
+            if (card is not null) Players.Add(card);
         }
 
         var joinLink = _urlLinks.GetUrlLink($"/Game/Setup/{game.Id}");
         JoinQrSvg = new QrCodeHelper(QrCodeFormat.Svg, 10).GenerateQrCode(joinLink);
 
         return true;
+    }
+
+    private async Task<PlayerCard?> BuildCard(GamePlayer player, string hostUserId)
+    {
+        var profile = await _profiles.GetUserProfileViewModelAsync(player.UserId);
+        return profile is null
+            ? null
+            : new PlayerCard(player.OrderId, profile, player.Dice1, player.Dice2, player.UserId == hostUserId);
     }
 }

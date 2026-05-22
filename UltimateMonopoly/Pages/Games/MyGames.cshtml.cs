@@ -7,18 +7,18 @@ namespace UltimateMonopoly.Pages.Games;
 
 public class MyGamesModel : PageModel
 {
-    private readonly GameListService _gameList;
+    private readonly GameService _game;
 
-    public MyGamesModel(GameListService gameList)
+    public MyGamesModel(GameService game)
     {
-        _gameList = gameList;
+        _game = game;
     }
 
     public List<GameViewModel> Games { get; private set; } = [];
 
     public async Task OnGetAsync()
     {
-        Games = await _gameList.GetAllMyGames();
+        Games = await _game.GetAllMyGames();
     }
 
     public IActionResult OnPostDelete(string gameId)
