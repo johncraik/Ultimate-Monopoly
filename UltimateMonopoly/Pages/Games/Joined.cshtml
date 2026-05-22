@@ -4,9 +4,12 @@
     ViewData["Title"] = "Joined Games";
 }
 
-<div class="mb-4">
-    <h1 class="mb-1">Joined Games</h1>
-    <p class="text-body-secondary mb-0">Games you're a player in.</p>
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+    <div>
+        <h1 class="mb-1">Joined Games</h1>
+        <p class="text-body-secondary mb-0">Games you're a player in.</p>
+    </div>
+    <a asp-page="/Games/MyGames" class="btn btn-outline-primary">View My Games</a>
 </div>
 
 <partial name="_GameTabs" model="Model.Games" />

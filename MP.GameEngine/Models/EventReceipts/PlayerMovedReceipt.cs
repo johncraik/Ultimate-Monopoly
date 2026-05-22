@@ -1,6 +1,6 @@
 using MP.GameEngine.Enums.Players;
 
-namespace MP.GameEngine.Models.MidTurn;
+namespace MP.GameEngine.Models.EventReceipts;
 
 public class PlayerMovedReceipt : EventReceipt
 {

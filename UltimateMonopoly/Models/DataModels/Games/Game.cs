@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using MP.GameEngine.Enums.Games;
 using MP.GameEngine.Models.Boards;
 using UltimateMonopoly.Models.DataModels.Boards;
-using UltimateMonopoly.Services.GameConfig;
+using UltimateMonopoly.Services.Cache;
 
 namespace UltimateMonopoly.Models.DataModels.Games;
 
@@ -79,7 +79,7 @@ public class Game : AuditModel
     public async Task SetBoard(BoardCacheService cache)
     {
         var boards = await cache.GetAllBoards();
-        var board = boards.FirstOrDefault(b => b.SkinId == BoardId);
+        var board = boards.FirstOrDefault(b => b.BoardId == BoardId);
         if(!string.IsNullOrEmpty(BoardId) && board == null)
             throw new InvalidOperationException("Board not found");
         

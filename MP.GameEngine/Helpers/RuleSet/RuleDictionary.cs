@@ -1,4 +1,4 @@
-namespace UltimateMonopoly.Helpers.RuleSet;
+namespace MP.GameEngine.Helpers.RuleSet;
 
 public static class RuleDictionary
 {

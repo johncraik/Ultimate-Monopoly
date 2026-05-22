@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using JC.Core.Models.Auditing;
 using Microsoft.EntityFrameworkCore;
-using UltimateMonopoly.Helpers.RuleSet;
+using MP.GameEngine.Helpers.RuleSet;
 
 namespace UltimateMonopoly.Models.DataModels.Games;
 

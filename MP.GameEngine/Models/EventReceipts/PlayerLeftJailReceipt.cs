@@ -1,4 +1,4 @@
-namespace MP.GameEngine.Models.MidTurn;
+namespace MP.GameEngine.Models.EventReceipts;
 
 public class PlayerLeftJailReceipt : EventReceipt
 {

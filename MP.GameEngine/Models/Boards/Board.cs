@@ -1,8 +1,8 @@
 namespace MP.GameEngine.Models.Boards;
 
-public class Board(string name, List<BoardSpace> spaces, string? skinId = null)
+public class Board(string name, List<BoardSpace> spaces, string? boardId = null)
 {
-    public string? SkinId { get; } = skinId;
+    public string? BoardId { get; } = boardId;
     public string Name { get; } = name;
     public List<BoardSpace> Spaces { get; } = spaces;
 }

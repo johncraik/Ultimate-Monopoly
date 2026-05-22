@@ -4,7 +4,7 @@ using Microsoft.Extensions.Caching.Memory;
 using MP.GameEngine.Models.Boards;
 using UltimateMonopoly.Services.Imports;
 
-namespace UltimateMonopoly.Services.GameConfig;
+namespace UltimateMonopoly.Services.Cache;
 
 public class BoardCacheService
 {

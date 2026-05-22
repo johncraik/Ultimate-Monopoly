@@ -1,6 +1,6 @@
 using MP.GameEngine.Enums;
 
-namespace MP.GameEngine.Models.MidTurn;
+namespace MP.GameEngine.Models.EventReceipts;
 
 public class FinancialTransactionReceipt : EventReceipt
 {

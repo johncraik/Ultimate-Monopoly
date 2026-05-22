@@ -22,6 +22,28 @@
     const notify = (message, type) =>
         window.showFloatingAlert && window.showFloatingAlert(message, type);
 
+    function lockDownPage() {
+        document.querySelectorAll('button, input[type="submit"]').forEach(el => el.disabled = true);
+        document.addEventListener('submit', e => e.preventDefault(), true);
+        connection.stop().catch(() => { /* already tearing down */ });
+    }
+
+    function showBlockingAlert(message) {
+        const overlay = document.createElement('div');
+        overlay.className = 'position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center';
+        overlay.style.zIndex = '2000';
+        overlay.style.background = 'rgba(0, 0, 0, 0.6)';
+
+        const box = document.createElement('div');
+        box.className = 'alert alert-warning shadow-lg text-center fs-5 m-4 px-4 py-4';
+        box.style.maxWidth = '420px';
+        box.setAttribute('role', 'alert');
+        box.textContent = message;
+
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+    }
+
     connection.on('PlayerDiceSet', (changedUserId, dice1, dice2) => {
         if (changedUserId !== userId) return;
 
@@ -37,7 +59,8 @@
     });
 
     connection.on('Kicked', () => {
-        notify('You have been removed from the game.', 'warning');
+        lockDownPage();
+        showBlockingAlert('You have been removed from the game.');
         setTimeout(() => { window.location.href = '/'; }, 3000);
     });
 

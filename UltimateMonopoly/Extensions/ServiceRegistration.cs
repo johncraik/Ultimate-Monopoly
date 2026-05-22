@@ -6,8 +6,8 @@ using UltimateMonopoly.Models.DataModels.Games;
 using UltimateMonopoly.Models.DataModels.Social;
 using UltimateMonopoly.Services;
 using UltimateMonopoly.Services.BoardSkins;
+using UltimateMonopoly.Services.Cache;
 using UltimateMonopoly.Services.Friends;
-using UltimateMonopoly.Services.GameConfig;
 using UltimateMonopoly.Services.Games;
 using UltimateMonopoly.Services.Imports;
 

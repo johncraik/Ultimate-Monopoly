@@ -2,7 +2,7 @@ using Microsoft.Extensions.Caching.Memory;
 using MP.GameEngine.Models;
 using UltimateMonopoly.Services.Games;
 
-namespace UltimateMonopoly.Services.GameConfig;
+namespace UltimateMonopoly.Services.Cache;
 
 public class GameCacheService
 {

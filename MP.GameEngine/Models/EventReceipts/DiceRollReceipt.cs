@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace MP.GameEngine.Models.MidTurn;
+namespace MP.GameEngine.Models.EventReceipts;
 
 public class DiceRollReceipt : EventReceipt
 {

@@ -15,7 +15,7 @@ using UltimateMonopoly.Data;
 using UltimateMonopoly.Extensions;
 using UltimateMonopoly.Hubs;
 using UltimateMonopoly.Services;
-using UltimateMonopoly.Services.GameConfig;
+using UltimateMonopoly.Services.Cache;
 
 var builder = WebApplication.CreateBuilder(args);
 

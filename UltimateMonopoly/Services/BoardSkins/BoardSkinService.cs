@@ -10,7 +10,7 @@ using MP.GameEngine.Models.Boards;
 using UltimateMonopoly.Models.DataModels.Boards;
 using UltimateMonopoly.Models.ViewModels;
 using UltimateMonopoly.Models.ViewModels.BoardSkins;
-using UltimateMonopoly.Services.GameConfig;
+using UltimateMonopoly.Services.Cache;
 
 namespace UltimateMonopoly.Services.BoardSkins;
 
@@ -46,7 +46,7 @@ public class BoardSkinService
         else
         {
             var allBoards = await _boardCacheService.GetAllBoards();
-            var b = allBoards.FirstOrDefault(b => string.Equals(b.SkinId, id, StringComparison.OrdinalIgnoreCase));
+            var b = allBoards.FirstOrDefault(b => string.Equals(b.BoardId, id, StringComparison.OrdinalIgnoreCase));
             if (b == null) return null;
 
             fullBoard = b;

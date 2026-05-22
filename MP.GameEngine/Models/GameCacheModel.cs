@@ -1,5 +1,5 @@
 using MP.GameEngine.Models.Boards;
-using MP.GameEngine.Models.MidTurn;
+using MP.GameEngine.Models.EventReceipts;
 using MP.GameEngine.Models.Snapshot;
 
 namespace MP.GameEngine.Models;

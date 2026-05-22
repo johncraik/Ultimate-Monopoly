@@ -1,8 +1,8 @@
 using MP.GameEngine.Enums.Cards;
 
-namespace MP.GameEngine.Models.MidTurn;
+namespace MP.GameEngine.Models.EventReceipts;
 
-public class CardTakenReceipt : EventReceipt
+public class CardPlayedReceipt : EventReceipt
 {
     public CardType CardType { get; set; }
     
