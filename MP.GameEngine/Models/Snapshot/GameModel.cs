@@ -5,9 +5,9 @@ namespace MP.GameEngine.Models.Snapshot;
 public class GameModel
 {
     /// <summary>
-    /// This stores information about the game that can be traced back to database models
+    /// This stores information about the turn that can be traced back to database models
     /// </summary>
-    public GameMetadata Metadata { get; set; }
+    public TurnMetadata Metadata { get; set; }
 
     public bool ReserveRuleActive { get; set; }
     public uint FreeParkingAmount { get; set; }
@@ -34,7 +34,7 @@ public class GameModel
 
     public GameModel(GameModel model)
     {
-        Metadata = new GameMetadata(model.Metadata);
+        Metadata = new TurnMetadata(model.Metadata);
         
         ReserveRuleActive = model.ReserveRuleActive;
         FreeParkingAmount = model.FreeParkingAmount;

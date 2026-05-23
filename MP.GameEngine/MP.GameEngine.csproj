@@ -8,12 +8,10 @@
 
     <ItemGroup>
       <Folder Include="Abstractions\" />
+      <Folder Include="Services\Framework\" />
     </ItemGroup>
-
     <ItemGroup>
-      <Reference Include="JC.Core">
-        <HintPath>..\..\JC.Core.dll</HintPath>
-      </Reference>
+      <PackageReference Include="JC.Core" Version="3.6.1" />
     </ItemGroup>
 
 </Project>

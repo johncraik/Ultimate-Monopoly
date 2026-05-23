@@ -66,7 +66,7 @@ public class BoardSpace
         var index = IndexHelper.ResolveIndex(import.Index, (BoardSpaceType)spaceType);
         if (index == null) return false;
         
-        var colour = PropertySetHelper.ResolveColour(index.Value);
+        var colour = PropertySetHelper.ResolveSet(index.Value);
         if (colour == null && index.Value.IsProperty()) return false;
         
         Index = index.Value;

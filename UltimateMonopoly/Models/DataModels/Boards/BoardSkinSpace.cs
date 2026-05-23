@@ -34,7 +34,7 @@ public class BoardSkinSpace : AuditModel
         //Cannot customise card spaces
         if (index == null || index.Value.IsCard()) return false;
         
-        var colour = PropertySetHelper.ResolveColour(index.Value);
+        var colour = PropertySetHelper.ResolveSet(index.Value);
         //Prevent setting properties if no colour and is a property:
         if (colour == null && index.Value.IsProperty()) return false;
         

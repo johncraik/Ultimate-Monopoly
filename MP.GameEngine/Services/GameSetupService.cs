@@ -23,37 +23,29 @@ public class GameSetupService
     {
         var gameModel = new GameModel
         {
-            Metadata = new GameMetadata
+            Metadata = new TurnMetadata
             {
-                GameId = gameDto.Id,
-                GameName = gameDto.Name,
-                RoundingRule = gameDto.RoundingRule,
-                BoardId = board.BoardId,
-                GameState = gameDto.State,
-                GameOutcome = gameDto.Outcome,
-                
                 CurrentTurnId = turnDto.Id,
                 CurrentPlayerId = turnDto.PlayerId,
                 TurnNumber = turnDto.TurnNumber
-            }
+            },
+            Players = _playerService.GetPlayers(playerDtos),
+            Properties = _propertyService.GetProperties(board)
         };
 
-        gameModel.Players = _playerService.GetPlayers(playerDtos);
-        gameModel.Properties = _propertyService.GetProperties(board);
-        
         //TODO Load cards!
         
-        return SetupGameCache(gameModel, board);
+        return SetupGameCache(gameDto, gameModel, board);
     }
 
-    public GameCacheModel SetupGameCache(string snapshotJson, Board board)
+    public GameCacheModel SetupGameCache(GameDTO gameDto, string snapshotJson, Board board)
     {
         var gameModel = JsonSerializer.Deserialize<GameModel>(snapshotJson);
         return gameModel == null 
             ? throw new ArgumentException("Invalid game snapshot JSON") 
-            : SetupGameCache(gameModel, board);
+            : SetupGameCache(gameDto, gameModel, board);
     }
     
-    private GameCacheModel SetupGameCache(GameModel gameModel, Board board)
-        => new GameCacheModel(gameModel, board);
+    private GameCacheModel SetupGameCache(GameDTO gameDto, GameModel gameModel, Board board)
+        => new GameCacheModel(gameDto, gameModel, board);
 }

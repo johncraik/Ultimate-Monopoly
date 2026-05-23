@@ -16,7 +16,7 @@ public static class PropertySetHelper
     public static readonly ushort[] StationIndexes = [5, 15, 25, 35];
     public static readonly ushort[] UtilityIndexes = [12, 28];
 
-    public static PropertySet? ResolveColour(ushort index)
+    public static PropertySet? ResolveSet(ushort index)
     {
         if (BrownPropIndexes.Contains(index))
             return PropertySet.Brown;

@@ -1,10 +1,13 @@
+using MP.GameEngine.Enums.Games;
 using MP.GameEngine.Models.Boards;
+using MP.GameEngine.Models.DTOs;
 using MP.GameEngine.Models.EventReceipts;
+using MP.GameEngine.Models.Prompts;
 using MP.GameEngine.Models.Snapshot;
 
 namespace MP.GameEngine.Models;
 
-public class GameCacheModel(GameModel game, Board board)
+public class GameCacheModel(GameDTO gameDto, GameModel game, Board board)
 {
     public string ConcurrencyStamp { get; private set; } = Guid.NewGuid().ToString();
     
@@ -30,7 +33,27 @@ public class GameCacheModel(GameModel game, Board board)
     public IReadOnlyList<EventReceipt> Events => _events;
 
 
-    public void StampConcurrency()
+    /// <summary>
+    /// The open prompt the engine is currently awaiting a response for, if any.
+    /// Singular by design — at most one prompt is open at any moment. In-memory
+    /// only; does not survive a server restart. See <c>design-docs/choice-events.md</c>.
+    /// </summary>
+    public PendingPrompt? PendingPrompt { get; private set; }
+
+
+    //Game Metadata
+    public string GameId { get; } = gameDto.Id;
+    public string GameName { get; } = gameDto.Name;
+    public string? BoardId { get; } = gameDto.BoardId;
+    public string HostPlayerId { get; } = gameDto.HostPlayerId;
+    
+    public GameRoundingRule RoundingRule { get; } = gameDto.RoundingRule;
+        
+    public GameState GameState { get; } = gameDto.State;
+    public GameOutcome? GameOutcome { get; } = gameDto.Outcome;
+
+
+    private void StampConcurrency()
     {
         ConcurrencyStamp = Guid.NewGuid().ToString();
     }
@@ -59,6 +82,24 @@ public class GameCacheModel(GameModel game, Board board)
     public void AddEvent(EventReceipt eventReceipt)
     {
         _events.Add(eventReceipt);
+        StampConcurrency();
+    }
+
+    public void SetPendingPrompt(PendingPrompt pending)
+    {
+        if (PendingPrompt is not null)
+            throw new InvalidOperationException(
+                "A prompt is already pending. Resolve or clear the current prompt before opening another.");
+
+        PendingPrompt = pending;
+        StampConcurrency();
+    }
+
+    public void ClearPendingPrompt()
+    {
+        if (PendingPrompt is null) return;
+
+        PendingPrompt = null;
         StampConcurrency();
     }
 }
