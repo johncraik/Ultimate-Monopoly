@@ -4,7 +4,7 @@ public static class RuleDictionary
 {
     public const string GameName = "Monopoly: Property Pandamonium";
     public const ushort MinimumPlayers = 2;
-    public const ushort MaximumPlayers = 8;
+    public const ushort MaximumPlayers = 6;
     
     public const ushort StartingMoney = 1500;
     

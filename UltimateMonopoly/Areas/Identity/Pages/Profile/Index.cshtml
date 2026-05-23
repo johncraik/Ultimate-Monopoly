@@ -7,6 +7,7 @@
     string PaneClass(string name) => Model.Tab == name ? "tab-pane fade show active" : "tab-pane fade";
 
     var avatarBg = string.IsNullOrEmpty(Model.Input.AvatarColour) ? "var(--bs-dark)" : Model.Input.AvatarColour;
+    var pickerValue = string.IsNullOrEmpty(Model.Input.AvatarColour) ? "#212529" : Model.Input.AvatarColour;
 }
 
 <div class="d-flex align-items-center flex-wrap gap-3 mb-4">
@@ -100,7 +101,7 @@
                                              mode="Picker"
                                              inline="true"
                                              showButtons="false"
-                                             value="@avatarBg"
+                                             value="@pickerValue"
                                              change="onColourChange"></ejs-colorpicker>
                         </div>
                         <div class="col d-flex flex-row flex-md-column align-items-center justify-content-center gap-3">

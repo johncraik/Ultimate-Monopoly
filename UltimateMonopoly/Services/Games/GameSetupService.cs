@@ -26,6 +26,7 @@ public class GameSetupService
     private readonly UrlLinkService _urlLinkService;
     private readonly BlockAndReportService _blockAndReportService;
     private readonly IHubContext<GameSetupHub> _setupHub;
+    private readonly FriendService _friendService;
 
 
     public GameSetupService(IRepositoryManager repos,
@@ -35,7 +36,8 @@ public class GameSetupService
         BoardSkinService boardSkinService,
         UrlLinkService urlLinkService,
         BlockAndReportService blockAndReportService,
-        IHubContext<GameSetupHub> setupHub)
+        IHubContext<GameSetupHub> setupHub,
+        FriendService friendService)
     {
         _repos = repos;
         _userInfo = userInfo;
@@ -45,6 +47,7 @@ public class GameSetupService
         _urlLinkService = urlLinkService;
         _blockAndReportService = blockAndReportService;
         _setupHub = setupHub;
+        _friendService = friendService;
     }
 
 
@@ -171,6 +174,9 @@ public class GameSetupService
         
         if (allPlayers.Count >= RuleDictionary.MaximumPlayers) 
             return new JoinGameResult(false, "Game is full");
+        
+        var areFriends = await _friendService.AreFriends(userId, game.CreatedById);
+        if (!areFriends) return new JoinGameResult(false, "Unable to join game");
         
         var anyBlocks = await _blockAndReportService.CheckIfBlocksExist(userId, allPlayers.Select(p => p.UserId));
         if (anyBlocks) return new JoinGameResult(false, "Unable to join game");
