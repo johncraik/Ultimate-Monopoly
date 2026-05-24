@@ -14,8 +14,5 @@ namespace MP.GameEngine.Models.Prompts.PromptTypes;
 /// </remarks>
 public sealed class AcknowledgePrompt : Prompt<AcknowledgeResponse>
 {
-    /// <summary>The player being notified — the named target who taps OK.</summary>
-    public string PlayerId { get; init; } = "";
-
     public override PromptTarget Target => PromptTarget.SinglePlayer(PlayerId);
 }

@@ -150,7 +150,8 @@ mirroring the existing `EventReceipt` setup.
 public abstract class Prompt
 {
     public string PromptId { get; init; } = Guid.NewGuid().ToString();
-    public abstract PromptTarget Target { get; }
+    public string PlayerId { get; init; } = "";       // subject — see note below
+    public abstract PromptTarget Target { get; }       // audience — distinct from subject
     public TimeSpan? Timeout { get; init; }            // advisory — see §10
     public PromptResponse? DefaultResponse { get; init; }
     public string Title { get; init; } = "";          // every prompt has these
@@ -188,11 +189,10 @@ A choice prompt:
 ```csharp
 public sealed class AcquirePropertyPrompt : Prompt<AcquirePropertyResponse>
 {
-    public string PlayerId { get; init; } = "";
     public ushort BoardIndex { get; init; }
     public uint Cost { get; init; }
     public override PromptTarget Target => PromptTarget.SinglePlayer(PlayerId);
-    // Title/Body inherited from the Prompt base.
+    // PlayerId / Title / Body inherited from the Prompt base.
 }
 
 public sealed class AcquirePropertyResponse : PromptResponse
@@ -206,9 +206,8 @@ An acknowledgement prompt:
 ```csharp
 public sealed class AcknowledgePrompt : Prompt<AcknowledgeResponse>
 {
-    public string PlayerId { get; init; } = "";
     public override PromptTarget Target => PromptTarget.SinglePlayer(PlayerId);
-    // Title/Body inherited.
+    // PlayerId / Title / Body inherited.
 }
 
 public sealed class AcknowledgeResponse : PromptResponse { }   // intentionally empty
@@ -219,7 +218,6 @@ An input prompt:
 ```csharp
 public sealed class DiceRollPrompt : Prompt<DiceRollResponse>
 {
-    public string PlayerId { get; init; } = "";
     public ushort DiceCount { get; init; }               // 1, 2, or 3
     public override PromptTarget Target => PromptTarget.SinglePlayer(PlayerId);
 }
@@ -231,6 +229,16 @@ public sealed class DiceRollResponse : PromptResponse
     public ushort? ThirdDie { get; init; }               // populated when DiceCount == 3
 }
 ```
+
+**`PlayerId` on the base — subject, not audience.** Every prompt carries a
+`PlayerId`: the player the prompt is *about*. For single-player prompts
+(everything but `InterruptibleWindowPrompt`) the subject also happens to be
+the audience, and `Target` is just `SinglePlayer(PlayerId)`. For
+group-targeted prompts the subject and audience diverge — on
+`InterruptibleWindowPrompt`, `PlayerId` is the player whose card play the
+window is interrupting, while `Target` is the group of eligible responders
+derived from `EligiblePlays`. Authorisation is enforced by the validator
+against the response and the cache, not by either field.
 
 The host identity is not carried on any prompt — it lives on
 `GameCacheModel.HostPlayerId` (sourced from the game's DTO). The validator
@@ -671,9 +679,13 @@ The card-interrupt pattern. See §9 for the full design discussion.
 
 **Prompt fields**
 
+- `PlayerId` (inherited) — the *initiator* of the play this window is
+  interrupting (the card-player whose play is on the line). Subject of the
+  prompt, distinct from the audience. Useful for rendering ("Player X
+  played card Y — anyone NOPE?").
 - `EligiblePlays: IReadOnlyList<EligibleCardPlay>` — the `(PlayerId, CardId,
   CardName)` triplets that may be submitted as `PlayCard` responses.
-- `Title`, `Body` — inherited from the `Prompt` base.
+- `Title`, `Body` (inherited) — from the `Prompt` base.
 
 **Response payload**
 
@@ -705,8 +717,8 @@ case 1.
 
 **Prompt fields**
 
-- `PlayerId` — the named target who taps OK.
-- `Title`, `Body` — inherited from the `Prompt` base.
+- `PlayerId` (inherited) — the named target who taps OK.
+- `Title`, `Body` (inherited) — from the `Prompt` base.
 
 **Response payload**
 
@@ -733,10 +745,10 @@ the four prompt shapes named in §3 (input).
 
 **Prompt fields**
 
-- `PlayerId` — the player rolling.
+- `PlayerId` (inherited) — the player rolling.
 - `DiceCount: ushort` — how many dice to enter; must be 1, 2, or 3. The
   response must populate exactly that many of `Die1` / `Die2` / `ThirdDie`.
-- `Title`, `Body` — inherited from the `Prompt` base.
+- `Title`, `Body` (inherited) — from the `Prompt` base.
 
 **Response payload**
 
@@ -780,13 +792,13 @@ response branches on game state to either `MarkPropertyOwned` or
 
 **Prompt fields**
 
-- `PlayerId` — the lander.
+- `PlayerId` (inherited) — the lander.
 - `BoardIndex: ushort` — the property's board index. Set/colour resolves via
   `PropertySetHelper.ResolveColour(ushort)`.
 - `Cost: uint` — what the lander would pay for the offered action (full price
   for a buy, half price for a reserve). The engine computes this; the
   framework does not interpret it.
-- `Title`, `Body` — inherited from the `Prompt` base.
+- `Title`, `Body` (inherited) — from the `Prompt` base.
 
 **Response payload**
 
@@ -807,6 +819,220 @@ the lander's behalf via the tablet).
   lives in the engine's local state when constructing the prompt and again
   when handling the response. Title/Body carry whatever the player needs to
   see ("Reserve Pall Mall for £70 — completes pink set").
+
+### 15.5 `TargetPlayerPrompt` — *implemented*
+
+Generic player selector. Reused by any engine path that needs the chooser
+to pick one or more players — card effects, deal initiation, etc. The
+framework deliberately does not describe the intent; the call site sets
+`Title` / `Body` and `Count`. `Count` is fixed by the caller, not offered
+as a range — the player never decides how many to pick. Where two cards in
+the same deck differ in how many targets they affect (e.g. one card
+targets one player, another targets two), they remain separate cards with
+their own fixed counts; each card's handler opens this prompt with its
+own concrete `Count`.
+
+|  |  |
+|---|---|
+| Discriminator | `TargetPlayer` |
+| Target | Single player (`PlayerId`) |
+| Timeout | Caller-controlled |
+| Response | `TargetPlayerResponse` |
+| Files | `Models/Prompts/PromptTypes/TargetPlayerPrompt.cs`, `Models/Prompts/PromptTypes/Responses/TargetPlayerResponse.cs` |
+
+**Prompt fields**
+
+- `PlayerId` (inherited) — the chooser.
+- `EligiblePlayerIds: IReadOnlyList<string>` — the candidate set the chooser
+  must pick from. The engine populates this per context.
+- `Count: ushort` — how many players must be selected. Fixed by the caller.
+- `Title`, `Body` (inherited) — from the `Prompt` base.
+
+**Response payload**
+
+- `SelectedPlayerIds: IReadOnlyList<string>` — must have length `Count`,
+  every id in `EligiblePlayerIds`, and no duplicates.
+
+**Authorisation**
+
+Submitter must equal `PlayerId` or `cache.HostPlayerId` (host can submit on
+the chooser's behalf via the tablet).
+
+### 15.6 `TargetPropertyPrompt` — *implemented*
+
+Generic property selector. Reused for any property-pick context —
+mortgaging to cover a shortfall, selling a building, handing a property into
+Free Parking, choosing which of an opponent's properties to purge, and so
+on. Same intent-agnostic shape as `TargetPlayerPrompt`.
+
+|  |  |
+|---|---|
+| Discriminator | `TargetProperty` |
+| Target | Single player (`PlayerId`) |
+| Timeout | Caller-controlled |
+| Response | `TargetPropertyResponse` |
+| Files | `Models/Prompts/PromptTypes/TargetPropertyPrompt.cs`, `Models/Prompts/PromptTypes/Responses/TargetPropertyResponse.cs` |
+
+**Prompt fields**
+
+- `PlayerId` (inherited) — the chooser.
+- `EligibleBoardIndexes: IReadOnlyList<ushort>` — the candidate set, by
+  `PropertyModel.BoardIndex`. The engine populates per context (e.g. for
+  mortgaging, only the player's currently unmortgaged properties).
+- `Count: ushort` — how many properties must be selected. Fixed by the
+  caller. For actions that need per-step rule re-evaluation (selling a
+  building one at a time so each sale runs through the even-building rule,
+  for example), the engine loops with `Count = 1` and re-derives the
+  eligible set each iteration.
+- `Title`, `Body` (inherited) — from the `Prompt` base.
+
+**Response payload**
+
+- `SelectedBoardIndexes: IReadOnlyList<ushort>` — must have length `Count`,
+  every index in `EligibleBoardIndexes`, and no duplicates.
+
+**Authorisation**
+
+Submitter must equal `PlayerId` or `cache.HostPlayerId`.
+
+### 15.7 `ShortfallPrompt` — *implemented*
+
+Opens when the engine has computed a payment the player cannot meet from
+their cash on hand. The response is a single `ShortfallAction` — the
+player's chosen way to raise the balance (loan, mortgage, sell buildings,
+propose a settling deal) or to surrender (declare bankruptcy). See
+`game-rules.md` Default rule 7, Loans, Mortgaging, Bankruptcy.
+
+|  |  |
+|---|---|
+| Discriminator | `Shortfall` |
+| Target | Single player (`PlayerId`) |
+| Timeout | Caller-controlled |
+| Response | `ShortfallResponse` |
+| Files | `Models/Prompts/PromptTypes/ShortfallPrompt.cs`, `Models/Prompts/PromptTypes/Responses/ShortfallResponse.cs` |
+
+**Prompt fields**
+
+- `PlayerId` (inherited) — the player who owes the money.
+- `Cost: uint` — the total amount the player has to pay.
+- `PlayerBalance: uint` — the player's available cash at the moment the
+  shortfall is computed.
+- `AmountOwed: uint` — computed as `Cost - PlayerBalance`. Get-only:
+  serialised on the way out so the frontend receives the shortfall
+  pre-computed, skipped on deserialisation so tampered values can't poison
+  the prompt (the server always re-derives from `Cost` and `PlayerBalance`).
+- `OwedToPlayerId: string?` — the creditor, if the debt is owed to another
+  player. `null` when the debt is owed to the bank, in which case
+  `ProposeDeal` is not a valid response.
+- `Title`, `Body` (inherited) — from the `Prompt` base.
+
+**Response payload**
+
+- `Action: ShortfallAction` — one of `TakeLoan` / `Mortgage` /
+  `SellHouses` / `ProposeDeal` / `DeclareBankruptcy`.
+
+**Authorisation and validation**
+
+- Submitter must equal `PlayerId` or `cache.HostPlayerId`.
+- `ProposeDeal` is rejected when `OwedToPlayerId` is `null` — settling-deal
+  semantics require a creditor to deal with.
+- Other actions are accepted at the framework level. The engine is
+  responsible for handling whether the chosen path is actually achievable
+  (sufficient buildings to sell, loan slots available, etc.) and for
+  re-opening the prompt if the player is still short afterwards.
+
+**Notes**
+
+- The deal-proposal flow itself (offer items, accept / reject / counter,
+  debt-cancellation semantics) is a separate sub-system not yet designed.
+  Until it lands, `ProposeDeal` is enumerated on the response but no engine
+  path consumes it.
+- `SellHouses` is shortfall-only — `game-rules.md` Default rule 7 forbids
+  raising funds via mortgaging, selling buildings, or non-creditor deals
+  for a new commitment (buy / bid). Buying and bidding must be paid from
+  money the player genuinely has.
+
+### 15.8 `AuctionBidPrompt` — *implemented*
+
+Sequential bidding prompt for the auction loop triggered by `game-rules.md`
+Default rule 6 (declined or unaffordable purchases). The engine opens one
+of these per bidder per round, in clockwise order, until the auction
+resolves. Every player may bid, including the player who declined the
+purchase and any players currently in jail (Default rule 6).
+
+|  |  |
+|---|---|
+| Discriminator | `AuctionBid` |
+| Target | Single player (`PlayerId`) |
+| Timeout | Caller-controlled |
+| Response | `AuctionBidResponse` |
+| Files | `Models/Prompts/PromptTypes/AuctionBidPrompt.cs`, `Models/Prompts/PromptTypes/Responses/AuctionBidResponse.cs` |
+
+**Prompt fields**
+
+- `PlayerId` (inherited) — the bidder being asked.
+- `BoardIndex: ushort` — the property being auctioned.
+- `CurrentHighBid: uint` — the highest bid so far. `0` before the first
+  bid; a new bid must strictly exceed this.
+- `CurrentHighBidderId: string?` — the player currently winning, if any.
+  Informational for the frontend; not consulted by validation.
+- `PlayerBalance: uint` — the bidder's available cash. Bids cannot exceed
+  this — `game-rules.md` Default rule 7 bars raising funds to bid.
+- `Title`, `Body` (inherited) — from the `Prompt` base.
+
+**Response payload**
+
+- `Action: AuctionBidAction` — `Bid` or `Pass`.
+- `BidAmount: uint?` — required when `Action == Bid`; must be `null` when
+  `Action == Pass`.
+
+**Authorisation and validation**
+
+- Submitter must equal `PlayerId` or `cache.HostPlayerId`.
+- `Bid` → `BidAmount` must be present, strictly greater than
+  `CurrentHighBid`, and not greater than `PlayerBalance`.
+- `Pass` → `BidAmount` must be `null`.
+
+### 15.9 `CardOptionPrompt` — *implemented*
+
+Generic n-ary selector for card handlers that present a labelled choice
+("pay £200 OR draw a Chance card", "advance to nearest station OR pay
+£50"). The framework does not model per-card effects — each card has its
+own handler per `game-engine.md` §11 — but the option-pick shape is shared.
+Composes naturally with `TargetPlayerPrompt` and `TargetPropertyPrompt`
+when an option needs follow-on targeting.
+
+|  |  |
+|---|---|
+| Discriminator | `CardOption` |
+| Target | Single player (`PlayerId`) |
+| Timeout | Caller-controlled |
+| Response | `CardOptionResponse` |
+| Files | `Models/Prompts/PromptTypes/CardOptionPrompt.cs`, `Models/Prompts/PromptTypes/Responses/CardOptionResponse.cs` |
+
+**Prompt fields**
+
+- `PlayerId` (inherited) — the player choosing.
+- `Options: IReadOnlyList<CardOption>` — `(Key, Label)` records. `Key` is a
+  stable identifier returned in the response; `Label` is the player-facing
+  display text. By convention at least two options — a single-option list
+  is a non-choice and should not open this prompt.
+- `Title`, `Body` (inherited) — from the `Prompt` base.
+
+**Response payload**
+
+- `SelectedKey: string` — must match the `Key` of one of the prompt's
+  `Options`.
+
+**Authorisation**
+
+Submitter must equal `PlayerId` or `cache.HostPlayerId`.
+
+**Notes**
+
+- Keys (not list indexes) carry the choice so logs and audit trails remain
+  readable, and so a later card revision that reorders options doesn't
+  silently change the meaning of past responses.
 
 ### Planned
 

@@ -18,9 +18,6 @@ namespace MP.GameEngine.Models.Prompts.PromptTypes;
 /// </remarks>
 public sealed class AcquirePropertyPrompt : Prompt<AcquirePropertyResponse>
 {
-    /// <summary>The lander — the player being offered the property.</summary>
-    public string PlayerId { get; init; } = "";
-
     /// <summary>
     /// The property's <see cref="Snapshot.PropertyModel.BoardIndex"/>. The set
     /// and colour can be resolved through

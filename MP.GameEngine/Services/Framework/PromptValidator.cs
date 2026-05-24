@@ -32,6 +32,141 @@ public static class PromptValidator
             AcknowledgePrompt p => ValidateAcknowledge(p, response, submittingUserId, cache),
             DiceRollPrompt p => ValidateDiceRoll(p, response, submittingUserId, cache),
             AcquirePropertyPrompt p => ValidateAcquireProperty(p, response, submittingUserId, cache),
+            TargetPlayerPrompt p => ValidateTargetPlayer(p, response, submittingUserId, cache),
+            TargetPropertyPrompt p => ValidateTargetProperty(p, response, submittingUserId, cache),
+            ShortfallPrompt p => ValidateShortfall(p, response, submittingUserId, cache),
+            AuctionBidPrompt p => ValidateAuctionBid(p, response, submittingUserId, cache),
+            CardOptionPrompt p => ValidateCardOption(p, response, submittingUserId, cache),
+            _ => false
+        };
+    }
+
+    /// <summary>
+    /// Auction bids must come from the named bidder (or the host on their
+    /// behalf). A <see cref="AuctionBidAction.Bid"/> response must carry a
+    /// <see cref="AuctionBidResponse.BidAmount"/> that strictly exceeds the
+    /// prompt's <see cref="AuctionBidPrompt.CurrentHighBid"/> and does not
+    /// exceed <see cref="AuctionBidPrompt.PlayerBalance"/> — bidders may
+    /// not exceed the cash they genuinely have (<c>game-rules.md</c>
+    /// Default rule 7). A <see cref="AuctionBidAction.Pass"/> response
+    /// must have a <c>null</c> bid amount.
+    /// </summary>
+    private static bool ValidateAuctionBid(
+        AuctionBidPrompt prompt,
+        PromptResponse response,
+        string submittingUserId,
+        GameCacheModel cache)
+    {
+        if (response is not AuctionBidResponse r) return false;
+
+        if (submittingUserId != prompt.PlayerId && submittingUserId != cache.HostPlayerId)
+            return false;
+
+        return r.Action switch
+        {
+            AuctionBidAction.Bid => r.BidAmount is { } amount
+                                    && amount > prompt.CurrentHighBid
+                                    && amount <= prompt.PlayerBalance,
+            AuctionBidAction.Pass => r.BidAmount is null,
+            _ => false
+        };
+    }
+
+    /// <summary>
+    /// Card-option responses must come from the named chooser (or the host),
+    /// and the <see cref="CardOptionResponse.SelectedKey"/> must match one
+    /// of the prompt's <see cref="CardOptionPrompt.Options"/> by key.
+    /// </summary>
+    private static bool ValidateCardOption(
+        CardOptionPrompt prompt,
+        PromptResponse response,
+        string submittingUserId,
+        GameCacheModel cache)
+    {
+        if (response is not CardOptionResponse r) return false;
+
+        if (submittingUserId != prompt.PlayerId && submittingUserId != cache.HostPlayerId)
+            return false;
+
+        return prompt.Options.Any(o => o.Key == r.SelectedKey);
+    }
+
+    /// <summary>
+    /// Target-player selection must come from the named chooser (or the host
+    /// acting on their behalf), pick exactly <see cref="TargetPlayerPrompt.Count"/>
+    /// players, draw every selection from <see cref="TargetPlayerPrompt.EligiblePlayerIds"/>,
+    /// and contain no duplicates.
+    /// </summary>
+    private static bool ValidateTargetPlayer(
+        TargetPlayerPrompt prompt,
+        PromptResponse response,
+        string submittingUserId,
+        GameCacheModel cache)
+    {
+        if (response is not TargetPlayerResponse r) return false;
+
+        if (submittingUserId != prompt.PlayerId && submittingUserId != cache.HostPlayerId)
+            return false;
+
+        if (r.SelectedPlayerIds.Count != prompt.Count) return false;
+        if (r.SelectedPlayerIds.Distinct().Count() != r.SelectedPlayerIds.Count) return false;
+
+        var eligible = prompt.EligiblePlayerIds.ToHashSet();
+        return r.SelectedPlayerIds.All(eligible.Contains);
+    }
+
+    /// <summary>
+    /// Target-property selection must come from the named chooser (or the
+    /// host acting on their behalf), pick exactly
+    /// <see cref="TargetPropertyPrompt.Count"/> properties, draw every
+    /// selection from <see cref="TargetPropertyPrompt.EligibleBoardIndexes"/>,
+    /// and contain no duplicates.
+    /// </summary>
+    private static bool ValidateTargetProperty(
+        TargetPropertyPrompt prompt,
+        PromptResponse response,
+        string submittingUserId,
+        GameCacheModel cache)
+    {
+        if (response is not TargetPropertyResponse r) return false;
+
+        if (submittingUserId != prompt.PlayerId && submittingUserId != cache.HostPlayerId)
+            return false;
+
+        if (r.SelectedBoardIndexes.Count != prompt.Count) return false;
+        if (r.SelectedBoardIndexes.Distinct().Count() != r.SelectedBoardIndexes.Count) return false;
+
+        var eligible = prompt.EligibleBoardIndexes.ToHashSet();
+        return r.SelectedBoardIndexes.All(eligible.Contains);
+    }
+
+    /// <summary>
+    /// Shortfall responses carry a single <see cref="ShortfallAction"/> from
+    /// the player who owes the debt (or the host on their behalf).
+    /// <see cref="ShortfallAction.ProposeDeal"/> is rejected when the debt is
+    /// owed to the bank — there is no creditor to settle with. Other actions
+    /// are accepted at the framework level; the engine handles whether the
+    /// chosen path is actually achievable (sufficient buildings to sell,
+    /// loan slots available, etc.).
+    /// </summary>
+    private static bool ValidateShortfall(
+        ShortfallPrompt prompt,
+        PromptResponse response,
+        string submittingUserId,
+        GameCacheModel cache)
+    {
+        if (response is not ShortfallResponse r) return false;
+
+        if (submittingUserId != prompt.PlayerId && submittingUserId != cache.HostPlayerId)
+            return false;
+
+        return r.Action switch
+        {
+            ShortfallAction.TakeLoan => true,
+            ShortfallAction.Mortgage => true,
+            ShortfallAction.SellHouses => true,
+            ShortfallAction.ProposeDeal => prompt.OwedToPlayerId is not null,
+            ShortfallAction.DeclareBankruptcy => true,
             _ => false
         };
     }

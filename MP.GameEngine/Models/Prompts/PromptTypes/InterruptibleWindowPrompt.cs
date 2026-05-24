@@ -12,7 +12,11 @@ namespace MP.GameEngine.Models.Prompts.PromptTypes;
 /// The engine opens this prompt only when at least one other player holds a
 /// card that could respond — otherwise the play is applied directly with no
 /// prompt. <see cref="Prompt.Timeout"/> is always <c>null</c>: the table
-/// decides when the window closes.
+/// decides when the window closes. <see cref="Prompt.PlayerId"/> carries
+/// the initiator of the play the window is interrupting — useful for
+/// rendering ("Player X played card Y — anyone NOPE?") but not the audience
+/// for the response (the audience is derived from <see cref="EligiblePlays"/>
+/// via <see cref="Target"/>).
 /// </remarks>
 public sealed class InterruptibleWindowPrompt : Prompt<InterruptibleWindowResponse>
 {

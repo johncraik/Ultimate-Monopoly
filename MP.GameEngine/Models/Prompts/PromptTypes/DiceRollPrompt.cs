@@ -13,9 +13,6 @@ namespace MP.GameEngine.Models.Prompts.PromptTypes;
 /// </remarks>
 public sealed class DiceRollPrompt : Prompt<DiceRollResponse>
 {
-    /// <summary>The player who is rolling.</summary>
-    public string PlayerId { get; init; } = "";
-
     /// <summary>
     /// How many dice the player must enter. Valid values are 1, 2, or 3. The
     /// response must populate exactly that many of <see cref="DiceRollResponse.Die1"/>,

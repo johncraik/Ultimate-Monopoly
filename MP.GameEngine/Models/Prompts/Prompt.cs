@@ -16,6 +16,11 @@ namespace MP.GameEngine.Models.Prompts;
 [JsonDerivedType(typeof(AcknowledgePrompt), "Acknowledge")]
 [JsonDerivedType(typeof(DiceRollPrompt), "DiceRoll")]
 [JsonDerivedType(typeof(AcquirePropertyPrompt), "AcquireProperty")]
+[JsonDerivedType(typeof(TargetPlayerPrompt), "TargetPlayer")]
+[JsonDerivedType(typeof(TargetPropertyPrompt), "TargetProperty")]
+[JsonDerivedType(typeof(ShortfallPrompt), "Shortfall")]
+[JsonDerivedType(typeof(AuctionBidPrompt), "AuctionBid")]
+[JsonDerivedType(typeof(CardOptionPrompt), "CardOption")]
 public abstract class Prompt
 {
     /// <summary>
@@ -25,7 +30,20 @@ public abstract class Prompt
     public string PromptId { get; init; } = Guid.NewGuid().ToString();
 
     /// <summary>
-    /// The audience that will see this prompt. Authorisation for individual
+    /// The player this prompt is about — its subject. For single-player
+    /// prompts this also happens to be the responder (and matches
+    /// <see cref="Target"/>); for group-targeted prompts such as
+    /// <see cref="PromptTypes.InterruptibleWindowPrompt"/> it is the player
+    /// whose action the prompt concerns (e.g. the initiator of the play
+    /// the window is interrupting), distinct from the audience. Subject and
+    /// audience are different concepts — see <see cref="Target"/>.
+    /// </summary>
+    public string PlayerId { get; init; } = "";
+
+    /// <summary>
+    /// The audience that will see this prompt. For single-player prompts
+    /// this is <see cref="PlayerId"/>; group-targeted prompts derive their
+    /// audience from prompt-specific data. Authorisation for individual
     /// response variants is enforced separately in the validator.
     /// </summary>
     public abstract PromptTarget Target { get; }

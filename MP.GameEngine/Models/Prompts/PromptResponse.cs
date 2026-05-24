@@ -13,6 +13,11 @@ namespace MP.GameEngine.Models.Prompts;
 [JsonDerivedType(typeof(AcknowledgeResponse), "Acknowledge")]
 [JsonDerivedType(typeof(DiceRollResponse), "DiceRoll")]
 [JsonDerivedType(typeof(AcquirePropertyResponse), "AcquireProperty")]
+[JsonDerivedType(typeof(TargetPlayerResponse), "TargetPlayer")]
+[JsonDerivedType(typeof(TargetPropertyResponse), "TargetProperty")]
+[JsonDerivedType(typeof(ShortfallResponse), "Shortfall")]
+[JsonDerivedType(typeof(AuctionBidResponse), "AuctionBid")]
+[JsonDerivedType(typeof(CardOptionResponse), "CardOption")]
 public abstract class PromptResponse
 {
     /// <summary>

@@ -32,8 +32,13 @@ rule set.
    automatically goes to auction. Every player may bid, including the player
    who declined it and any players currently in jail.
 
-7. **No mortgaging to purchase or bid.** A player cannot mortgage properties to
-   raise funds to buy a property they have landed on, nor to bid in an auction.
+7. **No raising funds to buy or bid.** Buying a property and bidding in an
+   auction must be paid from money the player genuinely has. A player cannot
+   mortgage properties, sell buildings, or trade with another player to raise
+   funds for either. These raising mechanisms are available only to settle a
+   debt the player already owes. A debt owed to another player may instead be
+   settled by a direct deal with that creditor — the deal itself discharges
+   the debt.
 
 8. **Bankruptcy ends a player's game.** If a player cannot pay what they owe and
    has nothing left to mortgage, they go bankrupt and are out of the game.
