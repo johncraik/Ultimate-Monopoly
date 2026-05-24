@@ -4,6 +4,6 @@ namespace MP.GameEngine.Models.EventReceipts;
 
 public class PlayerDirectionChangedReceipt : EventReceipt
 {
-    public PlayerDirection InitialDirection { get; set; }
-    public PlayerDirection FinalDirection { get; set; }
+    public PlayerDirection InitialDirection { get; init; }
+    public PlayerDirection FinalDirection { get; init; }
 }

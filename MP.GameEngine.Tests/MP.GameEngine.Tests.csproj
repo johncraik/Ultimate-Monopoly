@@ -22,4 +22,9 @@
     <ProjectReference Include="..\MP.GameEngine\MP.GameEngine.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="HelperTests\" />
+    <Folder Include="ServiceTests\" />
+  </ItemGroup>
+
 </Project>

@@ -29,10 +29,25 @@ public sealed class PromptProvider : IPromptProvider
 
         _cache.SetPendingPrompt(new PendingPrompt(prompt, tcs));
 
-        await using (ct.Register(() => tcs.TrySetCanceled(ct)))
+        try
         {
-            var response = await tcs.Task.ConfigureAwait(false);
-            return (TResponse)response;
+            await using (ct.Register(() => tcs.TrySetCanceled(ct)))
+            {
+                var response = await tcs.Task.ConfigureAwait(false);
+                return (TResponse)response;
+            }
+        }
+        finally
+        {
+            // Defensive cleanup: on the success path TrySubmit has already
+            // cleared the pending prompt, so this no-ops. On cancellation /
+            // exception, the pending prompt is still ours and would otherwise
+            // be stranded — clear it (only if it really is ours; some other
+            // prompt could theoretically have replaced it under future code
+            // changes). ClearPendingPrompt re-stamps the concurrency stamp,
+            // so any racing TrySubmit fails as stale.
+            if (_cache.PendingPrompt is { } pending && pending.Prompt.PromptId == prompt.PromptId)
+                _cache.ClearPendingPrompt();
         }
     }
 
@@ -46,8 +61,13 @@ public sealed class PromptProvider : IPromptProvider
         if (pending.Prompt.PromptId != response.PromptId) return false;
         if (!PromptValidator.Validate(pending.Prompt, response, submittingUserId, _cache)) return false;
 
+        // TrySetResult is the atomic gate — only one of any concurrent
+        // submitters can transition the TCS to the completed state. If we
+        // lose the race, the TCS was already resolved (by a winning
+        // submitter, or by cancellation) and we report false.
+        if (!pending.Tcs.TrySetResult(response)) return false;
+
         _cache.ClearPendingPrompt();
-        pending.Tcs.TrySetResult(response);
         return true;
     }
 }

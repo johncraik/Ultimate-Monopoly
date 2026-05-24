@@ -4,9 +4,9 @@ namespace MP.GameEngine.Models.EventReceipts;
 
 public class PlayerMovedReceipt : EventReceipt
 {
-    public ushort InitialBoardIndex { get; set; }
-    public ushort FinalBoardIndex { get; set; }
-    public PlayerMovementDirection Direction { get; set; }
+    public ushort InitialBoardIndex { get; init; }
+    public ushort FinalBoardIndex { get; init; }
+    public PlayerMovementDirection Direction { get; init; }
     
-    public bool IsAdvance { get; set; }
+    public bool IsAdvance { get; init; }
 }

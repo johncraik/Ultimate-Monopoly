@@ -11,11 +11,12 @@ public static class ServiceRegistration
     public static IServiceCollection AddGameEngine(this IServiceCollection services)
     {
         services.TryAddScoped<IPromptProvider, PromptProvider>();
-        
+        services.TryAddScoped<IEventEmitter, EventEmitter>();
+
         services.TryAddScoped<GameSetupService>();
         services.TryAddScoped<PlayerService>();
         services.TryAddScoped<PropertyService>();
-        
+
         return services;
     }
 }

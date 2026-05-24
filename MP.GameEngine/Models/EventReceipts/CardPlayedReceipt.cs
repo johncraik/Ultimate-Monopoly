@@ -4,7 +4,7 @@ namespace MP.GameEngine.Models.EventReceipts;
 
 public class CardPlayedReceipt : EventReceipt
 {
-    public CardType CardType { get; set; }
+    public CardType CardType { get; init; }
     
     //TODO When cards are designed and implemented
 }

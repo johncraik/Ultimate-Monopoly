@@ -1,3 +1,4 @@
+using MP.GameEngine.Enums;
 using MP.GameEngine.Enums.Games;
 using MP.GameEngine.Models.Boards;
 using MP.GameEngine.Models.DTOs;
@@ -51,6 +52,9 @@ public class GameCacheModel(GameDTO gameDto, GameModel game, Board board)
         
     public GameState GameState { get; } = gameDto.State;
     public GameOutcome? GameOutcome { get; } = gameDto.Outcome;
+    
+    public DiceRoll? TurnDiceRoll { get; private set; }
+    public TurnState TurnState { get; private set; } = TurnState.StartOfTurn;
 
 
     private void StampConcurrency()
@@ -81,6 +85,12 @@ public class GameCacheModel(GameDTO gameDto, GameModel game, Board board)
     
     public void AddEvent(EventReceipt eventReceipt)
     {
+        // Framework-managed bookkeeping — producers set receipt-specific
+        // fields (and PlayerId); cache backfills TurnNumber and the
+        // per-turn sequence index. See design-docs/event-receipts.md §7.
+        eventReceipt.TurnNumber = Game.Metadata.TurnNumber;
+        eventReceipt.SequenceIndex = (ushort)_events.Count;
+
         _events.Add(eventReceipt);
         StampConcurrency();
     }
@@ -100,6 +110,23 @@ public class GameCacheModel(GameDTO gameDto, GameModel game, Board board)
         if (PendingPrompt is null) return;
 
         PendingPrompt = null;
+        StampConcurrency();
+    }
+
+    public void SetTurnDiceRoll(ushort die1, ushort die2, ushort thirdDie)
+    {
+        if(TurnState != TurnState.StartOfTurn || TurnDiceRoll is not null)
+            return;
+        
+        TurnDiceRoll = new DiceRoll(die1, die2, thirdDie);
+        
+        //Internally stamps concurrency
+        SetTurnState(TurnState.PlayerRollMovement);
+    }
+    
+    internal void SetTurnState(TurnState turnState)
+    {
+        TurnState = turnState;
         StampConcurrency();
     }
 }
