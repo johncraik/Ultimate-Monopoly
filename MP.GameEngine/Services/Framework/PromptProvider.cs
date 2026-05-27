@@ -1,6 +1,8 @@
 using MP.GameEngine.Abstractions;
 using MP.GameEngine.Models;
 using MP.GameEngine.Models.Prompts;
+using MP.GameEngine.Models.Prompts.PromptTypes;
+using MP.GameEngine.Models.Prompts.PromptTypes.Responses;
 
 namespace MP.GameEngine.Services.Framework;
 
@@ -51,6 +53,21 @@ public sealed class PromptProvider : IPromptProvider
         }
     }
 
+    public async Task<AcknowledgeResponse> Acknowledge(string playerId, string title, string body, TimeSpan? timeout = null, CancellationToken ct = default)
+    {
+        var promptId = Guid.NewGuid().ToString();
+        timeout ??= TimeSpan.FromSeconds(30);
+        return await RequestAsync(new AcknowledgePrompt
+        {
+            PromptId = promptId,
+            PlayerId = playerId,
+            Title = title,
+            Body = body,
+            Timeout = timeout,
+            DefaultResponse = new AcknowledgeResponse { PromptId = promptId }
+        }, ct);
+    }
+    
     /// <inheritdoc />
     public bool TrySubmit(string submittingUserId, string concurrencyStamp, PromptResponse response)
     {

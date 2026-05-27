@@ -9,6 +9,6 @@ public class PropertyTransactionReceipt : EventReceipt
     public bool SetsOnly { get; init; }
     
     //When value is positive, this becomes the source
-    public TransactionDestination Destination { get; init; }
+    public TransactionCounterparty Counterparty { get; init; }
     public string? DestinationPlayerId { get; init; }
 }

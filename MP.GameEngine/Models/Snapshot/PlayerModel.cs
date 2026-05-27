@@ -82,4 +82,27 @@ public class PlayerModel
 
         FPHandedInSets = [..model.FPHandedInSets];
     }
+
+
+    #region Player Primitive Methods
+
+    public void FlipDirection()
+    {
+        Direction = Direction == PlayerDirection.Forward 
+            ? PlayerDirection.Backward 
+            : PlayerDirection.Forward;
+    }
+
+
+    public bool IsDiceNumber(DiceRoll roll)
+    {
+        var d1 = roll.Die1;
+        var d2 = roll.Die2 ?? throw new ArgumentNullException(nameof(roll.Die2), "Die2 cannot be null for dice roll validation.");
+        
+        return (d1 == Dice1 && d2 == Dice2) || (d1 == Dice2 && d2 == Dice1);
+    }
+
+    #endregion
+    
+    
 }

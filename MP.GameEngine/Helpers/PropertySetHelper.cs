@@ -16,6 +16,19 @@ public static class PropertySetHelper
     public static readonly ushort[] StationIndexes = [5, 15, 25, 35];
     public static readonly ushort[] UtilityIndexes = [12, 28];
 
+
+    public static readonly Dictionary<PropertySet, PropertySet> StreetPartner = new()
+    {
+        [PropertySet.Brown] = PropertySet.Blue,
+        [PropertySet.Blue] = PropertySet.Brown,
+        [PropertySet.Pink] = PropertySet.Orange,
+        [PropertySet.Orange] = PropertySet.Pink,
+        [PropertySet.Red] = PropertySet.Yellow,
+        [PropertySet.Yellow] = PropertySet.Red,
+        [PropertySet.Green] = PropertySet.DarkBlue,
+        [PropertySet.DarkBlue] = PropertySet.Green
+    };
+
     public static PropertySet? ResolveSet(ushort index)
     {
         if (BrownPropIndexes.Contains(index))
@@ -50,4 +63,20 @@ public static class PropertySetHelper
         
         return null;
     }
+
+    public static List<ushort> GetIndexes(PropertySet set)
+        => set switch
+        {
+            PropertySet.Brown => BrownPropIndexes.ToList(),
+            PropertySet.Blue => BluePropIndexes.ToList(),
+            PropertySet.Pink => PinkPropIndexes.ToList(),
+            PropertySet.Orange => OrangePropIndexes.ToList(),
+            PropertySet.Red => RedPropIndexes.ToList(),
+            PropertySet.Yellow => YellowPropIndexes.ToList(),
+            PropertySet.Green => GreenPropIndexes.ToList(),
+            PropertySet.DarkBlue => DarkBluePropIndexes.ToList(),
+            PropertySet.Station => StationIndexes.ToList(),
+            PropertySet.Utility => UtilityIndexes.ToList(),
+            _ => throw new ArgumentOutOfRangeException(nameof(set), set, null)
+        };
 }

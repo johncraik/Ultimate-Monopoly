@@ -2,7 +2,7 @@ using MP.GameEngine.Enums.Properties;
 using MP.GameEngine.Models.Boards;
 using MP.GameEngine.Models.Snapshot;
 
-namespace MP.GameEngine.Services;
+namespace MP.GameEngine.Services.SubSystems;
 
 public class PropertyService
 {
@@ -23,6 +23,6 @@ public class PropertyService
                 OwnerPlayerId = null,
                 State = PropertyState.NotOwned,
                 RentLevel = RentLevel.SINGLE,
-                HasBeenBuiltOn = false
+                StreetRuleQualifier = StreetRuleQualifier.None
             }).ToList();
 }

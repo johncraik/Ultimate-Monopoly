@@ -129,4 +129,11 @@ public class BoardSpace
         Rents = rentDict;
         return true;
     }
+    
+    public ushort? GetRent(RentLevel rentLevel)
+    {
+        if (Rents == null) return null;
+        if (!Rents.TryGetValue(rentLevel, out var rent)) return null;
+        return rent;
+    }
 }

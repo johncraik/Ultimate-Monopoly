@@ -12,12 +12,7 @@ public class PropertyModel
     
     public RentLevel RentLevel { get; set; }
     
-    /// <summary>
-    /// True if the current owner has built this property.
-    /// Resets to false whenever owner changes.
-    /// Used for owning the street rule.
-    /// </summary>
-    public bool HasBeenBuiltOn { get; set; }
+    public StreetRuleQualifier StreetRuleQualifier { get; set; }
 
     public PropertyModel()
     {
@@ -32,6 +27,62 @@ public class PropertyModel
         State = model.State;
         RentLevel = model.RentLevel;
         
-        HasBeenBuiltOn = model.HasBeenBuiltOn;
+        StreetRuleQualifier = model.StreetRuleQualifier;
     }
+
+
+    #region Property State Methods
+
+    private void UnownedProperty()
+    {
+        OwnerPlayerId = null;
+        RentLevel = RentLevel.SINGLE;
+        StreetRuleQualifier = StreetRuleQualifier.None;
+    }
+    
+    public void ReturnToBank()
+    {
+        State = PropertyState.NotOwned;
+        UnownedProperty();
+    }
+
+    public void HandInToFreeParking()
+    {
+        State = PropertyState.FreeParking;
+        UnownedProperty();
+    }
+
+    public void OwnProperty(string playerId)
+    {
+        if(OwnerPlayerId != null && OwnerPlayerId == playerId)
+            //Cannot own a property that is already owned by the player
+            return;
+        
+        //Determines whether property state changes (mortgaged and reserved properties remain mortgaged/reserved)
+        var transferBetweenPlayers = OwnerPlayerId != null;
+        
+        OwnerPlayerId = playerId;
+        StreetRuleQualifier = StreetRuleQualifier.NeverBuiltOn;
+
+        if (!transferBetweenPlayers)
+            State = PropertyState.Owned;
+    }
+
+    public void MortgageProperty()
+    {
+        if(OwnerPlayerId == null || State == PropertyState.Reserved)
+            return;
+        
+        State = PropertyState.Mortgaged;
+    }
+    
+    public void ReserveProperty()
+    {
+        if(OwnerPlayerId == null || State == PropertyState.Mortgaged)
+            return;
+        
+        State = PropertyState.Reserved;
+    }
+    
+    #endregion
 }

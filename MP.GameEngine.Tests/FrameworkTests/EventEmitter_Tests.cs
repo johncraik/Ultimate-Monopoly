@@ -58,8 +58,8 @@ public class EventEmitter_Tests
             PlayerId = PlayerId,
             Amount = amount,
             Reason = FinancialReason.Rent,
-            Destination = TransactionDestination.Player,
-            DestinationPlayerId = "other"
+            Counterparty = TransactionCounterparty.Player,
+            CounterpartyPlayerId = "other"
         };
 
 
@@ -190,7 +190,7 @@ public class EventEmitter_Tests
 
         emitter.Emit(new PlayerMovedReceipt { PlayerId = PlayerId });
         emitter.Emit(new PlayerEnteredJailReceipt { PlayerId = PlayerId });
-        emitter.Emit(new DiceRollReceipt { PlayerId = PlayerId, Dice1 = 3 });
+        emitter.Emit(new DiceRollReceipt(PlayerId, new DiceRoll(1)));
 
         Assert.Equal(3, cache.Events.Count);
         Assert.IsType<PlayerMovedReceipt>(cache.Events[0]);

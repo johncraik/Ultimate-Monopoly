@@ -1,6 +1,6 @@
 namespace MP.GameEngine.Enums;
 
-public enum TransactionDestination
+public enum TransactionCounterparty
 {
     Bank,
     FreeParking,

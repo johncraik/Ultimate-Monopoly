@@ -6,7 +6,7 @@ namespace MP.GameEngine.Models.EventReceipts;
 /// Records a money movement. From the subject player's perspective:
 /// positive <see cref="Amount"/> = received, negative = paid. The categorical
 /// <see cref="Reason"/> axis lets the stats projection aggregate without
-/// re-implementing rule logic; <see cref="SourcePropertyId"/> attaches
+/// re-implementing rule logic; <see cref="CounterpartyPropertyIndex"/> attaches
 /// property attribution for the reasons where that matters (rent, purchase,
 /// build, etc.). See <c>design-docs/event-receipts.md</c> §4.
 /// </summary>
@@ -18,11 +18,11 @@ public class FinancialTransactionReceipt : EventReceipt
     /// <summary>Categorical reason for the movement. Stats group by this.</summary>
     public FinancialReason Reason { get; init; }
 
-    /// <summary>The other side of the transaction (source when receiving, destination when paying).</summary>
-    public TransactionDestination Destination { get; init; }
+    /// <summary>The other side of the transaction (source when receiving, counterparty when paying).</summary>
+    public TransactionCounterparty Counterparty { get; init; }
 
-    /// <summary>The counterparty player id when <see cref="Destination"/> is <see cref="TransactionDestination.Player"/>; null otherwise.</summary>
-    public string? DestinationPlayerId { get; init; }
+    /// <summary>The counterparty player id when <see cref="Counterparty"/> is <see cref="TransactionCounterparty.Player"/>; null otherwise.</summary>
+    public string? CounterpartyPlayerId { get; init; }
 
     /// <summary>
     /// The <see cref="Snapshot.PropertyModel.BoardIndex"/> the transaction
@@ -30,5 +30,5 @@ public class FinancialTransactionReceipt : EventReceipt
     /// sell, mortgage, unmortgage. Null when the transaction has no property
     /// context (GO bonus, jail fee, tax, etc.).
     /// </summary>
-    public ushort? SourcePropertyId { get; init; }
+    public ushort? CounterpartyPropertyIndex { get; init; }
 }

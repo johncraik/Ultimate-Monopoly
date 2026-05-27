@@ -1,3 +1,5 @@
+using MP.GameEngine.Models.EventReceipts;
+
 namespace MP.GameEngine.Enums;
 
 /// <summary>
@@ -7,14 +9,11 @@ namespace MP.GameEngine.Enums;
 /// </summary>
 public enum FinancialReason
 {
-    /// <summary>Rent paid on a landed-space (uses <see cref="Models.EventReceipts.FinancialTransactionReceipt.SourcePropertyId"/>).</summary>
+    /// <summary>Rent paid on a landed-space (uses <see cref="FinancialTransactionReceipt.CounterpartyPropertyIndex"/>).</summary>
     Rent,
 
     /// <summary>Tax space payout.</summary>
     Tax,
-
-    /// <summary>Rule or card-driven fine.</summary>
-    Fine,
 
     /// <summary>Passing or landing on GO.</summary>
     GoBonus,
@@ -34,25 +33,25 @@ public enum FinancialReason
     /// <summary>Money paid towards a loan repayment.</summary>
     LoanRepay,
 
-    /// <summary>Buying a property (uses <see cref="Models.EventReceipts.FinancialTransactionReceipt.SourcePropertyId"/>).</summary>
+    /// <summary>Buying a property (uses <see cref="FinancialTransactionReceipt.CounterpartyPropertyIndex"/>).</summary>
     Purchase,
 
-    /// <summary>Winning an auction (uses <see cref="Models.EventReceipts.FinancialTransactionReceipt.SourcePropertyId"/>).</summary>
+    /// <summary>Winning an auction (uses <see cref="FinancialTransactionReceipt.CounterpartyPropertyIndex"/>).</summary>
     Auction,
 
-    /// <summary>Building a house or hotel (uses <see cref="Models.EventReceipts.FinancialTransactionReceipt.SourcePropertyId"/>).</summary>
+    /// <summary>Building a house or hotel (uses <see cref="FinancialTransactionReceipt.CounterpartyPropertyIndex"/>).</summary>
     Build,
 
-    /// <summary>Selling a building back to the bank (uses <see cref="Models.EventReceipts.FinancialTransactionReceipt.SourcePropertyId"/>).</summary>
+    /// <summary>Selling a building back to the bank (uses <see cref="FinancialTransactionReceipt.CounterpartyPropertyIndex"/>).</summary>
     Sell,
 
-    /// <summary>Mortgaging — money in (uses <see cref="Models.EventReceipts.FinancialTransactionReceipt.SourcePropertyId"/>).</summary>
+    /// <summary>Mortgaging — money in (uses <see cref="FinancialTransactionReceipt.CounterpartyPropertyIndex"/>).</summary>
     Mortgage,
     
     /// <summary>Fee paid when passing go - money out</summary>
     MortgageFee,
 
-    /// <summary>Unmortgaging — money out (uses <see cref="Models.EventReceipts.FinancialTransactionReceipt.SourcePropertyId"/>).</summary>
+    /// <summary>Unmortgaging — money out (uses <see cref="FinancialTransactionReceipt.CounterpartyPropertyIndex"/>).</summary>
     Unmortgage,
 
     /// <summary>Card-driven money in.</summary>

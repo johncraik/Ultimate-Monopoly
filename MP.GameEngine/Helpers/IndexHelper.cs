@@ -241,7 +241,7 @@ public static class IndexHelper
 
 
 
-    public static (ushort Index, ushort GoPasses) MoveIndex(ushort index, ushort spaces, PlayerDirection direction)
+    public static (ushort Index, ushort GoPasses) MoveIndex(ushort index, int spaces, PlayerDirection direction)
     {
         var desiredIndex = (direction switch
         {

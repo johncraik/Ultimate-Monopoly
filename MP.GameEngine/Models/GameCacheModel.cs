@@ -113,17 +113,18 @@ public class GameCacheModel(GameDTO gameDto, GameModel game, Board board)
         StampConcurrency();
     }
 
-    public void SetTurnDiceRoll(ushort die1, ushort die2, ushort thirdDie)
+    public DiceRoll? SetTurnDiceRoll(ushort die1, ushort die2, ushort thirdDie)
     {
         if(TurnState != TurnState.StartOfTurn || TurnDiceRoll is not null)
-            return;
+            return null;
         
         TurnDiceRoll = new DiceRoll(die1, die2, thirdDie);
         
         //Internally stamps concurrency
         SetTurnState(TurnState.PlayerRollMovement);
+        return TurnDiceRoll;
     }
-    
+
     internal void SetTurnState(TurnState turnState)
     {
         TurnState = turnState;
