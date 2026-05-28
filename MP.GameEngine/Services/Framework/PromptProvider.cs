@@ -14,10 +14,12 @@ namespace MP.GameEngine.Services.Framework;
 public sealed class PromptProvider : IPromptProvider
 {
     private readonly GameCacheModel _cache;
+    private readonly IEngineNotifier _notifier;
 
-    public PromptProvider(GameCacheModel cache)
+    public PromptProvider(GameCacheModel cache, IEngineNotifier notifier)
     {
         _cache = cache;
+        _notifier = notifier;
     }
 
     /// <inheritdoc />
@@ -30,6 +32,8 @@ public sealed class PromptProvider : IPromptProvider
             TaskCreationOptions.RunContinuationsAsynchronously);
 
         _cache.SetPendingPrompt(new PendingPrompt(prompt, tcs));
+        _notifier.PromptOpened(_cache.GameId, prompt, _cache.ConcurrencyStamp);
+        _notifier.StateChanged(_cache);
 
         try
         {
@@ -49,7 +53,10 @@ public sealed class PromptProvider : IPromptProvider
             // changes). ClearPendingPrompt re-stamps the concurrency stamp,
             // so any racing TrySubmit fails as stale.
             if (_cache.PendingPrompt is { } pending && pending.Prompt.PromptId == prompt.PromptId)
+            {
                 _cache.ClearPendingPrompt();
+                _notifier.PromptClosed(_cache.GameId, prompt.PromptId, _cache.ConcurrencyStamp);
+            }
         }
     }
 
@@ -85,6 +92,7 @@ public sealed class PromptProvider : IPromptProvider
         if (!pending.Tcs.TrySetResult(response)) return false;
 
         _cache.ClearPendingPrompt();
+        _notifier.PromptClosed(_cache.GameId, response.PromptId, _cache.ConcurrencyStamp);
         return true;
     }
 }

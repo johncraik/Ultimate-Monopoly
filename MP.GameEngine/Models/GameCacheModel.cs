@@ -5,6 +5,7 @@ using MP.GameEngine.Models.DTOs;
 using MP.GameEngine.Models.EventReceipts;
 using MP.GameEngine.Models.Prompts;
 using MP.GameEngine.Models.Snapshot;
+using System.Text.Json.Serialization;
 
 namespace MP.GameEngine.Models;
 
@@ -21,8 +22,11 @@ public class GameCacheModel(GameDTO gameDto, GameModel game, Board board)
     
     
     /// <summary>
-    /// The board used in the game
+    /// The board used in the game. Static for the game's lifetime, so it is
+    /// excluded from the live state broadcast — clients fetch it once
+    /// (<c>GamePlayHub.GetBoard</c>) rather than receiving it on every frame.
     /// </summary>
+    [JsonIgnore]
     public Board Board { get; private set; } = board;
     
     
@@ -31,6 +35,13 @@ public class GameCacheModel(GameDTO gameDto, GameModel game, Board board)
     /// These are cleared at the start/end of each turn.
     /// </summary>
     private readonly List<EventReceipt> _events = [];
+
+    /// <summary>
+    /// Internal per-turn history (the stats source) — excluded from the live
+    /// state broadcast. The live view renders from current state, not the
+    /// receipt stream. See <c>design-docs/event-receipts.md</c>.
+    /// </summary>
+    [JsonIgnore]
     public IReadOnlyList<EventReceipt> Events => _events;
 
 
@@ -123,6 +134,12 @@ public class GameCacheModel(GameDTO gameDto, GameModel game, Board board)
         //Internally stamps concurrency
         SetTurnState(TurnState.PlayerRollMovement);
         return TurnDiceRoll;
+    }
+    
+    public void ClearTurnDiceRoll()
+    {
+        TurnDiceRoll = null;
+        StampConcurrency();
     }
 
     internal void SetTurnState(TurnState turnState)

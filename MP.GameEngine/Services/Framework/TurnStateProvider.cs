@@ -28,10 +28,6 @@ public class TurnStateProvider(GameCacheModel cache, ISnapshotService snapshotSe
     /// <summary>True when the given player is the one whose turn it currently is.</summary>
     private bool IsCurrentPlayer(string playerId) =>
         cache.Game.Metadata.CurrentPlayerId == playerId;
-    
-    private PlayerModel CurrentPlayer()
-        => cache.Game.Players.FirstOrDefault(p => p.PlayerId == cache.Game.Metadata.CurrentPlayerId) 
-           ?? throw new InvalidOperationException("Current player not found in game players list.");
 
     /// <summary>True when the given player is in jail right now.</summary>
     private bool IsJailed(string playerId)
@@ -44,11 +40,22 @@ public class TurnStateProvider(GameCacheModel cache, ISnapshotService snapshotSe
     private bool IsAtTurnBoundary() =>
         cache.TurnState is TurnState.StartOfTurn or TurnState.EndOfTurn;
 
+    /// <summary>
+    /// True when <paramref name="submittingUserId"/> may act for
+    /// <paramref name="playerId"/> — the player acting for themselves, or the
+    /// host acting on their behalf. The host tablet is the game controller and
+    /// can drive any player's commands; phones are an optional convenience
+    /// layer. See <c>design-docs/Game-UI.md</c>.
+    /// </summary>
+    private bool IsAuthorisedActor(string playerId, string submittingUserId) =>
+        submittingUserId == playerId || submittingUserId == cache.HostPlayerId;
+
 
     // ─── Capability gates ───────────────────────────────────────────────
-    // Each "Can…" returns true when the named player is allowed to issue
-    // the command right now. Composes the primitives above — no boolean
-    // spaghetti in callers.
+    // Each "Can…" returns true when the submitting user may issue the command
+    // for the named player right now. Game-state checks key off the named
+    // player; authorisation is the player themselves or the host (host-bypass).
+    // Composes the primitives above — no boolean spaghetti in callers.
 
     /// <summary>
     /// Portfolio commands (mortgage / unmortgage / build / sell houses / play
@@ -57,8 +64,9 @@ public class TurnStateProvider(GameCacheModel cache, ISnapshotService snapshotSe
     /// EndOfTurn is *not* a portfolio window — once movement is done the
     /// player can only end the turn or initiate/accept a deal.
     /// </summary>
-    public bool CanPortfolioCommand(string playerId) =>
-        cache.TurnState == TurnState.StartOfTurn
+    public bool CanPortfolioCommand(string playerId, string submittingUserId) =>
+        IsAuthorisedActor(playerId, submittingUserId)
+        && cache.TurnState == TurnState.StartOfTurn
         && IsCurrentPlayer(playerId)
         && !IsJailed(playerId)
         && IsEngineIdle();
@@ -69,22 +77,25 @@ public class TurnStateProvider(GameCacheModel cache, ISnapshotService snapshotSe
     /// is the engine layer's job — the provider only confirms the calling
     /// player is at a legal moment in their own turn cycle.
     /// </summary>
-    public bool CanDeal(string playerId) =>
-        IsAtTurnBoundary() && IsEngineIdle();
+    public bool CanDeal(string playerId, string submittingUserId) =>
+        IsAuthorisedActor(playerId, submittingUserId)
+        && IsAtTurnBoundary() && IsEngineIdle();
 
     /// <summary>
     /// Jail exit (pay fee / play card / attempt double): only at StartOfTurn,
     /// only by the current player, only if they're actually in jail.
     /// </summary>
-    public bool CanLeaveJail(string playerId) =>
-        cache.TurnState == TurnState.StartOfTurn
+    public bool CanLeaveJail(string playerId, string submittingUserId) =>
+        IsAuthorisedActor(playerId, submittingUserId)
+        && cache.TurnState == TurnState.StartOfTurn
         && IsCurrentPlayer(playerId)
         && IsJailed(playerId)
         && IsEngineIdle();
 
     /// <summary>End turn: current player only, at EndOfTurn, engine idle.</summary>
-    public bool CanEndTurn(string playerId) =>
-        cache.TurnState == TurnState.EndOfTurn
+    public bool CanEndTurn(string playerId, string submittingUserId) =>
+        IsAuthorisedActor(playerId, submittingUserId)
+        && cache.TurnState == TurnState.EndOfTurn
         && IsCurrentPlayer(playerId)
         && IsEngineIdle();
 
@@ -94,8 +105,9 @@ public class TurnStateProvider(GameCacheModel cache, ISnapshotService snapshotSe
     /// of their own (or another player's) turn boundaries — not literally any
     /// moment in the middle of execution.
     /// </summary>
-    public bool CanDeclareBankruptcy(string playerId) =>
-        IsAtTurnBoundary() && IsEngineIdle();
+    public bool CanDeclareBankruptcy(string playerId, string submittingUserId) =>
+        IsAuthorisedActor(playerId, submittingUserId)
+        && IsAtTurnBoundary() && IsEngineIdle();
 
 
     // ─── Transitions ────────────────────────────────────────────────────
@@ -162,7 +174,9 @@ public class TurnStateProvider(GameCacheModel cache, ISnapshotService snapshotSe
     {
         Expect(TurnState.EndOfTurn);
 
-        var player = CurrentPlayer();
+        var player = cache.Game.CurrentPlayer();
+        if (player == null) throw new InvalidOperationException("Current player not found in game players list.");
+        
         if (isTriple)
         {
             player.TriplesInRow++;
@@ -219,34 +233,76 @@ public class TurnStateProvider(GameCacheModel cache, ISnapshotService snapshotSe
     }
 
     /// <summary>
-    /// Advances <see cref="TurnMetadata.CurrentPlayerId"/> to the next
-    /// player in seat order (wraps around). Intrinsic to "next player"
-    /// but borders on game logic.
+    /// Advances <see cref="TurnMetadata.CurrentPlayerId"/> clockwise to the
+    /// next eligible player. Bankrupt players are skipped (excluded by
+    /// <see cref="GameModel.GetPlayers(bool,bool)"/>); players who
+    /// must miss a turn are skipped and have their
+    /// <see cref="PlayerModel.TurnsToMiss"/> decremented as they are passed
+    /// (Double 2 / Double 5 effects). When every other player is skipping,
+    /// play returns to the current player.
     /// </summary>
-    /// <remarks>
-    /// TODO: extract into a dedicated helper class once the turn-loop
-    /// orchestration shape is clearer. The helper should sit *above* the
-    /// provider and decide which transition fires (extra-turn vs next-
-    /// player), and own the harder cases this stub doesn't handle yet:
-    /// skip bankrupt players (<c>game-rules.md</c> Bankruptcy) and
-    /// decrement <see cref="PlayerModel.TurnsToMiss"/> to skip missed-
-    /// turn players (Double 2 effect). Keeping it here would leak more
-    /// game logic into the foundation provider; pulling it out keeps
-    /// the provider a pure state-machine.
-    /// </remarks>
     private void AdvancePlayer()
     {
-        var currentPlayer = CurrentPlayer();
-        var allPlayers = cache.Game.Players.OrderBy(p => p.OrderId).ToList();
+        //Grabs ordered list of players from current player POV
+        var otherPlayers = cache.Game.GetPlayers(excludePovPlayer: false);
+        PlayerModel? nextPlayer = null;
 
-        var nextPlayer = allPlayers.FirstOrDefault(p => p.OrderId > currentPlayer.OrderId)
-                         ?? allPlayers.MinBy(p => p.OrderId)
-                         ?? throw new InvalidOperationException("No eligible players left in game.");
+        var currentPlayer = cache.Game.CurrentPlayer();
+        if (currentPlayer is { HasExtraTurns: true })
+        {
+            //The current player has extra turns (and no turns to miss)
+            //Does not throw when current player is not found in the list, as they may have bankrupted on this turn,
+            //and thus, loose their extra turns anyway
+            currentPlayer.ExtraTurns--;
+            nextPlayer = currentPlayer;
+        }
+        else
+        {
+            if(otherPlayers.Count == 0)
+                throw new InvalidOperationException("No players in game.");
+            
+            var initialPass = currentPlayer != null;
+            do
+            {
+                //Foreach inside a do while so that this loop will run until a next player is chosen
+                //Initial pass variable blocks the current player becoming the next player
+                //ONLY when executing first iteration of do while, and first execution of foreach
+                foreach (var p in otherPlayers)
+                {
+                    //Check if player misses this turn
+                    //List starts with current player, so prevent setting next player to current player
+                    if (!p.MissNextTurn && !initialPass)
+                    {
+                        //Only sets next player if not first pass (current player)
+                        //AND if the player does not miss this turn
+                        nextPlayer = p;
+                        break;
+                    }
+
+                    //If this is the initial pass (current player)
+                    //Then do not modify miss turns (it was just their turn)
+                    if (initialPass)
+                    {
+                        //Instead, set false to initial pass and continue to next player in list
+                        initialPass = false;
+                        continue;
+                    }
+
+                    //Only decrement turns to miss if the player is missing this turn,
+                    //AND if the player is not the first player in the list
+                    p.TurnsToMiss--;
+                }
+            } while (nextPlayer == null);
+        }
+        
         UpdateMetadata(nextPlayer.PlayerId);
     }
 
     private void UpdateMetadata(string playerId)
     {
+        //Clears dice roll:
+        cache.ClearTurnDiceRoll();
+        
         // CurrentTurnId is not assigned here — the snapshot service
         // generates the new GameTurn id and writes it back to
         // Metadata.CurrentTurnId as part of CreateSnapshotAsync.

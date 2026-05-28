@@ -1,0 +1,205 @@
+@using JC.Core.Extensions
+@using MP.GameEngine.Enums.Properties
+@using MP.GameEngine.Helpers
+@using MP.GameEngine.Helpers.RuleSet
+@using UltimateMonopoly.Helpers
+@using UltimateMonopoly.Models.ViewModels.Games
+@model BoardViewModel
+@{
+    // Live ownership state keyed by board index. A space is "ownable" (banner +
+    // state tint, no text label) iff it has a PropertySet; everything else
+    // (corners, tax, card spaces) shows its name as text.
+    var propsByIndex = Model.Properties.ToDictionary(p => p.BoardIndex);
+}
+
+@* ─── Board ───────────────────────────────────────────────────────────────
+   Square 13×13 grid sized off the container's height (see Game-UI.md). Each
+   cell carries data-board-index so the live layer can re-colour it from the
+   StateChanged broadcast. Ownable spaces show a colour banner (inward edge,
+   shared .bg-prop-* palette) + an ownership-state tint; corners and
+   non-property spaces show a text label.                                       *@
+<div class="board-view">
+    <div class="board-grid">
+        @foreach (var space in Model.Board.Spaces
+            .Where(s => s.Index < IndexHelper.PhysicalBoardSize)
+            .OrderBy(s => s.Index))
+        {
+            var cell = BoardLayoutHelper.GetCell(space.Index);
+            var isCorner = cell.Side == BoardSide.Corner;
+            var ownable = space.IsPurchasable;
+            propsByIndex.TryGetValue(space.Index, out var prop);
+
+            // Tooltip on properties + tax only — not corners, not card spaces.
+            string? tipTitle = null, tipContent = null;
+            if (ownable)
+            {
+                tipTitle = space.Name;
+                var owner = prop?.OwnerPlayerId ?? "Available";
+                tipContent = $"Cost: {RuleDictionary.Currency}{space.PurchaseCost}";
+                if (space.IsBuildable)
+                    tipContent += $"\nBuild: {RuleDictionary.Currency}{space.BuildCost}";
+                tipContent += $"\nOwner: {owner}";
+            }
+            else if (space.IsTaxable)
+            {
+                tipTitle = space.Name;
+                tipContent = $"Tax: {RuleDictionary.Currency}{space.Tax}";
+            }
+            var hasTip = tipContent is not null;
+
+            var propClass = PropClass(space.PropertySet);
+            var stateClass = ownable && prop is not null ? StateClass(prop.State) : null;
+
+            <div class="board-space @SideClass(cell.Side) @(isCorner ? "is-corner" : null)"
+                 style="grid-column: @cell.Column / span @cell.ColumnSpan; grid-row: @cell.Row / span @cell.RowSpan;"
+                 data-board-index="@space.Index"
+                 tabindex="@(hasTip ? "0" : null)"
+                 role="@(hasTip ? "button" : null)"
+                 data-bs-toggle="@(hasTip ? "popover" : null)"
+                 data-bs-trigger="@(hasTip ? "focus" : null)"
+                 data-bs-custom-class="@(hasTip ? "board-popover" : null)"
+                 data-bs-title="@tipTitle"
+                 data-bs-content="@tipContent">
+                @if (ownable)
+                {
+                    <div class="space-banner @propClass"></div>
+                    <div class="space-body @stateClass"></div>
+                }
+                else
+                {
+                    <div class="space-label">@space.Name</div>
+                }
+            </div>
+        }
+
+        @* Centre — Free Parking pot + last property handed in. Structure only;
+           figures populated live from StateChanged (cache). *@
+        <div class="board-centre" style="grid-column: 3 / span 9; grid-row: 3 / span 9;">
+            <div class="fp-label">Free Parking</div>
+            <div class="fp-pot" data-fp-pot></div>
+            <div class="fp-last-property" data-fp-last-prop></div>
+        </div>
+    </div>
+</div>
+
+@functions {
+    static string SideClass(BoardSide side) => side switch
+    {
+        BoardSide.Top => "side-top",
+        BoardSide.Bottom => "side-bottom",
+        BoardSide.Left => "side-left",
+        BoardSide.Right => "side-right",
+        _ => "is-corner"
+    };
+
+    // Banner colour via the shared SCSS property palette (.bg-prop-{slug}) —
+    // e.g. DarkBlue -> bg-prop-dark-blue, Station -> bg-prop-station. ToDisplayName
+    // splits the PascalCase name ("Dark blue") and ToSlug kebabs it, matching the
+    // keys in custom-bootstrap.scss ($prop-colours).
+    static string? PropClass(PropertySet? set) =>
+        set is null ? null : $"bg-prop-{set.Value.ToDisplayName().ToSlug()}";
+
+    // Ownership-state tint via Bootstrap's light "-subtle" backgrounds, so the
+    // hues track the theme palette (no hardcoded colours).
+    static string StateClass(PropertyState state) => state switch
+    {
+        PropertyState.NotOwned => "bg-success",     // available — green
+        PropertyState.Owned => "bg-danger",         // owned — red
+        PropertyState.Mortgaged => "bg-warning",    // mortgaged — amber
+        PropertyState.Reserved => "bg-primary",     // reserved — light blue
+        PropertyState.FreeParking => "bg-info",     // free parking — periwinkle/purple
+        _ => ""
+    };
+}
+
+@* Init click-popovers once the page (and Bootstrap, loaded at end of body) is ready.
+   TODO: move into the board JS module so it re-inits when the board re-renders live. *@
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        if (typeof bootstrap === 'undefined') return;
+        document.querySelectorAll('.board-view [data-bs-toggle="popover"]')
+            .forEach(function (el) { new bootstrap.Popover(el); });
+    });
+</script>
+
+<style>
+    /* Square sized off the container's height; capped so a narrow column can't overflow. */
+    .board-view {
+        aspect-ratio: 1 / 1;
+        height: 100%;
+        max-width: 100%;
+        margin-inline: auto;
+    }
+
+    .board-grid {
+        display: grid;
+        grid-template-columns: repeat(13, 1fr);
+        grid-template-rows: repeat(13, 1fr);
+        width: 100%;
+        height: 100%;
+        gap: 2px;                  /* gaps show the dark backing as grid lines */
+        background: #2b2b2b;
+        border: 2px solid #2b2b2b;
+        border-radius: 4px;
+    }
+
+    .board-space {
+        display: flex;
+        min-width: 0;
+        min-height: 0;
+        overflow: hidden;
+        background: #f5f5f5;        /* white body for plain (non-property) spaces */
+    }
+    .board-space[data-bs-toggle] { cursor: pointer; }
+
+    /* Banner on the inward edge. Markup order is banner-then-body, so the
+       reversed directions put the banner against the centre of the board. */
+    .side-top { flex-direction: column-reverse; }   /* banner bottom */
+    .side-bottom { flex-direction: column; }         /* banner top */
+    .side-left { flex-direction: row-reverse; }      /* banner right */
+    .side-right { flex-direction: row; }             /* banner left */
+
+    /* Body colour = ownership tint (.bg-*-subtle); banner colour = .bg-prop-*. */
+    .space-body { flex: 1 1 auto; background: #f5f5f5; }
+    .space-banner { flex: 0 0 22%; }
+
+    /* Text labels — non-property spaces (Chance, Tax, …) and corners */
+    .space-label {
+        flex: 1 1 auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.2rem;
+        text-align: center;
+        font-size: 0.62rem;
+        line-height: 1.05;
+        font-weight: 600;
+        color: #222;
+        overflow: hidden;
+    }
+
+    /* Corners + centre share the board base colour */
+    .board-space.is-corner { background: #e9e4d6; }
+    .board-space.is-corner .space-label {
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+    }
+    .board-centre {
+        background: #e9e4d6;
+        color: #222;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.25rem;
+        padding: 0.5rem;
+        text-align: center;
+    }
+    .board-centre .fp-label { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.7; }
+    .board-centre .fp-pot { font-size: 1.5rem; font-weight: 700; }
+
+    /* Multi-line popover content (plain text + pre-line — no HTML, so a
+       user-authored board-skin name can't inject markup). */
+    .board-popover .popover-body { white-space: pre-line; }
+</style>

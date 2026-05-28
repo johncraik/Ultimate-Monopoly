@@ -1,4 +1,5 @@
 using MP.GameEngine.Enums;
+using MP.GameEngine.Enums.Games;
 using MP.GameEngine.Enums.Properties;
 using MP.GameEngine.Helpers.RuleSet;
 using MP.GameEngine.Models.EventReceipts;
@@ -251,33 +252,41 @@ public class TransactionService
         bool allowShortfall = false,
         CancellationToken ct = default)
     {
-        if (amount == 0) return;
-
-        if (amount < 0)
+        if(amount == 0) return;
+        
+        amount = ComputeGameRounding(amount, engine.Cache.RoundingRule, reason);
+        switch (amount)
         {
-            var debit = (uint)(-amount);
-            if (player.Money < debit)
+            case 0:
+                return;
+            case < 0:
             {
-                if (!allowShortfall) return;        // caller pre-gated and got it wrong → silent no-op
-
-                var outcome = await ResolveShortfall(engine, player, debit,
-                    counterpartyPlayer?.PlayerId, counterpartyPropertyIndex, ct);
-
-                switch (outcome)
+                var debit = (uint)(-amount);
+                if (player.Money < debit)
                 {
-                    case ShortfallOutcome.DebtSettled:
-                    case ShortfallOutcome.Bankrupted:
-                        // The debt is no longer owed — via creditor-deal or bankruptcy.
-                        // The original transaction must not apply; receipts for the
-                        // settling path are emitted by the relevant sub-service.
-                        return;
+                    if (!allowShortfall) return;        // caller pre-gated and got it wrong → silent no-op
 
-                    case ShortfallOutcome.FundsRaised:
-                        // The sub-service raised cash (loan / mortgage / sell-building).
-                        // The original transaction continues below.
-                        if (player.Money < debit) return;   // shouldn't happen, but defensive
-                        break;
+                    var outcome = await ResolveShortfall(engine, player, debit,
+                        counterpartyPlayer?.PlayerId, counterpartyPropertyIndex, ct);
+
+                    switch (outcome)
+                    {
+                        case ShortfallOutcome.DebtSettled:
+                        case ShortfallOutcome.Bankrupted:
+                            // The debt is no longer owed — via creditor-deal or bankruptcy.
+                            // The original transaction must not apply; receipts for the
+                            // settling path are emitted by the relevant sub-service.
+                            return;
+
+                        case ShortfallOutcome.FundsRaised:
+                            // The sub-service raised cash (loan / mortgage / sell-building).
+                            // The original transaction continues below.
+                            if (player.Money < debit) return;   // shouldn't happen, but defensive
+                            break;
+                    }
                 }
+
+                break;
             }
         }
 
@@ -338,6 +347,37 @@ public class TransactionService
             CounterpartyPlayerId = player.PlayerId,
             CounterpartyPropertyIndex = counterpartyPropertyIndex
         });
+    }
+
+    public long ComputeGameRounding(long amount, GameRoundingRule roundingRule, FinancialReason reason )
+    {
+        var value = roundingRule switch
+        {
+            GameRoundingRule.None => amount,
+            GameRoundingRule.To5 => (long)(Math.Round(amount / 5.0, MidpointRounding.AwayFromZero) * 5),
+            GameRoundingRule.To10 => (long)(Math.Round(amount / 10.0, MidpointRounding.AwayFromZero) * 10),
+            GameRoundingRule.To20 => (long)(Math.Round(amount / 20.0, MidpointRounding.AwayFromZero) * 20),
+            GameRoundingRule.To50 => (long)(Math.Round(amount / 50.0, MidpointRounding.AwayFromZero) * 50),
+            _ => throw new ArgumentOutOfRangeException(nameof(roundingRule), roundingRule, null)
+        };
+        
+        if(reason == FinancialReason.Rent) 
+            //Rent that resolves to 0, is 0. All others round UP to minimum value
+            return value;
+        
+        var positive = amount > 0;
+        if (value == 0)
+            value = roundingRule switch
+            {
+                GameRoundingRule.None => value,
+                GameRoundingRule.To5 => positive ? 5 : -5,
+                GameRoundingRule.To10 => positive ? 10 : -10,
+                GameRoundingRule.To20 => positive ? 20 : -20,
+                GameRoundingRule.To50 => positive ? 50 : -50,
+                _ => throw new ArgumentOutOfRangeException(nameof(roundingRule), roundingRule, null)
+            };
+        
+        return value;
     }
 
 

@@ -29,6 +29,11 @@ public class PlayerModel
     [JsonIgnore]
     public bool MissNextTurn => TurnsToMiss > 0;
     
+    public ushort ExtraTurns { get; set; }
+    [JsonIgnore]
+    public bool HasExtraTurns => ExtraTurns > 0 && !MissNextTurn; //Miss turns takes precedence
+    
+    
     [JsonIgnore]
     public bool IsInJail => BoardIndex == IndexHelper.JailSpace;
     public ushort JailTurnCounter { get; set; }
@@ -72,6 +77,7 @@ public class PlayerModel
         JailCost = model.JailCost;
         
         TurnsToMiss = model.TurnsToMiss;
+        ExtraTurns = model.ExtraTurns;
         JailTurnCounter = model.JailTurnCounter;
         MaxJailTurnsOverride = model.MaxJailTurnsOverride;
         
@@ -88,9 +94,10 @@ public class PlayerModel
 
     public void FlipDirection()
     {
-        Direction = Direction == PlayerDirection.Forward 
-            ? PlayerDirection.Backward 
-            : PlayerDirection.Forward;
+        if(HasPassedInitialGo)
+            Direction = Direction == PlayerDirection.Forward 
+                ? PlayerDirection.Backward 
+                : PlayerDirection.Forward;
     }
 
 

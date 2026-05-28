@@ -122,6 +122,7 @@ app.MapRazorPages();
 app.MapControllers();
 app.MapHub<PresenceHub>("/hubs/presence");
 app.MapHub<GameSetupHub>("/hubs/game-setup");
+app.MapHub<GamePlayHub>("/hubs/game-play");
 
 // Profile cookie — 90-day encrypted cookie holding the user's avatar choices
 app.PopulateEncryptedCookieProfiles(

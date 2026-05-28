@@ -1,7 +1,9 @@
+using MP.GameEngine.Abstractions;
 using MP.GameEngine.Enums.Games;
 using MP.GameEngine.Models;
 using MP.GameEngine.Models.Boards;
 using MP.GameEngine.Models.DTOs;
+using MP.GameEngine.Models.Prompts;
 using MP.GameEngine.Models.Prompts.PromptTypes;
 using MP.GameEngine.Models.Prompts.PromptTypes.Responses;
 using MP.GameEngine.Models.Snapshot;
@@ -43,7 +45,15 @@ public class PromptProvider_Tests
         return new GameCacheModel(dto, game, board);
     }
 
-    private static PromptProvider CreateProvider(GameCacheModel cache) => new(cache);
+    /// <summary>No-op notifier — these tests don't assert on broadcasts.</summary>
+    private sealed class NoOpNotifier : IEngineNotifier
+    {
+        public void PromptOpened(string gameId, Prompt prompt, string concurrencyStamp) { }
+        public void PromptClosed(string gameId, string promptId, string concurrencyStamp) { }
+        public void StateChanged(GameCacheModel cache) { }
+    }
+    
+    private static PromptProvider CreateProvider(GameCacheModel cache) => new(cache, new NoOpNotifier());
 
     private static AcknowledgePrompt CreateAckPrompt(string playerId = PlayerId) =>
         new() { PlayerId = playerId, Title = "Test", Body = "Test body" };

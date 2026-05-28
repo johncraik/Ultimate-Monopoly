@@ -64,5 +64,10 @@
         setTimeout(() => { window.location.href = '/'; }, 3000);
     });
 
+    connection.on('GameStarted', () => {
+        window.location.href = '/player-profile/'
+            + encodeURIComponent(gameId) + '/' + encodeURIComponent(userId);
+    });
+
     connection.start().catch(err => console.error('Game lobby hub failed to connect:', err));
 })();

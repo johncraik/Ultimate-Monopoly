@@ -140,7 +140,16 @@ public class GameModel
     {
         var players = Players.Where(p => p.IsBankrupt == bankrupt).ToList();
         var povPlayer = GetPlayer(povPlayerId, bankrupt);
-        if (povPlayer == null) return players.OrderBy(p => p.OrderId).ToList();
+        if (povPlayer == null)
+        {
+            povPlayer = GetPlayer(povPlayerId, !bankrupt);
+            if(povPlayer == null)
+                return players.OrderBy(p => p.OrderId).ToList();
+            
+            //Could not find POV player with bankrupt filter, but found when flipping bankrupt filter
+            //Therefore, always exclude POV player from the list (as they do not match bankrupt filter)
+            excludePovPlayer = true;
+        }
         
         var afterPov = players.Where(p => p.OrderId > povPlayer.OrderId);
         var beforePov = players.Where(p => p.OrderId < povPlayer.OrderId);

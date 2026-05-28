@@ -66,6 +66,8 @@ public static class ServiceRegistration
         // Game Engine
         services.TryAddScoped<ISnapshotService, SnapshotService>();
         services.TryAddScoped<IGameEngineFactory, GameEngineFactory>();
+        services.TryAddSingleton<IEngineNotifier, SignalrEngineNotifier>();
+        services.TryAddSingleton<IGameExecutor, GameExecutor>();
         services.AddGameEngine();
 
         return services;

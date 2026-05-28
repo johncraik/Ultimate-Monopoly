@@ -6,6 +6,7 @@ using MP.GameEngine.Models;
 using MP.GameEngine.Models.Boards;
 using MP.GameEngine.Models.DTOs;
 using MP.GameEngine.Models.EventReceipts;
+using MP.GameEngine.Models.Prompts;
 using MP.GameEngine.Models.Prompts.PromptTypes;
 using MP.GameEngine.Models.Snapshot;
 using MP.GameEngine.Services.Framework;
@@ -119,10 +120,18 @@ public class TurnStateProvider_Tests
         }
     }
 
+    /// <summary>No-op notifier — these tests don't assert on broadcasts.</summary>
+    private sealed class NoOpNotifier : IEngineNotifier
+    {
+        public void PromptOpened(string gameId, Prompt prompt, string concurrencyStamp) { }
+        public void PromptClosed(string gameId, string promptId, string concurrencyStamp) { }
+        public void StateChanged(GameCacheModel cache) { }
+    }
+
     /// <summary>Drops a prompt into the cache so IsEngineIdle returns false.</summary>
     private static void OpenPrompt(GameCacheModel cache)
     {
-        var prompts = new PromptProvider(cache);
+        var prompts = new PromptProvider(cache, new NoOpNotifier());
         _ = prompts.RequestAsync(new AcknowledgePrompt
         {
             PlayerId = PlayerId,
@@ -138,21 +147,21 @@ public class TurnStateProvider_Tests
     public void CanPortfolioCommand_AllConditionsMet_ReturnsTrue()
     {
         var provider = CreateProvider(CreateCache());
-        Assert.True(provider.CanPortfolioCommand(PlayerId));
+        Assert.True(provider.CanPortfolioCommand(PlayerId, PlayerId));
     }
 
     [Fact]
     public void CanPortfolioCommand_NotCurrentPlayer_ReturnsFalse()
     {
         var provider = CreateProvider(CreateCache());
-        Assert.False(provider.CanPortfolioCommand(OtherPlayerId));
+        Assert.False(provider.CanPortfolioCommand(OtherPlayerId, OtherPlayerId));
     }
 
     [Fact]
     public void CanPortfolioCommand_PlayerInJail_ReturnsFalse()
     {
         var provider = CreateProvider(CreateCache(currentPlayerInJail: true));
-        Assert.False(provider.CanPortfolioCommand(PlayerId));
+        Assert.False(provider.CanPortfolioCommand(PlayerId, PlayerId));
     }
 
     [Theory]
@@ -165,7 +174,7 @@ public class TurnStateProvider_Tests
         var provider = CreateProvider(cache);
         AdvanceTo(provider, state);
 
-        Assert.False(provider.CanPortfolioCommand(PlayerId));
+        Assert.False(provider.CanPortfolioCommand(PlayerId, PlayerId));
     }
 
     [Fact]
@@ -175,7 +184,7 @@ public class TurnStateProvider_Tests
         var provider = CreateProvider(cache);
         OpenPrompt(cache);
 
-        Assert.False(provider.CanPortfolioCommand(PlayerId));
+        Assert.False(provider.CanPortfolioCommand(PlayerId, PlayerId));
     }
 
 
@@ -185,7 +194,7 @@ public class TurnStateProvider_Tests
     public void CanDeal_StartOfTurn_ReturnsTrue()
     {
         var provider = CreateProvider(CreateCache());
-        Assert.True(provider.CanDeal(PlayerId));
+        Assert.True(provider.CanDeal(PlayerId, PlayerId));
     }
 
     [Fact]
@@ -195,14 +204,14 @@ public class TurnStateProvider_Tests
         var provider = CreateProvider(cache);
         AdvanceTo(provider, TurnState.EndOfTurn);
 
-        Assert.True(provider.CanDeal(PlayerId));
+        Assert.True(provider.CanDeal(PlayerId, PlayerId));
     }
 
     [Fact]
     public void CanDeal_AnyPlayer_ReturnsTrue()
     {
         var provider = CreateProvider(CreateCache());
-        Assert.True(provider.CanDeal(OtherPlayerId));
+        Assert.True(provider.CanDeal(OtherPlayerId, OtherPlayerId));
     }
 
     [Theory]
@@ -214,7 +223,7 @@ public class TurnStateProvider_Tests
         var provider = CreateProvider(cache);
         AdvanceTo(provider, state);
 
-        Assert.False(provider.CanDeal(PlayerId));
+        Assert.False(provider.CanDeal(PlayerId, PlayerId));
     }
 
     [Fact]
@@ -224,7 +233,7 @@ public class TurnStateProvider_Tests
         var provider = CreateProvider(cache);
         OpenPrompt(cache);
 
-        Assert.False(provider.CanDeal(PlayerId));
+        Assert.False(provider.CanDeal(PlayerId, PlayerId));
     }
 
 
@@ -234,14 +243,14 @@ public class TurnStateProvider_Tests
     public void CanLeaveJail_AllConditionsMet_ReturnsTrue()
     {
         var provider = CreateProvider(CreateCache(currentPlayerInJail: true));
-        Assert.True(provider.CanLeaveJail(PlayerId));
+        Assert.True(provider.CanLeaveJail(PlayerId, PlayerId));
     }
 
     [Fact]
     public void CanLeaveJail_PlayerNotInJail_ReturnsFalse()
     {
         var provider = CreateProvider(CreateCache(currentPlayerInJail: false));
-        Assert.False(provider.CanLeaveJail(PlayerId));
+        Assert.False(provider.CanLeaveJail(PlayerId, PlayerId));
     }
 
     [Fact]
@@ -249,7 +258,7 @@ public class TurnStateProvider_Tests
     {
         var provider = CreateProvider(CreateCache(currentPlayerInJail: true));
         // OtherPlayer isn't in jail in the fixture and isn't current — both fail.
-        Assert.False(provider.CanLeaveJail(OtherPlayerId));
+        Assert.False(provider.CanLeaveJail(OtherPlayerId, OtherPlayerId));
     }
 
     [Theory]
@@ -262,7 +271,7 @@ public class TurnStateProvider_Tests
         var provider = CreateProvider(cache);
         AdvanceTo(provider, state);
 
-        Assert.False(provider.CanLeaveJail(PlayerId));
+        Assert.False(provider.CanLeaveJail(PlayerId, PlayerId));
     }
 
     [Fact]
@@ -272,7 +281,7 @@ public class TurnStateProvider_Tests
         var provider = CreateProvider(cache);
         OpenPrompt(cache);
 
-        Assert.False(provider.CanLeaveJail(PlayerId));
+        Assert.False(provider.CanLeaveJail(PlayerId, PlayerId));
     }
 
 
@@ -285,7 +294,7 @@ public class TurnStateProvider_Tests
         var provider = CreateProvider(cache);
         AdvanceTo(provider, TurnState.EndOfTurn);
 
-        Assert.True(provider.CanEndTurn(PlayerId));
+        Assert.True(provider.CanEndTurn(PlayerId, PlayerId));
     }
 
     [Theory]
@@ -298,7 +307,7 @@ public class TurnStateProvider_Tests
         var provider = CreateProvider(cache);
         AdvanceTo(provider, state);
 
-        Assert.False(provider.CanEndTurn(PlayerId));
+        Assert.False(provider.CanEndTurn(PlayerId, PlayerId));
     }
 
     [Fact]
@@ -308,7 +317,7 @@ public class TurnStateProvider_Tests
         var provider = CreateProvider(cache);
         AdvanceTo(provider, TurnState.EndOfTurn);
 
-        Assert.False(provider.CanEndTurn(OtherPlayerId));
+        Assert.False(provider.CanEndTurn(OtherPlayerId, OtherPlayerId));
     }
 
     [Fact]
@@ -319,7 +328,7 @@ public class TurnStateProvider_Tests
         AdvanceTo(provider, TurnState.EndOfTurn);
         OpenPrompt(cache);
 
-        Assert.False(provider.CanEndTurn(PlayerId));
+        Assert.False(provider.CanEndTurn(PlayerId, PlayerId));
     }
 
 
@@ -329,7 +338,7 @@ public class TurnStateProvider_Tests
     public void CanDeclareBankruptcy_StartOfTurn_ReturnsTrue()
     {
         var provider = CreateProvider(CreateCache());
-        Assert.True(provider.CanDeclareBankruptcy(PlayerId));
+        Assert.True(provider.CanDeclareBankruptcy(PlayerId, PlayerId));
     }
 
     [Fact]
@@ -339,14 +348,14 @@ public class TurnStateProvider_Tests
         var provider = CreateProvider(cache);
         AdvanceTo(provider, TurnState.EndOfTurn);
 
-        Assert.True(provider.CanDeclareBankruptcy(PlayerId));
+        Assert.True(provider.CanDeclareBankruptcy(PlayerId, PlayerId));
     }
 
     [Fact]
     public void CanDeclareBankruptcy_AnyPlayer_ReturnsTrue()
     {
         var provider = CreateProvider(CreateCache());
-        Assert.True(provider.CanDeclareBankruptcy(OtherPlayerId));
+        Assert.True(provider.CanDeclareBankruptcy(OtherPlayerId, OtherPlayerId));
     }
 
     [Theory]
@@ -358,7 +367,7 @@ public class TurnStateProvider_Tests
         var provider = CreateProvider(cache);
         AdvanceTo(provider, state);
 
-        Assert.False(provider.CanDeclareBankruptcy(PlayerId));
+        Assert.False(provider.CanDeclareBankruptcy(PlayerId, PlayerId));
     }
 
     [Fact]
@@ -368,7 +377,46 @@ public class TurnStateProvider_Tests
         var provider = CreateProvider(cache);
         OpenPrompt(cache);
 
-        Assert.False(provider.CanDeclareBankruptcy(PlayerId));
+        Assert.False(provider.CanDeclareBankruptcy(PlayerId, PlayerId));
+    }
+
+
+    // ─── Host bypass (submitter acts for the named player) ──────────────
+
+    [Fact]
+    public void CanEndTurn_HostSubmitsForCurrentPlayer_ReturnsTrue()
+    {
+        var cache = CreateCache();
+        var provider = CreateProvider(cache);
+        AdvanceTo(provider, TurnState.EndOfTurn);
+
+        Assert.True(provider.CanEndTurn(PlayerId, HostId));
+    }
+
+    [Fact]
+    public void CanEndTurn_UnrelatedPlayerSubmits_ReturnsFalse()
+    {
+        var cache = CreateCache();
+        var provider = CreateProvider(cache);
+        AdvanceTo(provider, TurnState.EndOfTurn);
+
+        // OtherPlayer is neither the named player nor the host.
+        Assert.False(provider.CanEndTurn(PlayerId, OtherPlayerId));
+    }
+
+    [Fact]
+    public void CanPortfolioCommand_HostSubmitsForCurrentPlayer_ReturnsTrue()
+    {
+        var provider = CreateProvider(CreateCache());
+        Assert.True(provider.CanPortfolioCommand(PlayerId, HostId));
+    }
+
+    [Fact]
+    public void CanDeclareBankruptcy_HostSubmitsForAnyPlayer_ReturnsTrue()
+    {
+        // Host declares on a non-current player's behalf at a turn boundary.
+        var provider = CreateProvider(CreateCache());
+        Assert.True(provider.CanDeclareBankruptcy(OtherPlayerId, HostId));
     }
 
 

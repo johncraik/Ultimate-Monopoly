@@ -54,12 +54,12 @@ public class PlayerService
         if (player == null) throw new InvalidOperationException($"Player with id {playerId} not found in game players list.");
         
         var theyRolled = engine.Cache.Game.Metadata.CurrentPlayerId == playerId;
-        _ = await engine.PromptProvider.Acknowledge(playerId, "YOUR NUMBER!",
+        /*_ = await engine.PromptProvider.Acknowledge(playerId, "YOUR NUMBER!",
             $"{(theyRolled ? "You rolled" : "Someone else rolled")} your number ({player.Dice1} and {player.Dice2})." +
             $"You will collect {RuleDictionary.Currency}{RuleDictionary.DiceNumRolledBonus} from the bank, " +
             $"{(theyRolled ? $"{RuleDictionary.Currency}{RuleDictionary.DiceNumRolledBonus} from each player, " : "")}" +
             $"and a third card at the end of this turn.",
-            ct: ct);
+            ct: ct);*/
         
         
     }

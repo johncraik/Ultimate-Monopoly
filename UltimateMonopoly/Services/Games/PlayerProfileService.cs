@@ -46,4 +46,8 @@ public class PlayerProfileService
     public async Task<GamePlayer?> GetPlayerForGameSetup(string gameId, string userId)
         => await QueryGamePlayers(gameId, GameState.Setup, true, false)
             .FirstOrDefaultAsync(p => p.UserId == userId);
+
+    public async Task<GamePlayer?> GetPlayerForGamePlay(string gameId, string userId)
+        => await QueryGamePlayers(gameId, GameState.InPlay, true, false)
+            .FirstOrDefaultAsync(p => p.UserId == userId);
 }

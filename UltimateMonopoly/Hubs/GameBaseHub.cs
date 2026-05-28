@@ -49,7 +49,7 @@ public abstract class GameBaseHub : Hub
         await base.OnDisconnectedAsync(exception);
     }
 
-    private string? GetGameId() 
+    protected string? GetGameId()
         => Context.GetHttpContext()?.Request.Query["gameId"].ToString();
     
     private async Task<bool> CheckInGame(string gameId) 

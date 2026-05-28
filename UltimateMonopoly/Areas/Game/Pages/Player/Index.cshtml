@@ -1,2 +1,168 @@
 @page "/player-profile/{gameId}/{userId}"
 @model UltimateMonopoly.Areas.Game.Pages.Player.Index
+@{
+    ViewData["Title"] = Model.Profile?.DisplayName ?? "Player";
+}
+
+@*
+    MOBILE PLAYER PROFILE
+    The only functioning element on this page is the dice-roll prompt (the modal
+    at the bottom), driven by SignalR via game-play-hub.js. It appears only when a
+    DiceRollPrompt fires for this player. Everything else below is static mock — no
+    money/property/card data is wired yet.
+*@
+
+<div class="row justify-content-center"
+     data-player data-game-id="@Model.GameId" data-user-id="@Model.UserId">
+    <div class="col-md-7 col-lg-5">
+
+        @* ---- Identity ---- *@
+        <div class="card mb-3">
+            <div class="card-body d-flex align-items-center gap-3">
+                <profile-circle user="Model.Profile" size="Lg" />
+                <div class="flex-grow-1 min-w-0">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="fw-semibold text-truncate fs-5">@Model.Profile?.DisplayName</span>
+                        @if (Model.IsOwnProfile)
+                        {
+                            <span class="badge text-bg-primary">You</span>
+                        }
+                    </div>
+                    <div class="small text-body-secondary">
+                        @Model.GameName · Seat @(Model.OrderId + 1)
+                        @if (Model.Dice1 is not null && Model.Dice2 is not null)
+                        {
+                            <span class="ms-1">· Dice <span class="badge text-bg-secondary">@Model.Dice1 | @Model.Dice2</span></span>
+                        }
+                    </div>
+                </div>
+                @* mock turn indicator *@
+                <span class="badge rounded-pill text-bg-success align-self-start">Your turn</span>
+            </div>
+        </div>
+
+        @* ---- Cash (mock) ---- *@
+        <div class="card mb-3 text-center">
+            <div class="card-body py-4">
+                <div class="text-body-secondary text-uppercase small mb-1">Balance</div>
+                <div class="display-5 fw-bold">£1,500</div>
+                <div class="small text-body-secondary mt-1">Net worth £1,500</div>
+            </div>
+        </div>
+
+        @* ---- Quick stats (mock) ---- *@
+        <div class="row g-2 mb-3 text-center">
+            <div class="col-4">
+                <div class="card h-100"><div class="card-body p-2">
+                    <div class="fs-4 fw-semibold">0</div>
+                    <div class="small text-body-secondary">Properties</div>
+                </div></div>
+            </div>
+            <div class="col-4">
+                <div class="card h-100"><div class="card-body p-2">
+                    <div class="fs-4 fw-semibold">0</div>
+                    <div class="small text-body-secondary">Cards</div>
+                </div></div>
+            </div>
+            <div class="col-4">
+                <div class="card h-100"><div class="card-body p-2">
+                    <div class="fs-4 fw-semibold">0</div>
+                    <div class="small text-body-secondary">Loans</div>
+                </div></div>
+            </div>
+        </div>
+
+        @* ---- Properties (mock) ---- *@
+        <div class="card mb-3">
+            <div class="card-header fw-semibold d-flex justify-content-between align-items-center">
+                <span>Properties</span>
+                <span class="small text-body-secondary">by set</span>
+            </div>
+            <div class="card-body">
+                <div class="text-center text-body-secondary py-3">
+                    <i class="bi bi-houses fs-3 d-block mb-2"></i>
+                    You don't own any properties yet.
+                </div>
+            </div>
+        </div>
+
+        @* ---- Cards in hand (mock) ---- *@
+        <div class="card mb-3">
+            <div class="card-header fw-semibold">Cards in hand</div>
+            <div class="card-body">
+                <div class="text-center text-body-secondary py-3">
+                    <i class="bi bi-card-text fs-3 d-block mb-2"></i>
+                    No cards held.
+                </div>
+            </div>
+        </div>
+
+        @* ---- Actions (mock — disabled) ---- *@
+        <div class="d-grid gap-2 mb-2">
+            <button type="button" class="btn btn-outline-primary" disabled>Manage Properties</button>
+            <button type="button" class="btn btn-outline-primary" disabled>Propose Deal</button>
+            <button type="button" class="btn btn-success" disabled>End Turn</button>
+        </div>
+        <p class="text-center small text-body-secondary">These actions aren't wired up yet.</p>
+
+    </div>
+</div>
+
+@* ---- Dice-roll prompt (the only live feature) ---- *@
+<div class="modal fade" id="diceRollModal" tabindex="-1" aria-labelledby="diceRollTitle"
+     aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="diceRollTitle">Roll the dice</h5>
+            </div>
+            <div class="modal-body">
+                <p class="text-body-secondary" id="diceRollBody"></p>
+
+                <div class="mb-3" data-die-wrap>
+                    <label class="form-label">Die 1</label>
+                    <div class="btn-group d-flex" role="group" aria-label="Die 1" data-die="1">
+                        @for (ushort i = 1; i <= 6; i++)
+                        {
+                            <input type="radio" class="btn-check" name="roll-die1" id="roll-d1-@i" value="@i" autocomplete="off" />
+                            <label class="btn btn-outline-primary" for="roll-d1-@i">@i</label>
+                        }
+                    </div>
+                </div>
+
+                <div class="mb-3" data-die-wrap>
+                    <label class="form-label">Die 2</label>
+                    <div class="btn-group d-flex" role="group" aria-label="Die 2" data-die="2">
+                        @for (ushort i = 1; i <= 6; i++)
+                        {
+                            <input type="radio" class="btn-check" name="roll-die2" id="roll-d2-@i" value="@i" autocomplete="off" />
+                            <label class="btn btn-outline-primary" for="roll-d2-@i">@i</label>
+                        }
+                    </div>
+                </div>
+
+                <div class="mb-3" data-die-wrap>
+                    <label class="form-label">Third Die</label>
+                    <div class="btn-group d-flex" role="group" aria-label="Third Die" data-die="3">
+                        @for (ushort i = 1; i <= 6; i++)
+                        {
+                            <input type="radio" class="btn-check" name="roll-die3" id="roll-d3-@i" value="@i" autocomplete="off" />
+                            <label class="btn btn-outline-primary" for="roll-d3-@i">@i</label>
+                        }
+                    </div>
+                </div>
+
+                <div class="alert alert-warning d-none mb-0" id="diceRollError" role="alert"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary w-100" id="diceRollSubmit">
+                    <i class="bi bi-dice-5 me-1"></i> Roll
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/scripts/SignalR/game-play-hub.js" asp-append-version="true"></script>
+}

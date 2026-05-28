@@ -15,12 +15,15 @@ public class GameEngineFactory : IGameEngineFactory
 {
     private readonly GameCacheService _cacheService;
     private readonly ISnapshotService _snapshotService;
+    private readonly IEngineNotifier _engineNotifier;
 
     public GameEngineFactory(GameCacheService cacheService,
-        ISnapshotService snapshotService)
+        ISnapshotService snapshotService,
+        IEngineNotifier engineNotifier)
     {
         _cacheService = cacheService;
         _snapshotService = snapshotService;
+        _engineNotifier = engineNotifier;
     }
 
     public async Task<MP.GameEngine.Services.Framework.GameEngine> GetAsync(string gameId)
@@ -29,6 +32,6 @@ public class GameEngineFactory : IGameEngineFactory
             ?? throw new InvalidOperationException(
                 $"No active game cache for gameId '{gameId}' — game may not be started, or its snapshot could not be hydrated.");
 
-        return new MP.GameEngine.Services.Framework.GameEngine(cache, _snapshotService);
+        return new MP.GameEngine.Services.Framework.GameEngine(cache, _snapshotService, _engineNotifier);
     }
 }

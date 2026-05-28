@@ -28,6 +28,7 @@ public class MovementService
 
         engine.EventEmitter.Emit(new PlayerMovedReceipt
         {
+            PlayerId = player.PlayerId,
             InitialBoardIndex = initial,
             FinalBoardIndex = player.BoardIndex,
             Direction = amount > 0 ? PlayerMovementDirection.DirectionOfTravel : PlayerMovementDirection.CounterDirectionOfTravel,
@@ -51,6 +52,7 @@ public class MovementService
         
         engine.EventEmitter.Emit(new PlayerMovedReceipt
         {
+            PlayerId = player.PlayerId,
             InitialBoardIndex = initial,
             FinalBoardIndex = player.BoardIndex,
             Direction = direction,

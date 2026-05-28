@@ -78,12 +78,22 @@ keeps their number.
    as in standard Monopoly. A player's direction changes only when a rule or
    card dictates — most commonly by rolling a double (see Double Dice Rolls).
 
-2. **Direction of travel.** A player always moves in the direction they are
+2. **Direction is locked until the first GO pass.** A player cannot change
+   direction — by a double or any other means — until they have passed GO at
+   least once. The initial move off GO at the start of the game does not count
+   (as in Default Monopoly Rules, rule 1). Rationale: a player cannot buy until
+   they pass GO (Default rule 1), and an anti-clockwise crossing is not a proper
+   pass (it pays £100, not £200 — see GO Space, rule 3). Without this lock, a
+   player who rolled a double and reversed before ever passing GO could never
+   make a qualifying clockwise pass, and so could never buy — an unrecoverable
+   soft-lock. Holding direction clockwise until that first pass prevents it.
+
+3. **Direction of travel.** A player always moves in the direction they are
    currently facing. This applies to every kind of movement alike — their own
    roll, third-die movement, and card effects — so different players may be
    travelling in opposite directions at the same time.
 
-3. **Landing on a space performs its action.** Any movement that brings a
+4. **Landing on a space performs its action.** Any movement that brings a
    player onto a space performs that space's action for that player — their own
    roll, third-die movement, the forward/back movement of a double, card-driven
    movement, and so on. The only exception is swapping places with another
@@ -133,7 +143,8 @@ travel and **back** means the reverse of their direction of travel.
    is collect a double card.
 
 2. **Direction change.** After rolling a double, the rolling player changes
-   direction.
+   direction — unless they have not yet passed GO, in which case direction is
+   locked (see Movement, rule 2).
 
 3. **Doubled fines.** A fine from a card or a tax space is doubled if the player
    arrived at that space as the result of a double roll.

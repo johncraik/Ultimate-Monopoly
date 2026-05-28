@@ -17,6 +17,7 @@ using UltimateMonopoly.Models.ViewModels;
 using UltimateMonopoly.Services.BoardSkins;
 using UltimateMonopoly.Services.Cache;
 using UltimateMonopoly.Services.Friends;
+using UltimateMonopoly.Services.GameEngine;
 
 namespace UltimateMonopoly.Services.Games;
 
@@ -35,6 +36,7 @@ public class GameSetupService
     private readonly MP.GameEngine.Services.GameEngineSetupService _engineEngineSetupService;
     private readonly GameCacheService _gameCacheService;
     private readonly ISnapshotService _snapshotService;
+    private readonly GameService _gameService;
 
 
     public GameSetupService(IRepositoryManager repos,
@@ -49,7 +51,8 @@ public class GameSetupService
         BoardCacheService boardCacheService,
         MP.GameEngine.Services.GameEngineSetupService engineEngineSetupService,
         GameCacheService gameCacheService,
-        ISnapshotService snapshotService)
+        ISnapshotService snapshotService,
+        GameService gameService)
     {
         _repos = repos;
         _userInfo = userInfo;
@@ -64,6 +67,7 @@ public class GameSetupService
         _engineEngineSetupService = engineEngineSetupService;
         _gameCacheService = gameCacheService;
         _snapshotService = snapshotService;
+        _gameService = gameService;
     }
 
 
@@ -404,7 +408,8 @@ public class GameSetupService
         
         cache.SaveChanges();
         _gameCacheService.PopulateGame(cache);
-        
+        _gameService.EnqueueTurn(gameId);
+
         await _setupHub.Clients.Group(GameSetupHub.GroupName(gameId))
             .SendAsync("GameStarted");
         return true;

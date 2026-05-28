@@ -240,6 +240,18 @@ window is interrupting, while `Target` is the group of eligible responders
 derived from `EligiblePlays`. Authorisation is enforced by the validator
 against the response and the cache, not by either field.
 
+**One operation, one prompt — to the subject only, never affected
+counterparties.** When an operation touches more than one player, the prompt
+goes solely to the player it acts *on*, not to those merely affected. Player B
+landing on Player A's property gets the rent prompt (an `AcknowledgePrompt`, or
+a `ShortfallPrompt` if they can't pay, or a card prompt if a card intervenes);
+Player A, the collector, gets **no** prompt. This is the helper-not-simulator
+principle (`game-engine.md` §1): the players share one physical table, so
+stopping everyone for the same operation would only slow play — the engine
+pauses the *one* person whose input it needs. Affected counterparties learn of
+the outcome through the live state broadcast (`web-orchestration.md` §6), not a
+prompt — Player A's balance simply updates when the rent applies.
+
 The host identity is not carried on any prompt — it lives on
 `GameCacheModel.HostPlayerId` (sourced from the game's DTO). The validator
 reads it from there when enforcing host-bypass authorisation, so every prompt

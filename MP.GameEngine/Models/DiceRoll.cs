@@ -17,6 +17,8 @@ public class DiceRoll
     
     public bool IsTurnRoll { get; }
 
+    public bool IsDoubleFive => Die1 == 5 && Die2 == 5 && ThirdDie != 5;
+    
     public DiceRoll(ushort die1, ushort die2, ushort thirdDie, bool isTurnRoll = true)
     {
         Die1 = die1;
