@@ -7,7 +7,8 @@
 @*
     MOBILE PLAYER PROFILE
     The only functioning element on this page is the dice-roll prompt (the modal
-    at the bottom), driven by SignalR via game-play-hub.js. It appears only when a
+    at the bottom), driven by SignalR via /scripts/InGame/Prompts/dice-roll-prompt.js.
+    It appears only when a
     DiceRollPrompt fires for this player. Everything else below is static mock — no
     money/property/card data is wired yet.
 *@
@@ -109,60 +110,10 @@
 </div>
 
 @* ---- Dice-roll prompt (the only live feature) ---- *@
-<div class="modal fade" id="diceRollModal" tabindex="-1" aria-labelledby="diceRollTitle"
-     aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="diceRollTitle">Roll the dice</h5>
-            </div>
-            <div class="modal-body">
-                <p class="text-body-secondary" id="diceRollBody"></p>
-
-                <div class="mb-3" data-die-wrap>
-                    <label class="form-label">Die 1</label>
-                    <div class="btn-group d-flex" role="group" aria-label="Die 1" data-die="1">
-                        @for (ushort i = 1; i <= 6; i++)
-                        {
-                            <input type="radio" class="btn-check" name="roll-die1" id="roll-d1-@i" value="@i" autocomplete="off" />
-                            <label class="btn btn-outline-primary" for="roll-d1-@i">@i</label>
-                        }
-                    </div>
-                </div>
-
-                <div class="mb-3" data-die-wrap>
-                    <label class="form-label">Die 2</label>
-                    <div class="btn-group d-flex" role="group" aria-label="Die 2" data-die="2">
-                        @for (ushort i = 1; i <= 6; i++)
-                        {
-                            <input type="radio" class="btn-check" name="roll-die2" id="roll-d2-@i" value="@i" autocomplete="off" />
-                            <label class="btn btn-outline-primary" for="roll-d2-@i">@i</label>
-                        }
-                    </div>
-                </div>
-
-                <div class="mb-3" data-die-wrap>
-                    <label class="form-label">Third Die</label>
-                    <div class="btn-group d-flex" role="group" aria-label="Third Die" data-die="3">
-                        @for (ushort i = 1; i <= 6; i++)
-                        {
-                            <input type="radio" class="btn-check" name="roll-die3" id="roll-d3-@i" value="@i" autocomplete="off" />
-                            <label class="btn btn-outline-primary" for="roll-d3-@i">@i</label>
-                        }
-                    </div>
-                </div>
-
-                <div class="alert alert-warning d-none mb-0" id="diceRollError" role="alert"></div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-primary w-100" id="diceRollSubmit">
-                    <i class="bi bi-dice-5 me-1"></i> Roll
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
+<partial name="Play/_DiceRollPrompt" />
 
 @section Scripts {
-    <script src="~/scripts/SignalR/game-play-hub.js" asp-append-version="true"></script>
+    @* Coordinator first — prompt handlers register against it, then it connects. *@
+    <script src="~/scripts/InGame/game-play-hub.js" asp-append-version="true"></script>
+    <script src="~/scripts/InGame/Prompts/dice-roll-prompt.js" asp-append-version="true"></script>
 }

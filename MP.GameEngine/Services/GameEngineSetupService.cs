@@ -31,7 +31,9 @@ public class GameEngineSetupService
                     ?? throw new InvalidOperationException("No players in game")
             },
             Players = _playerService.GetPlayers(playerDtos),
-            Properties = _propertyService.GetProperties(board)
+            Properties = _propertyService.GetProperties(board),
+            ReserveRuleActive = true,
+            FreeParkingAmount = 0
         };
 
         //TODO Load cards!

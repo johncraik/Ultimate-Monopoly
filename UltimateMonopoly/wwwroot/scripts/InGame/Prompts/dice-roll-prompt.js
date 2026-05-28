@@ -1,15 +1,15 @@
+// Dice-roll prompt handler — renders _DiceRollPrompt.cshtml from the engine's
+// DiceRollPrompt and submits the chosen dice. Plugs into the game-play hub
+// coordinator (../game-play-hub.js), which owns the connection and routes the
+// PromptOpened / PromptClosed for this prompt type here. The element ids /
+// data-* hooks below mirror _DiceRollPrompt.cshtml.
 (function () {
     'use strict';
 
-    const root = document.querySelector('[data-player]');
-    if (!root || typeof signalR === 'undefined') return;
-
-    const gameId = root.dataset.gameId;
-    const userId = root.dataset.userId;          // the player this page is a profile of
-    if (!gameId || !userId) return;
+    if (!window.GamePlayHub || typeof bootstrap === 'undefined') return;
 
     const modalEl = document.getElementById('diceRollModal');
-    if (!modalEl || typeof bootstrap === 'undefined') return;
+    if (!modalEl) return;   // partial not on this page — nothing to handle
 
     const diceModal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
     const titleEl = document.getElementById('diceRollTitle');
@@ -22,16 +22,8 @@
         3: modalEl.querySelector('[data-die="3"]')
     };
 
-    // The prompt currently being answered: { promptId, stamp, diceCount }.
-    let current = null;
-
-    const notify = (message, type) =>
-        window.showFloatingAlert && window.showFloatingAlert(message, type);
-
-    const connection = new signalR.HubConnectionBuilder()
-        .withUrl('/hubs/game-play?gameId=' + encodeURIComponent(gameId))
-        .withAutomaticReconnect()
-        .build();
+    let current = null;   // { promptId, stamp, diceCount }
+    let ctx = null;       // hub context, captured when the prompt opens
 
     function selectedValue(groupEl) {
         const checked = groupEl.querySelector('input.btn-check:checked');
@@ -42,12 +34,18 @@
         groupEl.querySelectorAll('input.btn-check').forEach(r => { r.checked = false; });
     }
 
-    function isOurDiceRoll(prompt) {
-        // Polymorphic discriminator from the engine's [JsonPolymorphic] base.
-        return prompt && prompt['$type'] === 'DiceRoll' && prompt.playerId === userId;
+    function showError(message) {
+        errEl.textContent = message;
+        errEl.classList.remove('d-none');
     }
 
-    function showDicePrompt(prompt, stamp) {
+    function onOpen(prompt, stamp, hubCtx) {
+        // Render only for the player this profile page belongs to. (The host
+        // answers on a player's behalf server-side; the page is still that
+        // player's profile, so the playerId check holds for both.)
+        if (prompt.playerId !== hubCtx.userId) return;
+
+        ctx = hubCtx;
         const diceCount = Number(prompt.diceCount) || 3;
         current = { promptId: prompt.promptId, stamp: stamp, diceCount: diceCount };
 
@@ -55,6 +53,8 @@
         bodyEl.textContent = prompt.body || '';
         errEl.classList.add('d-none');
 
+        // Reveal Die 1..diceCount, hide the rest (1 -> Die1, 2 -> Die1+Die2,
+        // 3 -> all). DiceRollResponse never wants Die1 + third without Die2.
         for (let i = 1; i <= 3; i++) {
             const wrap = groups[i].closest('[data-die-wrap]');
             resetGroup(groups[i]);
@@ -64,33 +64,15 @@
         diceModal.show();
     }
 
-    function hideDicePrompt(promptId) {
+    function onClose(promptId) {
         // Ignore a close for a prompt we're no longer showing.
         if (current && promptId && current.promptId !== promptId) return;
         current = null;
         diceModal.hide();
     }
 
-    async function refreshPrompt() {
-        try {
-            const msg = await connection.invoke('GetCurrentPrompt');
-            if (msg && isOurDiceRoll(msg.prompt)) showDicePrompt(msg.prompt, msg.concurrencyStamp);
-            else hideDicePrompt(null);
-        } catch (e) {
-            console.error('GetCurrentPrompt failed:', e);
-        }
-    }
-
-    connection.on('PromptOpened', (msg) => {
-        if (msg && isOurDiceRoll(msg.prompt)) showDicePrompt(msg.prompt, msg.concurrencyStamp);
-    });
-
-    connection.on('PromptClosed', (msg) => {
-        if (msg) hideDicePrompt(msg.promptId);
-    });
-
     rollBtn.addEventListener('click', async () => {
-        if (!current) return;
+        if (!current || !ctx) return;
 
         const d1 = selectedValue(groups[1]);
         const d2 = current.diceCount >= 2 ? selectedValue(groups[2]) : null;
@@ -99,8 +81,7 @@
         if (d1 === null
             || (current.diceCount >= 2 && d2 === null)
             || (current.diceCount === 3 && d3 === null)) {
-            errEl.textContent = 'Select a value for each die.';
-            errEl.classList.remove('d-none');
+            showError('Select a value for each die.');
             return;
         }
 
@@ -114,24 +95,24 @@
 
         rollBtn.disabled = true;
         try {
-            const ok = await connection.invoke('SubmitPrompt', current.stamp, response);
+            const ok = await ctx.submit(current.stamp, response);
             if (ok) {
-                hideDicePrompt(current.promptId);
+                onClose(current.promptId);
             } else {
-                errEl.textContent = 'That roll could not be accepted — your view may be out of date. Refreshing…';
-                errEl.classList.remove('d-none');
-                await refreshPrompt();
+                showError('That roll could not be accepted — your view may be out of date. Refreshing…');
+                await ctx.refresh();
             }
         } catch (e) {
             console.error('SubmitPrompt failed:', e);
-            errEl.textContent = 'Something went wrong submitting your roll.';
-            errEl.classList.remove('d-none');
+            showError('Something went wrong submitting your roll.');
         } finally {
             rollBtn.disabled = false;
         }
     });
 
-    connection.start()
-        .then(refreshPrompt)
-        .catch(err => console.error('Game play hub failed to connect:', err));
+    window.GamePlayHub.registerPrompt({
+        type: 'DiceRoll',
+        onOpen: onOpen,
+        onClose: onClose
+    });
 })();

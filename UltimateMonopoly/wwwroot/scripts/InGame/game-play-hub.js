@@ -1,0 +1,119 @@
+// Game-play hub coordinator.
+//
+// Owns the single SignalR connection to the game-play hub for an in-game page
+// and fans engine prompts out to registered per-prompt handlers (one module per
+// prompt type, under /scripts/InGame/Prompts/). One connection per page —
+// handlers never open their own.
+//
+// A prompt module registers itself:
+//
+//   GamePlayHub.registerPrompt({
+//       type: 'DiceRoll',                  // engine [JsonPolymorphic] $type it renders
+//       onOpen(prompt, stamp, ctx) { },    // a prompt of this type opened
+//       onClose(promptId) { },             // the open prompt closed (promptId may be
+//                                          //   null on a resync that found none)
+//   });
+//
+// ctx (passed to onOpen) exposes:
+//   ctx.gameId, ctx.userId                 // page context — the profiled player
+//   ctx.submit(stamp, response) -> Promise<bool>   // SubmitPrompt; false = stale/invalid
+//   ctx.refresh() -> Promise               // re-pull the current prompt and re-dispatch
+//
+// Non-prompt consumers (e.g. a future StateChanged board projection) attach raw
+// hub handlers with GamePlayHub.on(eventName, callback) — queued until the
+// connection is built, then forwarded.
+//
+// Load order: this script must come before any /Prompts/* handler so the global
+// exists when they register. Registration is synchronous at parse time; the
+// connection is started once on DOMContentLoaded, by which point every handler
+// loaded after this script has registered.
+(function () {
+    'use strict';
+
+    const handlers = new Map();   // $type -> handler
+    const queued = [];            // { event, callback } raw subscriptions queued pre-connect
+    let connection = null;
+    let ctx = null;
+    let started = false;
+
+    function registerPrompt(handler) {
+        if (handler && handler.type) handlers.set(handler.type, handler);
+    }
+
+    function on(event, callback) {
+        if (connection) connection.on(event, callback);
+        else queued.push({ event, callback });
+    }
+
+    // Invoke a hub method (e.g. a command like EndTurn). Rejects if called before
+    // the connection is up.
+    function invoke(method) {
+        if (!connection) return Promise.reject(new Error('game-play hub not connected'));
+        return connection.invoke.apply(connection, arguments);
+    }
+
+    function dispatchOpen(msg) {
+        if (!msg || !msg.prompt) return;
+        const handler = handlers.get(msg.prompt['$type']);
+        if (handler) handler.onOpen(msg.prompt, msg.concurrencyStamp, ctx);
+    }
+
+    // Only one prompt is ever open at a time, and PromptClosed carries no type,
+    // so tell every handler — each ignores a close for a prompt it isn't showing.
+    function dispatchClose(promptId) {
+        handlers.forEach(h => { if (h.onClose) h.onClose(promptId); });
+    }
+
+    async function refresh() {
+        try {
+            const msg = await connection.invoke('GetCurrentPrompt');
+            if (msg && msg.prompt) dispatchOpen(msg);
+            else dispatchClose(null);
+        } catch (e) {
+            console.error('GetCurrentPrompt failed:', e);
+        }
+    }
+
+    function start() {
+        if (started) return;
+        // Player profile ([data-player], carries userId) or host play page
+        // ([data-play], no userId — prompt handlers there self-filter / aren't
+        // registered). Only gameId is required to connect.
+        const root = document.querySelector('[data-player], [data-play]');
+        if (!root || typeof signalR === 'undefined') return;
+
+        const gameId = root.dataset.gameId;
+        if (!gameId) return;
+        const userId = root.dataset.userId || null;
+
+        started = true;
+        connection = new signalR.HubConnectionBuilder()
+            .withUrl('/hubs/game-play?gameId=' + encodeURIComponent(gameId))
+            .withAutomaticReconnect()
+            .build();
+
+        ctx = {
+            gameId: gameId,
+            userId: userId,
+            submit: (stamp, response) => connection.invoke('SubmitPrompt', stamp, response),
+            refresh: refresh
+        };
+
+        connection.on('PromptOpened', dispatchOpen);
+        connection.on('PromptClosed', (msg) => { if (msg) dispatchClose(msg.promptId); });
+        queued.forEach(h => connection.on(h.event, h.callback));
+
+        // Re-sync the open prompt after a dropped connection is restored.
+        connection.onreconnected(refresh);
+
+        connection.start()
+            .then(refresh)
+            .catch(err => console.error('Game play hub failed to connect:', err));
+    }
+
+    window.GamePlayHub = { registerPrompt: registerPrompt, on: on, invoke: invoke };
+
+    // Defer start until handler modules loaded after this script have registered.
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+    else setTimeout(start, 0);
+})();

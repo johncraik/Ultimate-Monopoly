@@ -549,7 +549,8 @@ at the command layer — there is nothing to cancel.
 
 The host player is connected twice: once as the tablet controller, once as
 their own phone-side player profile. Both connections sit inside the
-SignalR group `game-{gameId}` (`signalr-design.md`). The `PromptOpened`
+in-play SignalR group `game-play__{gameId}` (`GamePlayHub` — see
+`signalr-design.md`). The `PromptOpened`
 event reaches both. The tablet renders the Continue button and the full
 `EligiblePlays` list (the host can play any player's card on their behalf,
 e.g. via a sidebar player-profile view). The phone shows only that player's
@@ -583,8 +584,11 @@ side-effect-free.
 
 ## 11. SignalR surface
 
-Two new server-to-client events on `GameHub`, one client-to-server method.
-Scoped to the existing `game-{gameId}` group from `signalr-design.md`.
+Two server-to-client events on `GamePlayHub`, one client-to-server method.
+Scoped to the in-play `game-play__{gameId}` group (`signalr-design.md`). The
+two S→C events are carried as `PromptOpenedMessage` / `PromptClosedMessage`
+records, broadcast by `SignalrEngineNotifier` (`web-orchestration.md` §6),
+which also pushes the whole-cache `StateChanged` frame on the same group.
 
 | Direction | Name | Payload | Notes |
 |---|---|---|---|
@@ -598,10 +602,11 @@ Scoped to the existing `game-{gameId}` group from `signalr-design.md`.
    is in `Target.PlayerIds` and what response variants they are authorised
    to submit.
 
-2. **Late joiners and reconnects pull the current state.** A
-   `GetCurrentPrompt` hub method (or the existing game-state fetch,
-   augmented) returns the open prompt if one exists, or `null`. Reconnecting
-   phones therefore see the prompt they missed.
+2. **Late joiners and reconnects pull the current state.** The implemented
+   `GamePlayHub.GetCurrentPrompt` returns the open prompt (as a
+   `PromptOpenedMessage`) if one exists, or `null`. Reconnecting phones
+   therefore see the prompt they missed. (`GamePlayHub.GetBoard` is the
+   companion pull for the static board.)
 
 ---
 

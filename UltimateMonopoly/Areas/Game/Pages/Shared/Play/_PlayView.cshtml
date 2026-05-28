@@ -1,0 +1,262 @@
+@using JC.Core.Extensions
+@using MP.GameEngine.Enums
+@using MP.GameEngine.Enums.Properties
+@using MP.GameEngine.Helpers.RuleSet
+@using UltimateMonopoly.Models.ViewModels.Games
+@using UltimateMonopoly.Services.Cache
+@model MP.GameEngine.Services.Framework.GameEngine
+@inject PlayerCacheService PlayerCache
+@{
+    // The live play body. Rendered on first load (from Play.cshtml) and re-rendered
+    // on every SignalR StateChanged frame (PlayModel.OnGetStateAsync → swapped in by
+    // play-state.js). All state reads straight off the engine cache, so the live and
+    // first-load render paths are identical.
+    var cache = Model.Cache;
+    var turnStateProvider = Model.TurnStateProvider;
+
+    var game = cache.Game;
+
+    var current = game.CurrentPlayer();
+    if (current == null) throw new InvalidOperationException("No current player.");
+
+    var players = game.GetPlayers(excludePovPlayer: false);
+
+    var canEndTurn = turnStateProvider.CanEndTurn(current.PlayerId, cache.HostPlayerId);
+
+    var availableCount = game.Properties.Count(p => string.IsNullOrEmpty(p.OwnerPlayerId));
+    var fpProperties = game.Properties.Where(p => p.State == PropertyState.FreeParking).ToList();
+
+    // Current player's portfolio summary (all read straight off the cache).
+    var ownedCount = game.GetOwnedProperties(current.PlayerId).Count;
+    var mortgagedCount = game.GetOwnedProperties(current.PlayerId).Count(p => p.State == PropertyState.Mortgaged);
+    var c = RuleDictionary.Currency;
+}
+
+@* ───────────────────────── Sidebar (col-3) ───────────────────────── *@
+<div class="col-3">
+    <div class="h-100 d-flex flex-column gap-3">
+
+        @* Top: player list *@
+        <div class="card flex-fill play-pane">
+            <div class="card-header fw-semibold d-flex justify-content-between align-items-center">
+                <span>Players</span>
+                <span class="badge text-bg-secondary">@players.Count</span>
+            </div>
+            <div class="card-body d-flex flex-column gap-2 overflow-auto">
+                @foreach (var p in players)
+                {
+                    var isHost = p.PlayerId == cache.HostPlayerId;
+                    var isCurrent = p.PlayerId == current.PlayerId;
+                    <div class="card play-player-card @(isCurrent ? "border-info" : null) @(p.IsBankrupt ? "opacity-50" : null)"
+                         data-player-card data-user-id="@p.PlayerId"
+                         data-player-name="@(await PlayerCache.GetPlayerName(p.PlayerId))">
+                        <div class="card-body d-flex align-items-center gap-2 py-2">
+                            <div class="flex-grow-1 min-w-0">
+                                <div class="fw-semibold text-truncate">
+                                    @(await PlayerCache.GetPlayerName(p.PlayerId))
+                                    @if (isHost)
+                                    {
+                                        <span class="badge text-bg-primary ms-1">Host</span>
+                                    }
+                                    @if (isCurrent)
+                                    {
+                                        <span class="badge text-bg-info ms-1">Turn</span>
+                                    }
+                                    @if (p.IsBankrupt)
+                                    {
+                                        <span class="badge text-bg-danger ms-1">Bankrupt</span>
+                                    }
+                                </div>
+                                <div class="small text-body-secondary">
+                                    Dice <span class="badge text-bg-secondary">@p.Dice1 | @p.Dice2</span>
+                                    <span class="ms-2">@c@p.Money</span>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-info"
+                                    data-view-player data-user-id="@p.PlayerId"
+                                    disabled="@p.IsBankrupt">
+                                View
+                            </button>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        @* Bottom: current player quick info *@
+        <div class="card flex-fill play-pane">
+            <div class="card-header fw-semibold">Current Player</div>
+            <div class="card-body overflow-auto">
+                <div class="d-flex align-items-baseline justify-content-between mb-2">
+                    <span class="fw-semibold">@(await PlayerCache.GetPlayerName(current.PlayerId))</span>
+                    <span class="fs-5 fw-bold">@c@current.Money</span>
+                </div>
+
+                @* Alerts *@
+                <div class="d-flex flex-wrap gap-1 mb-3">
+                    @if (current.IsInJail)
+                    {
+                        <span class="badge text-bg-warning">In jail</span>
+                    }
+                    @if (mortgagedCount > 0)
+                    {
+                        <span class="badge text-bg-warning">@mortgagedCount mortgaged</span>
+                    }
+                    @if (current.Loans.Count > 0)
+                    {
+                        <span class="badge text-bg-warning">@current.Loans.Count loan(s)</span>
+                    }
+                </div>
+
+                <dl class="row mb-0 small">
+                    <dt class="col-7 text-body-secondary fw-normal">Properties</dt>
+                    <dd class="col-5 text-end mb-1">@ownedCount</dd>
+
+                    <dt class="col-7 text-body-secondary fw-normal">Triple bonus</dt>
+                    <dd class="col-5 text-end mb-1">@c@current.TripleBonus</dd>
+
+                    <dt class="col-7 text-body-secondary fw-normal">Jail cost</dt>
+                    <dd class="col-5 text-end mb-1">@c@current.JailCost</dd>
+                </dl>
+                @* TODO: sets owned (needs PlayerOwnsCompleteSet / GetPropertiesInSet — not built). *@
+            </div>
+        </div>
+
+    </div>
+</div>
+
+@* ───────────────────────── Game View (col-9) ───────────────────────── *@
+<div class="col-9">
+    <div class="h-100 d-flex flex-column gap-3">
+
+        @* Current turn — info-headed card with the state-driven turn button *@
+        <div class="card">
+            <div class="card-header bg-info text-dark fw-semibold d-flex align-items-center justify-content-between gap-3">
+                <div class="min-w-0">
+                    <span class="fs-5 fw-semibold">@(await PlayerCache.GetPlayerName(current.PlayerId))</span>
+                    <span class="badge rounded-pill p-2 text-bg-secondary ms-2">@cache.TurnState.ToDisplayName()</span>
+                </div>
+                @* Turn button — driven by TurnState (commands in play-page.js,
+                   gated server-side and enqueued on the executor):
+                     • StartOfTurn → Roll Dice (StartTurn → EnqueueTurn)
+                     • EndOfTurn   → End Turn   (EndTurn → EnqueueEndTurn)
+                     • mid-turn    → End Turn, disabled (light)                  *@
+                @if (cache.TurnState == TurnState.StartOfTurn)
+                {
+                    <button type="button" class="btn btn-hero-success" data-start-turn>
+                        <i class="bi bi-dice-5 me-1"></i> Roll Dice
+                    </button>
+                }
+                else if (cache.TurnState == TurnState.EndOfTurn)
+                {
+                    <button type="button" class="btn btn-hero-danger" data-end-turn
+                            disabled="@(!canEndTurn)">
+                        <i class="bi bi-flag-fill me-1"></i> End Turn
+                    </button>
+                }
+                else
+                {
+                    <button type="button" class="btn btn-hero-light" data-end-turn disabled>
+                        <i class="bi bi-flag-fill me-1"></i> End Turn
+                    </button>
+                }
+            </div>
+        </div>
+
+        @* Board (square — the partial aspect-ratio-locks itself to the column
+           width) + Game Info. *@
+        <div class="row g-3">
+            <div class="col-9">
+                <partial name="Play/_BoardView" model="new BoardViewModel(cache.Board, game.Properties)" />
+            </div>
+
+            <div class="col-3">
+                <div class="card h-100 play-pane">
+                    <div class="card-header fw-semibold">Game Info</div>
+                    <div class="card-body overflow-auto">
+                        @* TODO: global card-effect banner alerts (e.g. "no rent on stations"). *@
+
+                        <div class="accordion" id="gameInfoAccordion">
+                            @* Free Parking *@
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#gi-fp">
+                                        Free Parking · @c@game.FreeParkingAmount
+                                    </button>
+                                </h2>
+                                <div id="gi-fp" class="accordion-collapse collapse show" data-bs-parent="#gameInfoAccordion">
+                                    <div class="accordion-body">
+                                        <div class="mb-1">Pot: <strong>@c@game.FreeParkingAmount</strong></div>
+                                        @if (fpProperties.Count == 0)
+                                        {
+                                            <div class="text-body-secondary small">No properties in Free Parking.</div>
+                                        }
+                                        else
+                                        {
+                                            <div class="small">@fpProperties.Count property(ies) held in Free Parking.</div>
+                                            @* TODO: list them by name (map BoardIndex via cache.Board.Spaces). *@
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+
+                            @* Available properties *@
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#gi-avail">
+                                        Available Properties · @availableCount
+                                    </button>
+                                </h2>
+                                <div id="gi-avail" class="accordion-collapse collapse" data-bs-parent="#gameInfoAccordion">
+                                    <div class="accordion-body small text-body-secondary">
+                                        @availableCount unowned propert@(availableCount == 1 ? "y" : "ies").
+                                        @* TODO: list by name + colour (map BoardIndex via cache.Board.Spaces). *@
+                                    </div>
+                                </div>
+                            </div>
+
+                            @* Reservation rule *@
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#gi-reserve">
+                                        Reservation Rule
+                                    </button>
+                                </h2>
+                                <div id="gi-reserve" class="accordion-collapse collapse" data-bs-parent="#gameInfoAccordion">
+                                    <div class="accordion-body small">
+                                        @if (game.ReserveRuleActive)
+                                        {
+                                            <span class="badge text-bg-info">Active</span>
+                                            <span class="text-body-secondary ms-1">No player may hold a complete set yet.</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge text-bg-secondary">Inactive</span>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+
+                            @* NOPE cards + per-player %cap — need helpers not yet built *@
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#gi-cards">
+                                        Cards &amp; Percentages
+                                    </button>
+                                </h2>
+                                <div id="gi-cards" class="accordion-collapse collapse" data-bs-parent="#gameInfoAccordion">
+                                    <div class="accordion-body small text-body-secondary">
+                                        @* TODO: NOPE cards remaining (cache.Game.CardDecks) and each active
+                                           player's %cap tier (needs building-state helpers). *@
+                                        Not yet available.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>

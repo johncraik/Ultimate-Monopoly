@@ -99,8 +99,11 @@
     static string? PropClass(PropertySet? set) =>
         set is null ? null : $"bg-prop-{set.Value.ToDisplayName().ToSlug()}";
 
-    // Ownership-state tint via Bootstrap's light "-subtle" backgrounds, so the
-    // hues track the theme palette (no hardcoded colours).
+    // Ownership-state tint via Bootstrap's contextual backgrounds. The hue
+    // tracks the theme palette; the tint strength is set once on .space-body
+    // via --bs-bg-opacity (these .bg-* classes compute their colour as
+    // rgba(var(--bs-*-rgb), var(--bs-bg-opacity))), composited over the white
+    // .board-space behind them for a light tint.
     static string StateClass(PropertyState state) => state switch
     {
         PropertyState.NotOwned => "bg-success",     // available — green
@@ -112,14 +115,17 @@
     };
 }
 
-@* Init click-popovers once the page (and Bootstrap, loaded at end of body) is ready.
-   TODO: move into the board JS module so it re-inits when the board re-renders live. *@
+@* Click-popover init exposed as a global so it can re-run after the board is
+   re-rendered live (this inline script does not execute on an innerHTML swap, but
+   window.initBoardPopovers persists from first load — play-state.js calls it). *@
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
+    window.initBoardPopovers = function () {
         if (typeof bootstrap === 'undefined') return;
-        document.querySelectorAll('.board-view [data-bs-toggle="popover"]')
-            .forEach(function (el) { new bootstrap.Popover(el); });
-    });
+        document.querySelectorAll('.board-view [data-bs-toggle="popover"]').forEach(function (el) {
+            if (!bootstrap.Popover.getInstance(el)) new bootstrap.Popover(el);
+        });
+    };
+    document.addEventListener('DOMContentLoaded', function () { window.initBoardPopovers(); });
 </script>
 
 <style>
@@ -159,8 +165,10 @@
     .side-left { flex-direction: row-reverse; }      /* banner right */
     .side-right { flex-direction: row; }             /* banner left */
 
-    /* Body colour = ownership tint (.bg-*-subtle); banner colour = .bg-prop-*. */
-    .space-body { flex: 1 1 auto; background: #f5f5f5; }
+    /* Body colour = ownership tint (.bg-success/-danger/…); banner = .bg-prop-*.
+       --bs-bg-opacity softens the .bg-* classes to a light tint over the white
+       space behind them (default is 1 — fully saturated, too dark). */
+    .space-body { flex: 1 1 auto; background: #f5f5f5; --bs-bg-opacity: .45 !important; }
     .space-banner { flex: 0 0 22%; }
 
     /* Text labels — non-property spaces (Chance, Tax, …) and corners */

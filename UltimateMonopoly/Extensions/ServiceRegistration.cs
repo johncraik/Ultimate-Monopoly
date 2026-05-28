@@ -56,6 +56,7 @@ public static class ServiceRegistration
 
         // Identity — profile
         services.TryAddScoped<ProfileService>();
+        services.TryAddScoped<PlayerCacheService>();
         
         // Games
         services.TryAddScoped<GameSetupService>();

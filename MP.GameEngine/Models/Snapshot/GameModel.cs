@@ -188,26 +188,52 @@ public class GameModel
 
 
     /// <summary>
-    /// Retrieves a list of properties owned by the current player, optionally including mortgaged
-    /// or reserved properties based on the provided parameters.
+    /// Retrieves a list of properties owned by the current player, allowing for optional filtering
+    /// based on property sets, mortgaged status, and reserved status.
     /// </summary>
+    /// <param name="set">
+    /// The property set to filter by. If provided, only properties belonging to the specified set
+    /// will be included. If null, properties from all sets are included.
+    /// </param>
     /// <param name="includeMortgaged">
-    /// A boolean indicating whether properties in a mortgaged state should be included in the result.
-    /// If false, mortgaged properties are excluded.
+    /// Indicates whether mortgaged properties should be included in the result. If true, mortgaged
+    /// properties are included; if false, they are excluded.
     /// </param>
     /// <param name="includeReserved">
-    /// A boolean indicating whether properties in a reserved state should be included in the result.
-    /// If false, reserved properties are excluded.
+    /// Indicates whether reserved properties should be included in the result. If true, reserved
+    /// properties are included; if false, they are excluded.
     /// </param>
     /// <returns>
-    /// A list of <see cref="PropertyModel"/> objects representing the properties owned by the current player
-    /// that match the specified criteria.
+    /// A list of <see cref="PropertyModel"/> objects representing the properties owned by the current
+    /// player, with the specified filtering applied.
     /// </returns>
-    public List<PropertyModel> GetOwnedProperties(PropertySet? set = null, bool includeMortgaged = true, bool includeReserved = true)
+    public List<PropertyModel> GetOwnedProperties(PropertySet? set = null, bool includeMortgaged = true,
+        bool includeReserved = true)
         => GetOwnedProperties(Metadata.CurrentPlayerId, set, includeMortgaged, includeReserved);
 
-    
-    public List<PropertyModel> GetOwnedProperties(string playerId, PropertySet? set = null, bool includeMortgaged = true, bool includeReserved = true)
+    /// <summary>
+    /// Retrieves a list of properties owned by the current player, filtered by optional criteria such as property set,
+    /// mortgage status, and reserved status.
+    /// </summary>
+    /// <param name="playerId">The ID of the player whose properties are to be retrieved.</param>
+    /// <param name="set">
+    /// An optional <see cref="PropertySet"/> to filter the owned properties by a specific set of properties (e.g., Brown, Blue, etc.).
+    /// If null, no filtering is applied based on property set.
+    /// </param>
+    /// <param name="includeMortgaged">
+    /// A boolean indicating whether mortgaged properties should be included in the results. If true, mortgaged properties are included;
+    /// otherwise, they are excluded.
+    /// </param>
+    /// <param name="includeReserved">
+    /// A boolean indicating whether reserved properties should be included in the results. If true, reserved properties are included;
+    /// otherwise, they are excluded.
+    /// </param>
+    /// <returns>
+    /// A list of <see cref="PropertyModel"/> objects representing the properties owned by the current player,
+    /// filtered according to the specified criteria.
+    /// </returns>
+    public List<PropertyModel> GetOwnedProperties(string playerId, PropertySet? set = null,
+        bool includeMortgaged = true, bool includeReserved = true)
     {
         var properties = Properties
             .Where(pr => !string.IsNullOrEmpty(pr.OwnerPlayerId) && pr.OwnerPlayerId == playerId)

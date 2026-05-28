@@ -94,7 +94,7 @@ public class SetupModel : PageModel
             return Forbid();
 
         var ok = await _gameSetup.TryStartGame(id);
-        if (ok) return Redirect("/");
+        if (ok) return Redirect($"/Game/Play/{id}");
 
         SetStatus(false, string.Empty, "Could not start the game.");
         return RedirectToPage(new { id });

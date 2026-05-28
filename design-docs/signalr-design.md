@@ -9,14 +9,19 @@ Ultimate Monopoly is a companion app to the physical board game, not a replaceme
 
 All views require authentication.
 
-This document covers how SignalR is used to keep these views in sync, starting with the **game setup page**. In-game sync (turns, money transfers, cards) is covered in later sections (TBD).
+This document covers how SignalR is used to keep these views in sync, starting with the **game setup page**. In-game sync (turns, prompts, money transfers, the live state broadcast) is now designed elsewhere: the prompt wire surface lives in `choice-events.md` §11, and the command pipeline + whole-cache live broadcast in `web-orchestration.md`.
 
 ## Architecture overview
 
-- A single `GameHub` handles the full game lifecycle (setup → in-progress → complete).
-- One SignalR group per game: `game-{gameId}`. Every connected client (tablet + phones) for that game joins the group.
-- Hub requires `[Authorize]`. User identity comes from `Context.UserIdentifier`.
-- Authorization for tablet-only actions = caller must be `game.CreatorId`.
+> **Updated 2026-05-28 — two hubs, not one.** This section originally described a single `GameHub` for the whole lifecycle and one `game-{gameId}` group. The implementation split it by lifecycle phase. The setup surface below is unchanged in substance; only the hub it lives on and the group name changed.
+
+- **One hub per lifecycle phase**, both deriving from a shared `GameBaseHub`:
+  - **`GameSetupHub`** — the setup page (this document).
+  - **`GamePlayHub`** — in-progress play (prompts, live state broadcast — see `choice-events.md` / `web-orchestration.md`).
+  - (A separate `PresenceHub` covers online presence, outside the per-game flow.)
+- **One group per game *per hub*.** `GameBaseHub.GroupName(prefix, gameId)` => `{prefix}__{gameId}`, so setup clients join `game-setup__{gameId}` and play clients join `game-play__{gameId}`. Keeping them separate means setup and in-play broadcasts never cross. Every connected client (tablet + phones) for a given phase joins that phase's group.
+- `GameBaseHub.OnConnectedAsync` reads `gameId` from the connection query string, verifies membership via `GameService.CheckUserInGame`, and aborts the connection if the caller isn't in the game. User identity comes from `Context.UserIdentifier`.
+- Authorization for tablet-only actions = caller must be `game.CreatorId` (the host).
 
 ## Game setup page
 
@@ -41,9 +46,9 @@ The rules for how these numbers determine turn order live in the game logic, not
 3. If not signed in, Identity auth flow runs, then returns to join endpoint.
 4. Server validates: game exists, is still in setup, capacity not exceeded, user not already joined (idempotent if they are).
 5. Server adds `PlayerGame` record and redirects phone to that user's player-profile page for the game.
-6. Player-profile page opens SignalR connection, hub adds connection to `game-{gameId}` group, and broadcasts `PlayerJoined` to the group.
+6. Player-profile page opens a SignalR connection to `GameSetupHub`, which adds the connection to the `game-setup__{gameId}` group and broadcasts `PlayerJoined` to the group.
 
-### SignalR surface (setup phase)
+### SignalR surface (setup phase) — `GameSetupHub`
 
 **Server → client events**
 
@@ -72,8 +77,8 @@ The tablet consumes all setup events to keep the player list live.
 
 ## Deferred / open items
 
-- **In-game sync** (turn flow, money transfers, cards, board state) — to be designed.
-- **Disconnect / reconnect behaviour** — phones losing connection mid-game.
+- ~~**In-game sync** (turn flow, money transfers, cards, board state).~~ Designed — `GamePlayHub` carries it: prompts via `choice-events.md` §11, the whole-cache live broadcast and command pipeline via `web-orchestration.md`. `GameStarted` is the seam: phones drop the setup connection and reconnect to `game-play__{gameId}`.
+- **Disconnect / reconnect behaviour** — phones losing connection mid-game. (`GamePlayHub.GetCurrentPrompt` + `GetBoard` cover the reconnect *pull*; the broader policy is still open.)
 - **Late joins / spectating** — can a user scan the QR after the game has started?
 - **Kicking a player** during setup — UI and event (`PlayerLeft` covers the wire, but the action is not yet specified).
 - **Multiple host views** — what happens if the creator opens the game view on two devices simultaneously? Probably fine (both join the group), but worth confirming.

@@ -12,11 +12,13 @@ public class GamePlayHub : GameBaseHub
     private const string Prefix = "game-play";
 
     private readonly IGameEngineFactory _engineFactory;
+    private readonly GameService _gameService;
 
     public GamePlayHub(GameService gameService, IGameEngineFactory engineFactory)
         : base(gameService)
     {
         _engineFactory = engineFactory;
+        _gameService = gameService;
     }
 
     protected override string GroupPrefix => Prefix;
@@ -71,5 +73,48 @@ public class GamePlayHub : GameBaseHub
 
         var engine = await _engineFactory.GetAsync(gameId);
         return engine.Cache.Board;
+    }
+
+    /// <summary>
+    /// Starts the current player's turn (kicks off the orchestrator, which opens
+    /// the dice prompt). Allowed at StartOfTurn (<c>CanStartTurn</c>); enqueues on
+    /// the game's single-writer executor. Returns false when not allowed or the
+    /// engine is unavailable.
+    /// </summary>
+    public async Task<bool> StartTurn()
+    {
+        var gameId = GetGameId();
+        if (string.IsNullOrEmpty(gameId) || string.IsNullOrEmpty(Context.UserIdentifier))
+            return false;
+
+        var engine = await _engineFactory.GetAsync(gameId);
+        if (!engine.TurnStateProvider.CanStartTurn())
+            return false;
+
+        _gameService.EnqueueTurn(gameId);
+        return true;
+    }
+
+    /// <summary>
+    /// Ends the current player's turn. Gates on the host-bypass-aware
+    /// <c>CanEndTurn</c> capability as an early-out, then enqueues the work on
+    /// the game's single-writer executor (the pump remains the authoritative
+    /// writer). Returns false when not allowed or the engine is unavailable.
+    /// </summary>
+    public async Task<bool> EndTurn()
+    {
+        var gameId = GetGameId();
+        if (string.IsNullOrEmpty(gameId) || string.IsNullOrEmpty(Context.UserIdentifier))
+            return false;
+
+        var engine = await _engineFactory.GetAsync(gameId);
+        var current = engine.Cache.Game.CurrentPlayer();
+        if (current is null) return false;
+
+        if (!engine.TurnStateProvider.CanEndTurn(current.PlayerId, Context.UserIdentifier))
+            return false;
+
+        _gameService.EnqueueEndTurn(gameId);
+        return true;
     }
 }

@@ -103,7 +103,7 @@
     });
 
     connection.on('GameStarted', () => {
-        window.location.href = '/';
+        window.location.href = '/Game/Play/' + encodeURIComponent(gameId);
     });
 
     connection.start().catch(err => console.error('Game setup hub failed to connect:', err));

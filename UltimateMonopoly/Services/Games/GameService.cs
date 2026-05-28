@@ -135,4 +135,13 @@ public class GameService
             await orchestrator.ResolveThirdDieMovement(engine, ct);
         });
     }
+    
+    public void EnqueueEndTurn(string gameId)
+    {
+        _executor.Enqueue(gameId, async (engine, sp, ct) =>
+        {
+            var orchestrator = sp.GetRequiredService<MP.GameEngine.Services.PlayerTurnOrchestrator>();
+            await orchestrator.EndPlayerTurn(engine, ct);
+        });
+    }
 }

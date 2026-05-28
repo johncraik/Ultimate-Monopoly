@@ -1,10 +1,12 @@
 # Event Receipts — State-Change Log & Stats Source
 
 The engine's after-the-fact narrative trail. Every meaningful state change
-in a turn produces a receipt; the per-turn stream of receipts is what
-drives live UI narration, replay, and the (future) statistical-snapshot
-projection. Pairs with the prompt framework (`choice-events.md`) and the
-turn-state provider (`turn-state.md`) to round out the foundation layer.
+in a turn produces a receipt; the per-turn stream of receipts is the input
+to game history and the (future) statistical-snapshot projection. It does
+**not** drive the live UI — that renders from the whole-cache broadcast
+(`web-orchestration.md` §6). Pairs with the prompt framework
+(`choice-events.md`) and the turn-state provider (`turn-state.md`) to round
+out the foundation layer.
 
 **Status:** built (foundation layer). The taxonomy described in §3, the
 enriched `FinancialTransactionReceipt` (§4), the `IEventEmitter` seam (§5),
@@ -215,12 +217,24 @@ internal sealed class EventEmitter(GameCacheModel cache) : IEventEmitter
 
 ## 6. Lifecycle
 
+> **Updated 2026-05-28 — receipts no longer drive the live view.** This section
+> (and §8) originally described receipts as the source of live UI narration via a
+> per-receipt SignalR push. That role is gone: the live view renders from the
+> **whole `GameCacheModel`** broadcast by `IEngineNotifier.StateChanged` (see
+> `web-orchestration.md` §6), and `Events` is `[JsonIgnore]`d out of that frame.
+> Receipts are now **internal history + the stats-projection input only** — no
+> live-broadcast stage. The text below reflects that.
+
 | Stage | Where | When |
 |---|---|---|
 | Emission | `IEventEmitter.Emit(...)` → `cache.AddEvent(...)` | Immediately after the corresponding state mutation succeeds |
-| Live broadcast | SignalR push from the web layer reading `cache.Events` | After each emission (or batched per turn boundary — see Open Items) |
 | Per-turn clearing | `cache.ClearEvents()` called by `TurnStateProvider.TransitionToExtraTurn` and `TransitionToNextPlayer` | Turn boundary |
+| Stats projection (future) | Web layer reads the per-turn list at the turn boundary, *before* clearing | Turn boundary |
 | Restart | Lost (cache is in-memory only) | At server restart, mid-turn |
+
+Receipts are **not** broadcast live. The live frame is the cache itself
+(`web-orchestration.md` §6); clients learn "what happened" by diffing the
+state they're pushed, not by replaying receipts.
 
 1. **Per-turn scope.** Receipts live on the cache for exactly one turn;
    the next turn starts with an empty list. This matches
@@ -298,26 +312,29 @@ mutation:
 
 ### Consumer convention
 
-There are three consumers and they each treat the stream differently:
+There are two consumers and they each treat the stream differently:
 
-1. **SignalR push (UI narration).** Reads the cache's `Events` list and
-   emits the most recent receipts to clients. Live narration per turn.
-2. **Stats projection (future).** Reads the per-turn list at turn
+1. **Stats projection (future).** Reads the per-turn list at turn
    boundary, computes deltas (e.g. `+Amount` for player money earnt),
    writes a flat row per player per turn. The receipt stream is the
    input; persisted stats are the output.
-3. **Replay UI (future).** If we want true replay, we'd need persisted
+2. **Replay UI (future).** If we want true replay, we'd need persisted
    receipts. Currently we don't — replay can step through the snapshot
    timeline instead. Receipts are *not* the replay source.
+
+**The live UI is *not* a receipt consumer.** It renders from the whole
+`GameCacheModel` pushed by `IEngineNotifier.StateChanged`
+(`web-orchestration.md` §6), and `Events` is `[JsonIgnore]`d out of that
+frame entirely. Receipts never reach the client over the live channel.
 
 ---
 
 ## 9. Open / TODO
 
-1. **Broadcast cadence.** Is SignalR push per-receipt (live narration)
-   or per-turn-boundary (batched)? Per-receipt feels right for UX, but
-   it does mean more chatty traffic. Worth deciding when wiring up the
-   hub.
+1. ~~**Broadcast cadence.** Is SignalR push per-receipt or
+   per-turn-boundary?~~ Moot — receipts are not broadcast at all. The
+   live channel pushes the whole cache (`web-orchestration.md` §6); the
+   only future receipt consumer is the turn-boundary stats projection.
 
 2. **Tests.** No tests on receipt emission yet (the framework piece —
    `EventEmitter.Emit` forwards correctly, `cache.AddEvent` backfills

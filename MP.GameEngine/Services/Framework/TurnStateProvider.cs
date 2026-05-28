@@ -58,6 +58,13 @@ public class TurnStateProvider(GameCacheModel cache, ISnapshotService snapshotSe
     // Composes the primitives above — no boolean spaghetti in callers.
 
     /// <summary>
+    /// Start turn (roll dice): allowed whenever the turn is at StartOfTurn.
+    /// No actor gating — kicking off the current player's turn is open to the
+    /// table (the host drives it on the tablet).
+    /// </summary>
+    public bool CanStartTurn() => cache.TurnState == TurnState.StartOfTurn;
+
+    /// <summary>
     /// Portfolio commands (mortgage / unmortgage / build / sell houses / play
     /// card from hand / pay loan early — anything in the player's portfolio):
     /// StartOfTurn only, current player only, not in jail, engine idle.
