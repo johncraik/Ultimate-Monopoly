@@ -9,9 +9,11 @@ namespace MP.GameEngine.Services.SubSystems;
 
 public class PlayerService
 {
-    public PlayerService()
+    private readonly TransactionService _transactionService;
+
+    public PlayerService(TransactionService transactionService)
     {
-        
+        _transactionService = transactionService;
     }
     
     public List<PlayerModel> GetPlayers(List<PlayerDTO> playerDtos)
@@ -24,6 +26,7 @@ public class PlayerService
             Money = RuleDictionary.StartingMoney,
             TripleBonus = RuleDictionary.DefaultTripleBonus,
             JailCost = RuleDictionary.DefaultJailCost,
+            InitialRoll = true,
             
             //Explicit defaults:
             HasPassedInitialGo = false,
@@ -37,15 +40,6 @@ public class PlayerService
             IsBankrupt = false
         }).ToList();
 
-    public void ModifyBalance(PlayerModel player, long amount)
-    {
-        var newBalance = player.Money + amount;
-        if (newBalance < 0)
-            //TODO call for shortfall prompt
-            return;
-        else
-            player.Money = (uint)newBalance;
-    }
     
     
     public async Task ResolveDiceNumber(Framework.GameEngine engine, string playerId, CancellationToken ct)
@@ -54,13 +48,21 @@ public class PlayerService
         if (player == null) throw new InvalidOperationException($"Player with id {playerId} not found in game players list.");
         
         var theyRolled = engine.Cache.Game.Metadata.CurrentPlayerId == playerId;
-        /*_ = await engine.PromptProvider.Acknowledge(playerId, "YOUR NUMBER!",
+        _ = await engine.PromptProvider.Acknowledge(playerId, "YOUR NUMBER!",
             $"{(theyRolled ? "You rolled" : "Someone else rolled")} your number ({player.Dice1} and {player.Dice2})." +
             $"You will collect {RuleDictionary.Currency}{RuleDictionary.DiceNumRolledBonus} from the bank, " +
             $"{(theyRolled ? $"{RuleDictionary.Currency}{RuleDictionary.DiceNumRolledBonus} from each player, " : "")}" +
             $"and a third card at the end of this turn.",
-            ct: ct);*/
+            ct: ct);
         
+        //Bank transaction:
+        await _transactionService.ReceiveDiceBonus(engine, player, ct);
+        if(!theyRolled) return;
         
+        var otherPlayers = engine.Cache.Game.GetPlayers(playerId);
+        foreach (var p in otherPlayers)
+        {
+            await _transactionService.PayDiceBonus(engine, p, player, ct);
+        }
     }
 }

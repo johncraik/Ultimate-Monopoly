@@ -8,10 +8,13 @@ namespace MP.GameEngine.Services.SubSystems;
 public class MovementService
 {
     private readonly BoardService _boardService;
+    private readonly GoService _goService;
 
-    public MovementService(BoardService boardService)
+    public MovementService(BoardService boardService,
+        GoService goService)
     {
         _boardService = boardService;
+        _goService = goService;
     }
     
     public async Task MovePlayer(Framework.GameEngine engine, PlayerModel player, int amount, CancellationToken ct)
@@ -20,11 +23,9 @@ public class MovementService
         var initial = player.BoardIndex;
         player.BoardIndex = newIndex;
 
-        if (goPasses > 0 && amount > 0)
-        {
+        if (goPasses > 0 && amount > 0 && !player.InitialRoll)
             //Can only collect GO money if moving in direction of travel (positive amount)
-            //TODO call go service to apply go passes
-        }
+            await _goService.CollectGoMoney(engine, player, goPasses, ct);
 
         engine.EventEmitter.Emit(new PlayerMovedReceipt
         {
@@ -45,10 +46,8 @@ public class MovementService
         player.BoardIndex = newIndex;
 
         if (passGo && direction == PlayerMovementDirection.DirectionOfTravel)
-        {
             //Can only collect GO money if moving in direction of travel
-            //TODO call go service to apply go passes
-        }
+            await _goService.CollectGoMoney(engine, player, 1, ct);
         
         engine.EventEmitter.Emit(new PlayerMovedReceipt
         {

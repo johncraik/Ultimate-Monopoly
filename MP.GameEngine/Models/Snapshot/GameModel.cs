@@ -151,8 +151,10 @@ public class GameModel
             excludePovPlayer = true;
         }
         
-        var afterPov = players.Where(p => p.OrderId > povPlayer.OrderId);
-        var beforePov = players.Where(p => p.OrderId < povPlayer.OrderId);
+        var afterPov = players.Where(p => p.OrderId > povPlayer.OrderId)
+            .OrderBy(p => p.OrderId);
+        var beforePov = players.Where(p => p.OrderId < povPlayer.OrderId)
+            .OrderBy(p => p.OrderId);
         
         var list = new List<PlayerModel>(afterPov);
         if(!excludePovPlayer) list.Insert(0, povPlayer);

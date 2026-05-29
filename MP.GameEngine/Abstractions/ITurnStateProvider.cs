@@ -4,7 +4,7 @@ namespace MP.GameEngine.Abstractions;
 
 public interface ITurnStateProvider
 {
-    bool CanStartTurn();
+    bool CanStartTurn(string playerId, string submittingUserId);
     bool CanPortfolioCommand(string playerId, string submittingUserId);
     bool CanDeal(string playerId, string submittingUserId);
     bool CanLeaveJail(string playerId, string submittingUserId);

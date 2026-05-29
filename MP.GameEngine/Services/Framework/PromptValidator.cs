@@ -31,6 +31,7 @@ public static class PromptValidator
             InterruptibleWindowPrompt p => ValidateInterruptibleWindow(p, response, submittingUserId, cache),
             AcknowledgePrompt p => ValidateAcknowledge(p, response, submittingUserId, cache),
             DiceRollPrompt p => ValidateDiceRoll(p, response, submittingUserId, cache),
+            LeaveJailPrompt p => ValidateLeaveJail(p, response, submittingUserId, cache),
             AcquirePropertyPrompt p => ValidateAcquireProperty(p, response, submittingUserId, cache),
             TargetPlayerPrompt p => ValidateTargetPlayer(p, response, submittingUserId, cache),
             TargetPropertyPrompt p => ValidateTargetProperty(p, response, submittingUserId, cache),
@@ -219,6 +220,31 @@ public static class PromptValidator
         return r.ThirdDie is not { } d3 || IsValidFace(d3);
 
         static bool IsValidFace(ushort value) => value is >= 1 and <= 6;
+    }
+
+    /// <summary>
+    /// Leave-jail responses come from the jailed player (or the host on their
+    /// behalf). <see cref="LeaveJailAction.PayFee"/> is always valid;
+    /// <see cref="LeaveJailAction.PlayCard"/> is rejected unless the prompt
+    /// reports the player holds a Get Out of Jail Free card.
+    /// </summary>
+    private static bool ValidateLeaveJail(
+        LeaveJailPrompt prompt,
+        PromptResponse response,
+        string submittingUserId,
+        GameCacheModel cache)
+    {
+        if (response is not LeaveJailResponse r) return false;
+
+        if (submittingUserId != prompt.PlayerId && submittingUserId != cache.HostPlayerId)
+            return false;
+
+        return r.Action switch
+        {
+            LeaveJailAction.PayFee => true,
+            LeaveJailAction.PlayCard => prompt.HasCard,
+            _ => false
+        };
     }
 
     /// <summary>

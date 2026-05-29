@@ -1,6 +1,9 @@
 using System.Collections.Concurrent;
 using System.Threading.Channels;
+using Microsoft.AspNetCore.SignalR;
 using MP.GameEngine.Abstractions;
+using UltimateMonopoly.Hubs;
+using UltimateMonopoly.Services.Cache;
 using EngineRuntime = MP.GameEngine.Services.Framework.GameEngine;
 
 namespace UltimateMonopoly.Services.GameEngine;
@@ -38,25 +41,70 @@ public sealed class GameExecutor : IGameExecutor, IAsyncDisposable
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<GameExecutor> _logger;
+    private readonly IHubContext<GamePlayHub> _hub;
     private readonly ConcurrentDictionary<string, GamePump> _pumps = new();
 
-    public GameExecutor(IServiceScopeFactory scopeFactory, ILogger<GameExecutor> logger)
+    private const string FaultMessage =
+        "An unexpected error occurred and the game cannot continue. You'll be returned to the home screen.";
+
+    public GameExecutor(IServiceScopeFactory scopeFactory, ILogger<GameExecutor> logger,
+        IHubContext<GamePlayHub> hub)
     {
         _scopeFactory = scopeFactory;
         _logger = logger;
+        _hub = hub;
     }
 
     public void Enqueue(string gameId, GameWorkItem work)
     {
-        var pump = _pumps.GetOrAdd(gameId, id => new GamePump(id, _scopeFactory, _logger));
-        if (!pump.TryEnqueue(work))
-            _logger.LogWarning("Dropped work item for game {GameId}: pump is shutting down.", gameId);
+        while (true)
+        {
+            var pump = _pumps.GetOrAdd(gameId, id => new GamePump(id, _scopeFactory, _logger, OnPumpFaulted));
+            if (pump.TryEnqueue(work))
+                return;
+
+            // The pump is faulting / shutting down and won't accept more work.
+            // Drop it and loop — GetOrAdd then spins up a fresh pump.
+            _pumps.TryRemove(new KeyValuePair<string, GamePump>(gameId, pump));
+        }
     }
 
     public async ValueTask StopAsync(string gameId)
     {
         if (_pumps.TryRemove(gameId, out var pump))
             await pump.DisposeAsync();
+    }
+
+    /// <summary>
+    /// Invoked by a pump when a work item throws. Something in the game flow has
+    /// gone haywire, so we abandon the whole pump (dropping any queued work — we
+    /// must not keep running against a half-applied working copy) and evict the
+    /// game's cache. The next <see cref="Enqueue"/> creates a fresh pump whose
+    /// first work item re-hydrates the cache from the last snapshot.
+    /// </summary>
+    private void OnPumpFaulted(string gameId, GamePump pump)
+    {
+        _pumps.TryRemove(new KeyValuePair<string, GamePump>(gameId, pump));
+
+        using (var scope = _scopeFactory.CreateScope())
+            scope.ServiceProvider.GetRequiredService<GameCacheService>().Invalidate(gameId);
+
+        // Force-quit every client in the game: show a fatal error and redirect home.
+        // Fire-and-forget — recovery must not hinge on broadcast latency.
+        _ = BroadcastFaultAsync(gameId);
+    }
+
+    private async Task BroadcastFaultAsync(string gameId)
+    {
+        try
+        {
+            await _hub.Clients.Group(GamePlayHub.GroupName(gameId))
+                .SendAsync("GameFaulted", new GameFaultMessage(FaultMessage));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to broadcast GameFaulted for game {GameId}.", gameId);
+        }
     }
 
     public async ValueTask DisposeAsync()
@@ -82,12 +130,15 @@ internal sealed class GamePump : IAsyncDisposable
         Channel.CreateUnbounded<GameWorkItem>(new UnboundedChannelOptions { SingleReader = true });
     private readonly CancellationTokenSource _cts = new();
     private readonly Task _pumpTask;
+    private readonly Action<string, GamePump> _onFault;
 
-    public GamePump(string gameId, IServiceScopeFactory scopeFactory, ILogger logger)
+    public GamePump(string gameId, IServiceScopeFactory scopeFactory, ILogger logger,
+        Action<string, GamePump> onFault)
     {
         _gameId = gameId;
         _scopeFactory = scopeFactory;
         _logger = logger;
+        _onFault = onFault;
         _pumpTask = Task.Run(() => PumpAsync(_cts.Token));
     }
 
@@ -109,12 +160,16 @@ internal sealed class GamePump : IAsyncDisposable
                 }
                 catch (Exception ex)
                 {
-                    // A turn threw. Per the engine policy the recovery boundary is
-                    // the last snapshot — the web layer re-hydrates from it. The
-                    // pump survives so the game can continue once re-hydrated.
-                    // TODO: evict the cache entry here so the dirty working copy is
-                    // discarded and the next item re-hydrates from the snapshot.
-                    _logger.LogError(ex, "Work item failed for game {GameId}.", _gameId);
+                    // A work item threw — the game flow is haywire, so we do NOT
+                    // continue with anything else queued for this game. Drop any
+                    // pending work, hand off to the executor to abandon this pump and
+                    // evict the (possibly dirty) cached working copy, then stop. The
+                    // next enqueue spins up a fresh pump that re-hydrates from the
+                    // last snapshot — the engine's recovery boundary.
+                    _logger.LogError(ex, "Work item failed for game {GameId}; abandoning pump and evicting cache.", _gameId);
+                    _channel.Writer.TryComplete();
+                    _onFault(_gameId, this);
+                    break;
                 }
             }
         }
@@ -157,3 +212,6 @@ internal sealed class GamePump : IAsyncDisposable
         _cts.Dispose();
     }
 }
+
+/// <summary>Wire payload for the <c>GameFaulted</c> force-quit broadcast.</summary>
+public sealed record GameFaultMessage(string Message);

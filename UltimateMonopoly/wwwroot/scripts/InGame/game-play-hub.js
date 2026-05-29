@@ -74,6 +74,44 @@
         }
     }
 
+    // Fatal game error (GameFaulted): the server abandoned the game's pump, so
+    // this session is over. Show a centred, static-backdrop alert and force-quit
+    // to the home screen. Terminal — there's no dismissing it back into the game.
+    function showFatalError(message) {
+        if (document.getElementById('gameFaultModal')) return;   // already shown
+
+        const text = message || 'An unexpected error occurred and the game cannot continue.';
+        const modalEl = document.createElement('div');
+        modalEl.className = 'modal fade';
+        modalEl.id = 'gameFaultModal';
+        modalEl.tabIndex = -1;
+        modalEl.setAttribute('data-bs-backdrop', 'static');
+        modalEl.setAttribute('data-bs-keyboard', 'false');
+        modalEl.innerHTML =
+            '<div class="modal-dialog modal-dialog-centered">' +
+              '<div class="modal-content border border-danger border-2">' +
+                '<div class="modal-header text-bg-danger border-0">' +
+                  '<h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill me-1"></i> Game error</h5>' +
+                '</div>' +
+                '<div class="modal-body"><p class="mb-0"></p></div>' +
+                '<div class="modal-footer">' +
+                  '<button type="button" class="btn btn-danger w-100" data-fault-leave>Return to home</button>' +
+                '</div>' +
+              '</div>' +
+            '</div>';
+        modalEl.querySelector('.modal-body p').textContent = text;
+        document.body.appendChild(modalEl);
+
+        const leave = () => { window.location.href = '/Index'; };
+        modalEl.querySelector('[data-fault-leave]').addEventListener('click', leave);
+
+        if (typeof bootstrap !== 'undefined') {
+            new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false }).show();
+        } else {
+            leave();   // no Bootstrap to render the modal — just bail home
+        }
+    }
+
     function start() {
         if (started) return;
         // Player profile ([data-player], carries userId) or host play page
@@ -101,6 +139,7 @@
 
         connection.on('PromptOpened', dispatchOpen);
         connection.on('PromptClosed', (msg) => { if (msg) dispatchClose(msg.promptId); });
+        connection.on('GameFaulted', (msg) => showFatalError(msg && msg.message));
         queued.forEach(h => connection.on(h.event, h.callback));
 
         // Re-sync the open prompt after a dropped connection is restored.

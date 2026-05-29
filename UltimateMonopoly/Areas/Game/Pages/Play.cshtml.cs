@@ -1,6 +1,8 @@
+using JC.Core.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using MP.GameEngine.Abstractions;
+using MP.GameEngine.Enums.Games;
 using MP.GameEngine.Models;
 using MP.GameEngine.Services.Framework;
 
@@ -14,10 +16,13 @@ namespace UltimateMonopoly.Areas.Game.Pages;
 public class PlayModel : PageModel
 {
     private readonly IGameEngineFactory _engineFactory;
+    private readonly IUserInfo _userInfo;
 
-    public PlayModel(IGameEngineFactory engineFactory)
+    public PlayModel(IGameEngineFactory engineFactory,
+        IUserInfo userInfo)
     {
         _engineFactory = engineFactory;
+        _userInfo = userInfo;
     }
 
     /// <summary>The live game cache — the single source the view renders from.</summary>
@@ -25,13 +30,10 @@ public class PlayModel : PageModel
 
     public async Task<IActionResult> OnGetAsync(string gameId)
     {
-        // TODO(auth): gate to game members (and surface host-only controls to the
-        // host). Group membership is already enforced on the game-play hub and
-        // commands authorise per-action (host-bypass), so this is the page-level
-        // gate only.
         try
         {
-            Engine = await _engineFactory.GetAsync(gameId);
+            var redirect = await LoadAsync(gameId);
+            if (redirect is not null) return redirect;
         }
         catch (InvalidOperationException)
         {
@@ -53,7 +55,8 @@ public class PlayModel : PageModel
     {
         try
         {
-            Engine = await _engineFactory.GetAsync(gameId);
+            var redirect = await LoadAsync(gameId);
+            if (redirect is not null) return redirect;
         }
         catch (InvalidOperationException)
         {
@@ -61,5 +64,14 @@ public class PlayModel : PageModel
         }
 
         return Partial("Play/_PlayView", Engine);
+    }
+
+    private async Task<IActionResult?> LoadAsync(string gameId)
+    {
+        Engine = await _engineFactory.GetAsync(gameId);
+        if(Engine.Cache.HostPlayerId != _userInfo.UserId)
+            return Forbid();
+            
+        return Engine.Cache.GameState != GameState.InPlay ? NotFound() : null;
     }
 }

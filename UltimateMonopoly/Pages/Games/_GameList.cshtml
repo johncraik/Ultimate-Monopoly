@@ -23,27 +23,41 @@ else
                     <div class="d-flex align-items-center gap-2 flex-shrink-0">
                         <span class="badge text-bg-secondary">@game.State</span>
 
-                        @if (game.State is "Setup" or "In Play")
+                        @switch (game.State.ToLower())
                         {
-                            @if (game.IsHost)
+                            case "setup":
                             {
-                                <a class="btn btn-sm btn-primary"
-                                   asp-area="Game" asp-page="/Setup" asp-route-id="@game.Id">Open Host</a>
+                                if (game.IsHost)
+                                {
+                                    <a class="btn btn-sm btn-primary"
+                                       asp-area="Game" asp-page="/Setup" asp-route-id="@game.Id">Open Host</a>
+                                }
+                                <a class="btn btn-sm btn-outline-primary"
+                                   asp-area="Game" asp-page="/Player/Lobby"
+                                   asp-route-gameId="@game.Id" asp-route-userId="@UserInfo.UserId">Player Lobby</a>
+                                break;
                             }
-                            <a class="btn btn-sm btn-outline-primary"
-                               asp-area="Game" asp-page="/Player/Lobby"
-                               asp-route-gameId="@game.Id" asp-route-userId="@UserInfo.UserId">Player Lobby</a>
-                        }
-                        else if (game.State == "Finished")
-                        {
-                            <a class="btn btn-sm btn-outline-secondary" href="#">View</a>
-                        }
-                        else if (game.State == "Cancelled" && game.IsHost)
-                        {
-                            <form method="post" asp-page-handler="Delete" class="m-0">
-                                <input type="hidden" name="gameId" value="@game.Id" />
-                                <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
-                            </form>
+                            case "in play":
+                            {
+                                if (game.IsHost)
+                                {
+                                    <a class="btn btn-sm btn-primary"
+                                       asp-area="Game" asp-page="/Play" asp-route-gameId="@game.Id">Host</a>
+                                }
+                                <a class="btn btn-sm btn-outline-primary"
+                                   asp-area="Game" asp-page="/Player/Index"
+                                   asp-route-gameId="@game.Id" asp-route-userId="@UserInfo.UserId">Open</a>
+                                break;
+                            }
+                            case "finished":
+                                <a class="btn btn-sm btn-outline-secondary" href="#">View</a>
+                                break;
+                            case "cancelled" when game.IsHost:
+                                <form method="post" asp-page-handler="Delete" class="m-0">
+                                    <input type="hidden" name="gameId" value="@game.Id" />
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                                </form>
+                                break;
                         }
                     </div>
                 </div>

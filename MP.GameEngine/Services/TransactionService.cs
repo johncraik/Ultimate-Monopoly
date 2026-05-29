@@ -163,12 +163,24 @@ public class TransactionService
             allowShortfall: true,
             ct: ct);
 
+    public Task PayDiceBonus(Framework.GameEngine engine, PlayerModel player, PlayerModel counterpartyPlayer, CancellationToken ct)
+        => Move(engine, player, -RuleDictionary.DiceNumRolledBonus, FinancialReason.DiceNumBonus,
+            counterparty: TransactionCounterparty.Player,
+            counterpartyPlayer: counterpartyPlayer,
+            allowShortfall: true,
+            ct: ct);
+
 
     // ───────────────────── Reasons that CREDIT the player ─────────────────────
 
     /// <summary>GO bonus (or partial bonus for anti-clockwise crossing) — Bank → player.</summary>
     public Task ReceiveGoBonus(Framework.GameEngine engine, PlayerModel player, uint amount, CancellationToken ct)
         => Move(engine, player, amount, FinancialReason.GoBonus,
+            counterparty: TransactionCounterparty.Bank,
+            ct: ct);
+    
+    public Task ReceiveDiceBonus(Framework.GameEngine engine, PlayerModel player, CancellationToken ct)
+        => Move(engine, player, RuleDictionary.DiceNumRolledBonus, FinancialReason.DiceNumBonus,
             counterparty: TransactionCounterparty.Bank,
             ct: ct);
 

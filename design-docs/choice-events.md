@@ -1051,6 +1051,41 @@ Submitter must equal `PlayerId` or `cache.HostPlayerId`.
   readable, and so a later card revision that reorders options doesn't
   silently change the meaning of past responses.
 
+### 15.10 `LeaveJailPrompt` — *implemented*
+
+Asks a jailed player *how* to settle leaving jail: pay the fee, or play a Get
+Out of Jail Free card. Choosing *whether* to leave (pay / play card / attempt a
+double) is a **command** at turn start (per §2) — this prompt is the pay-or-card
+settlement only, opened mid-execution (e.g. the forced exit on the third jail
+turn, `game-rules.md` Jail rule 2).
+
+|  |  |
+|---|---|
+| Discriminator | `LeaveJail` |
+| Target | Single player (`PlayerId`) |
+| Timeout | Caller-controlled |
+| Response | `LeaveJailResponse` |
+| Files | `Models/Prompts/PromptTypes/LeaveJailPrompt.cs`, `Models/Prompts/PromptTypes/Responses/LeaveJailResponse.cs` |
+
+**Prompt fields**
+
+- `PlayerId` (inherited) — the jailed player.
+- `Cost: uint` — the jail fee to pay (`game-rules.md` Jail rule 3).
+- `HasCard: bool` — whether the player holds a Get Out of Jail Free card. The
+  client only offers the `PlayCard` option when `true`.
+- `Title`, `Body` (inherited).
+
+**Response payload**
+
+- `Action: LeaveJailAction` — `PayFee` or `PlayCard`.
+
+**Authorisation and validation**
+
+- Submitter must equal `PlayerId` or `cache.HostPlayerId`.
+- `PayFee` is always valid.
+- `PlayCard` is rejected unless `HasCard` is `true` — a player can't play a card
+  they don't hold.
+
 ### Planned
 
 Future prompt types are listed here as they are designed. Status moves from

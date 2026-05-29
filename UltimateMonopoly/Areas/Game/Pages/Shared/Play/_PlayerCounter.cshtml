@@ -1,0 +1,13 @@
+@using MP.GameEngine.Enums.Players
+@model (UltimateMonopoly.Models.ViewModels.Social.UserProfileViewModel Profile, MP.GameEngine.Enums.Players.PlayerDirection Direction)
+@{
+    // PlayerDirection.Forward == Clockwise, Backward == CounterClockwise.
+    var clockwise = Model.Direction == PlayerDirection.Forward;
+    var arrowIcon = clockwise ? "bi-arrow-clockwise" : "bi-arrow-counterclockwise";
+    var directionLabel = clockwise ? "Clockwise" : "Anti-clockwise";
+}
+
+<span class="player-counter" title="@Model.Profile.DisplayName — @directionLabel">
+    <profile-circle user="Model.Profile" size="Sm" />
+    <i class="bi @arrowIcon player-counter__dir" aria-hidden="true"></i>
+</span>

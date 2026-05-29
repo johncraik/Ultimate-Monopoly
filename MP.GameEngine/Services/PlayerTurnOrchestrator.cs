@@ -12,14 +12,17 @@ public class PlayerTurnOrchestrator
     private readonly DiceService _diceService;
     private readonly MovementService _movementService;
     private readonly PlayerService _playerService;
+    private readonly JailService _jailService;
 
     public PlayerTurnOrchestrator(DiceService diceService,
         MovementService movementService,
-        PlayerService playerService)
+        PlayerService playerService,
+        JailService jailService)
     {
         _diceService = diceService;
         _movementService = movementService;
         _playerService = playerService;
+        _jailService = jailService;
     }
 
 
@@ -55,19 +58,17 @@ public class PlayerTurnOrchestrator
                 else if(player.JailTurnCounter == (player.MaxJailTurnsOverride ?? RuleDictionary.MaxJailTurns))
                 {
                     //Jail counter already increased before role type switch
-                    
-                    //TODO handle jail counter == max counter/override max
-                    //Should prompt to pay/use card to leave jail
+                    await _jailService.ForcePlayerToLeaveJail(engine, player, ct);
                 }
-                
                 
                 engine.TurnStateProvider.TransitionToThirdDie();
                 break;
+            
             case DiceRollType.Double:
                 if (player.DoublesInRow < RuleDictionary.DoublesBeforeJail)
                 {
                     //Will move player OUT of jail if in jail
-                    await CheckAndLeaveJail(engine, player, ct);
+                    await _jailService.CheckAndLeaveJail(engine, player, ct);
                     
                     //Get the double effect record, and notify player
                     var effect = DoubleEffects.For(dice.Die1);
@@ -105,16 +106,17 @@ public class PlayerTurnOrchestrator
                 {
                     //Too many doubles in a row, so send player to jail:
                     _ = await engine.PromptProvider.Acknowledge(player.PlayerId, "Going to Jail!", "You have rolled too many doubles in a row.", ct: ct);
-                    await SendToJail(engine, player, ct);
+                    await _jailService.SendPlayerToJail(engine, player, ct);
                 }
                 
                 engine.TurnStateProvider.TransitionToThirdDie();
                 break;
+            
             case DiceRollType.Triple:
                 if (player.TriplesInRow < RuleDictionary.TriplesBeforeJail)
                 {
                     //Will move player OUT of jail if in jail
-                    await CheckAndLeaveJail(engine, player, ct);
+                    await _jailService.CheckAndLeaveJail(engine, player, ct);
                     
                     _ = await engine.PromptProvider.Acknowledge(player.PlayerId, "Triple!", "You rolled a triple, you will move the combined total of all three dice.", ct: ct);
                     
@@ -125,7 +127,7 @@ public class PlayerTurnOrchestrator
                 {
                     //Too many triples in a row, so send player to jail:
                     _ = await engine.PromptProvider.Acknowledge(player.PlayerId, "Going to Jail!", "You have rolled too many triples in a row.", ct: ct);
-                    await SendToJail(engine, player, ct);
+                    await _jailService.SendPlayerToJail(engine, player, ct);
                 }
                 
                 //Triple doesnt grant third die movement
@@ -135,31 +137,13 @@ public class PlayerTurnOrchestrator
                 throw new ArgumentOutOfRangeException();
         }
 
-        var x = 2;
-    }
-
-    private async Task SendToJail(Framework.GameEngine engine, PlayerModel player, CancellationToken ct)
-    {
-        //Going to jail
-        //Reset counters, and send player to jail:
-        player.DoublesInRow = 0;
-        player.TriplesInRow = 0;
-        await _movementService.SendPlayerToJail(engine, player, ct);
-    }
-
-    private async Task CheckAndLeaveJail(Framework.GameEngine engine, PlayerModel player, CancellationToken ct)
-    {
-        if(!player.IsInJail)
-            return;
-
-        //Reset jail counter to 0
-        player.JailTurnCounter = 0;
+        if(player.InitialRoll)
+            player.InitialRoll = false;
         
-        //Direction of travel is no-op (moving from jail -> just visiting);
-        //Passing counter-direction to avoid accidental GO bonus
-        await _movementService.AdvancePlayer(engine, player, IndexHelper.JustVisitingSpace, 
-            PlayerMovementDirection.CounterDirectionOfTravel, ct);
+        engine.Cache.SaveChanges();
     }
+
+    
 
 
     public async Task ResolveThirdDieMovement(Framework.GameEngine engine, CancellationToken ct)
@@ -176,6 +160,7 @@ public class PlayerTurnOrchestrator
             await _movementService.MovePlayer(engine, player, thirdDie, ct);
         }
         
+        engine.Cache.SaveChanges();
         engine.TurnStateProvider.TransitionToEndOfTurn();
     }
 

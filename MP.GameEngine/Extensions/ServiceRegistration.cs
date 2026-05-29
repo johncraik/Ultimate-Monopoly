@@ -17,6 +17,8 @@ public static class ServiceRegistration
         services.TryAddScoped<MovementService>();
         services.TryAddScoped<PlayerService>();
         services.TryAddScoped<PropertyService>();
+        services.TryAddScoped<GoService>();
+        services.TryAddScoped<JailService>();
         
         //Main Services and Orchestrators
         services.TryAddScoped<GameEngineSetupService>();

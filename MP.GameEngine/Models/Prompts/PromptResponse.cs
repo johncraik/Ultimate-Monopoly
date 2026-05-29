@@ -12,6 +12,7 @@ namespace MP.GameEngine.Models.Prompts;
 [JsonDerivedType(typeof(InterruptibleWindowResponse), "InterruptibleWindow")]
 [JsonDerivedType(typeof(AcknowledgeResponse), "Acknowledge")]
 [JsonDerivedType(typeof(DiceRollResponse), "DiceRoll")]
+[JsonDerivedType(typeof(LeaveJailResponse), "LeaveJail")]
 [JsonDerivedType(typeof(AcquirePropertyResponse), "AcquireProperty")]
 [JsonDerivedType(typeof(TargetPlayerResponse), "TargetPlayer")]
 [JsonDerivedType(typeof(TargetPropertyResponse), "TargetProperty")]

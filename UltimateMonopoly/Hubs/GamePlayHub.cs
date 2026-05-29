@@ -88,7 +88,10 @@ public class GamePlayHub : GameBaseHub
             return false;
 
         var engine = await _engineFactory.GetAsync(gameId);
-        if (!engine.TurnStateProvider.CanStartTurn())
+        var current = engine.Cache.Game.CurrentPlayer();
+        if (current is null) return false;
+        
+        if (!engine.TurnStateProvider.CanStartTurn(current.PlayerId, Context.UserIdentifier))
             return false;
 
         _gameService.EnqueueTurn(gameId);

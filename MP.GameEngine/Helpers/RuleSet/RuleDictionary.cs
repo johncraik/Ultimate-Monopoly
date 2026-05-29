@@ -23,4 +23,9 @@ public static class RuleDictionary
     //Dice bonuses
     public const ushort SnakeEyesBonus = 500;
     public const ushort DiceNumRolledBonus = 100;
+    
+    //GO Bonuses
+    public const ushort GoPassClockwiseBonus = 200;
+    public const ushort GoPassCounterClockwiseBonus = 100;
+    public const ushort LandOnGoBonus = 200;
 }

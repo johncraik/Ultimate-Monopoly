@@ -243,42 +243,71 @@ public static class IndexHelper
 
     public static (ushort Index, ushort GoPasses) MoveIndex(ushort index, int spaces, PlayerDirection direction)
     {
-        var desiredIndex = (direction switch
-        {
-            PlayerDirection.Forward => index + spaces,
-            PlayerDirection.Backward => index - spaces,
-            _ => throw new ArgumentOutOfRangeException()
-        });
-        
-        if (desiredIndex is JailSpace or >= 0 and < PhysicalBoardSize)
-            return ((ushort)desiredIndex, 0);
+        if (spaces == 0)
+            return (index, 0);
 
-        ushort goPasses = 0;
-        while (desiredIndex is < 0 or >= PhysicalBoardSize)
+        var normalisedSpaces = spaces;
+        if (spaces < 0)
         {
-            desiredIndex = direction switch
+            //Flip direction if negative to traverse positive spaces
+            normalisedSpaces = Math.Abs(spaces);
+            direction = direction switch
             {
-                PlayerDirection.Forward => desiredIndex - PhysicalBoardSize,
-                PlayerDirection.Backward => desiredIndex + PhysicalBoardSize,
+                PlayerDirection.Forward => PlayerDirection.Backward,
+                PlayerDirection.Backward => PlayerDirection.Forward,
                 _ => throw new ArgumentOutOfRangeException(nameof(direction), direction, null)
             };
-            goPasses++;
         }
         
-        return ((ushort)desiredIndex, goPasses);
+        var i = (int)index;
+        ushort goPasses = 0;
+        for (var c = 1; c <= normalisedSpaces; c++)
+        {
+            i = direction switch
+            {
+                PlayerDirection.Forward => i + 1,
+                PlayerDirection.Backward => i - 1,
+                _ => throw new ArgumentOutOfRangeException(nameof(direction), direction, null)
+            };
+            
+            if(i is PhysicalBoardSize or GoSpace)
+                i = GoSpace;
+            
+            switch (i)
+            {
+                case -1 when direction == PlayerDirection.Backward:
+                    i = PhysicalBoardSize - 1;
+                    goPasses++;
+                    break;
+                case 1 when direction == PlayerDirection.Forward:
+                    goPasses++;
+                    break;
+            }
+        }
+        
+        return ((ushort)i, goPasses);
     }
 
     public static (ushort Index, bool PassesGo) AdvanceIndex(ushort currentIndex, ushort desiredIndex, PlayerDirection direction)
     {
-        if(desiredIndex > PhysicalBoardSize && desiredIndex != JailSpace)
-            throw new ArgumentOutOfRangeException(nameof(desiredIndex), "Desired index cannot exceed physical board size.");
-        
-        var passesGo = direction switch
+        switch (desiredIndex)
         {
-            PlayerDirection.Forward => desiredIndex <= currentIndex,
-            PlayerDirection.Backward => desiredIndex >= currentIndex,
-            _ => throw new ArgumentOutOfRangeException(nameof(direction), direction, null)
-        };
-        return (desiredIndex, passesGo);
+            case > PhysicalBoardSize when desiredIndex != JailSpace:
+                throw new ArgumentOutOfRangeException(nameof(desiredIndex), "Desired index cannot exceed physical board size.");
+            case JailSpace:
+                return (JailSpace, false);
+            case GoSpace:
+                return (GoSpace, false);
+            default:
+            {
+                var passesGo = direction switch
+                {
+                    PlayerDirection.Forward => currentIndex == 0 || desiredIndex <= currentIndex,
+                    PlayerDirection.Backward => currentIndex == 0 || desiredIndex >= currentIndex,
+                    _ => throw new ArgumentOutOfRangeException(nameof(direction), direction, null)
+                };
+                return (desiredIndex, passesGo);
+            }
+        }
     }
 }

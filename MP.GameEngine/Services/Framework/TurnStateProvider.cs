@@ -62,7 +62,10 @@ public class TurnStateProvider(GameCacheModel cache, ISnapshotService snapshotSe
     /// No actor gating — kicking off the current player's turn is open to the
     /// table (the host drives it on the tablet).
     /// </summary>
-    public bool CanStartTurn() => cache.TurnState == TurnState.StartOfTurn;
+    public bool CanStartTurn(string playerId, string submittingUserId) => 
+        IsAuthorisedActor(playerId, submittingUserId) 
+        && cache.TurnState == TurnState.StartOfTurn
+        && IsEngineIdle();
 
     /// <summary>
     /// Portfolio commands (mortgage / unmortgage / build / sell houses / play

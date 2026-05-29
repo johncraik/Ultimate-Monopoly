@@ -48,6 +48,13 @@ public class GameCacheService
         _cache.Set(GetKey(game.GameId), game, CacheExpiration);
     }
 
+    /// <summary>
+    /// Drops the cached working copy for a game so the next <see cref="GetGame"/>
+    /// re-hydrates from the latest snapshot in the database. Used to recover from
+    /// a work item that threw mid-turn and may have left the working copy dirty.
+    /// </summary>
+    public void Invalidate(string gameId) => _cache.Remove(GetKey(gameId));
+
     public async Task SaveChangesAsync(string gameId)
     {
         var game = await GetGame(gameId);

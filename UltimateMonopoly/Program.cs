@@ -79,12 +79,7 @@ builder.Services.AddMessaging<AppDbContext>();
 builder.Services.AddNotifications<AppDbContext>();
 
 //Background Jobs — Hangfire
-builder.Services.AddHangfireSqlServer(builder.Configuration
-    /*, configureSqlStorage: opts =>
-{
-    //TODO Remove:
-    opts.SqlClientFactory = Microsoft.Data.SqlClient.SqlClientFactory.Instance;
-}*/);
+builder.Services.AddHangfireSqlServer(builder.Configuration);
 
 builder.Services.AddServices();
 

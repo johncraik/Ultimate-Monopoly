@@ -10,6 +10,12 @@
     // state tint, no text label) iff it has a PropertySet; everything else
     // (corners, tax, card spaces) shows its name as text.
     var propsByIndex = Model.Properties.ToDictionary(p => p.BoardIndex);
+
+    // Players grouped by the space they occupy. One counter renders per space
+    // (the first occupant); any others are tallied on the space's outer edge.
+    var playersByIndex = Model.Players
+        .GroupBy(pl => pl.Model.BoardIndex)
+        .ToDictionary(g => g.Key, g => g.ToList());
 }
 
 @* ─── Board ───────────────────────────────────────────────────────────────
@@ -28,6 +34,7 @@
             var isCorner = cell.Side == BoardSide.Corner;
             var ownable = space.IsPurchasable;
             propsByIndex.TryGetValue(space.Index, out var prop);
+            playersByIndex.TryGetValue(space.Index, out var spacePlayers);
 
             // Tooltip on properties + tax only — not corners, not card spaces.
             string? tipTitle = null, tipContent = null;
@@ -65,9 +72,36 @@
                     <div class="space-banner @propClass"></div>
                     <div class="space-body @stateClass"></div>
                 }
+                else if (isCorner)
+                {
+                    <div class="space-label">@space.Name</div>
+                }
+                else if (space.Index.IsChance())
+                {
+                    <div class="space-icon" title="@space.Name"><i class="bi bi-question-lg"></i></div>
+                }
+                else if (space.Index.IsComChest())
+                {
+                    <div class="space-icon" title="@space.Name"><i class="bi bi-archive-fill"></i></div>
+                }
+                else if (space.Index.IsTax())
+                {
+                    <div class="space-icon" title="@space.Name"><i class="bi bi-bank2"></i></div>
+                }
                 else
                 {
                     <div class="space-label">@space.Name</div>
+                }
+
+                @if (spacePlayers is { Count: > 0 })
+                {
+                    <div class="space-counters">
+                        <partial name="Play/_PlayerCounter" model="(spacePlayers[0].Profile, spacePlayers[0].Model.Direction)" />
+                    </div>
+                    if (spacePlayers.Count > 1)
+                    {
+                        <span class="space-counter-extra @CounterEdgeClass(cell)">@(spacePlayers.Count)</span>
+                    }
                 }
             </div>
         }
@@ -90,6 +124,24 @@
         BoardSide.Left => "side-left",
         BoardSide.Right => "side-right",
         _ => "is-corner"
+    };
+
+    // The space's outer edge (facing away from the board centre) for the extra-
+    // player count badge. Edge spaces map to their side; corners pin to the
+    // outer corner derived from the cell's grid position.
+    static string CounterEdgeClass(BoardCell cell) => cell.Side switch
+    {
+        BoardSide.Top => "cnt-top",
+        BoardSide.Bottom => "cnt-bottom",
+        BoardSide.Left => "cnt-left",
+        BoardSide.Right => "cnt-right",
+        _ => (cell.Row, cell.Column) switch
+        {
+            (1, 1) => "cnt-tl",
+            (1, _) => "cnt-tr",
+            (_, 1) => "cnt-bl",
+            _ => "cnt-br"
+        }
     };
 
     // Banner colour via the shared SCSS property palette (.bg-prop-{slug}) —
@@ -150,10 +202,11 @@
     }
 
     .board-space {
+        position: relative;
         display: flex;
         min-width: 0;
         min-height: 0;
-        overflow: hidden;
+        overflow: visible;          /* let player tokens sit over the cell edges */
         background: #f5f5f5;        /* white body for plain (non-property) spaces */
     }
     .board-space[data-bs-toggle] { cursor: pointer; }
@@ -185,6 +238,55 @@
         color: #222;
         overflow: hidden;
     }
+
+    /* Icon glyphs replace text on non-corner Chance / Community Chest / Tax spaces */
+    .space-icon {
+        flex: 1 1 auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+        line-height: 1;
+        color: #333;
+    }
+
+    /* Player tokens — centred over the whole space (edge spaces span two cells).
+       One counter per space; extras are tallied in a badge on the outer edge. */
+    .space-counters {
+        position: absolute;
+        inset: 0;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+    }
+    .space-counter-extra {
+        position: absolute;
+        z-index: 3;
+        min-width: 1.1rem;
+        height: 1.1rem;
+        padding: 0 0.22rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.6rem;
+        font-weight: 700;
+        line-height: 1;
+        border-radius: 1rem;
+        background: rgba(17, 17, 17, .85);
+        color: #fff;
+        pointer-events: none;
+    }
+    /* Outer edge (facing away from the board centre); corners pin to the corner. */
+    .space-counter-extra.cnt-top    { top: 0;    left: 50%; transform: translateX(-50%); }
+    .space-counter-extra.cnt-bottom { bottom: 0; left: 50%; transform: translateX(-50%); }
+    .space-counter-extra.cnt-left   { left: 0;   top: 50%;  transform: translateY(-50%); }
+    .space-counter-extra.cnt-right  { right: 0;  top: 50%;  transform: translateY(-50%); }
+    .space-counter-extra.cnt-tl { top: 0; left: 0; }
+    .space-counter-extra.cnt-tr { top: 0; right: 0; }
+    .space-counter-extra.cnt-bl { bottom: 0; left: 0; }
+    .space-counter-extra.cnt-br { bottom: 0; right: 0; }
 
     /* Corners + centre share the board base colour */
     .board-space.is-corner { background: #e9e4d6; }

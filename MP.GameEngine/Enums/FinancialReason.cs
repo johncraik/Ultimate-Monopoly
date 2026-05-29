@@ -17,6 +17,9 @@ public enum FinancialReason
 
     /// <summary>Passing or landing on GO.</summary>
     GoBonus,
+    
+    /// <summary>Bonus for your number being rolled.</summary>
+    DiceNumBonus,
 
     /// <summary>Paying out of jail.</summary>
     JailFee,

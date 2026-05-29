@@ -15,6 +15,7 @@ public class PlayerModel
     public ushort Dice2 { get; set; }
     
     public bool HasPassedInitialGo { get; set; }
+    public bool InitialRoll { get; set; }
     public uint Money { get; set; }
     public ushort BoardIndex { get; set; }
     public PlayerDirection Direction { get; set; }
