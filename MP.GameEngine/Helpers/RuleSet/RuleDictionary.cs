@@ -17,7 +17,7 @@ public static class RuleDictionary
     public const ushort TriplesBeforeJail = 2;
     
     //Triple Bonus
-    public const ushort DefaultTripleBonus = 1500;
+    public const ushort DefaultTripleBonus = 1000;
     public const ushort TripleBonusIncrease = 500;
 
     //Dice bonuses

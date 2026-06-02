@@ -1,0 +1,477 @@
+@using JC.Core.Extensions
+@using MP.GameEngine.Enums
+@using MP.GameEngine.Enums.Properties
+@using MP.GameEngine.Helpers
+@using MP.GameEngine.Helpers.RuleSet
+@using MP.GameEngine.Models.Snapshot
+@using UltimateMonopoly.Models.ViewModels.Games
+@using UltimateMonopoly.Services.Cache
+@model PlayerProfilePlayViewModel
+@inject PlayerCacheService PlayerCache
+@{
+    // The live player-profile body. Rendered on first load (Player/Index) and
+    // re-rendered on every SignalR StateChanged frame (Index.OnGetStateAsync →
+    // swapped in by player-state.js). All state reads straight off the engine
+    // cache, so the live and first-load render paths are identical — mirrors the
+    // host _PlayView. See design-docs/Game-UI.md "Player Profile Partial".
+    var engine = Model.Engine;
+    var cache = engine.Cache;
+    var tsp = engine.TurnStateProvider;
+    var game = cache.Game;
+    var board = cache.Board;
+    var rule = cache.RoundingRule;
+
+    var playerId = Model.PlayerId;
+    var viewerId = Model.ViewerUserId;
+
+    var player = game.GetPlayer(playerId) ?? game.GetPlayer(playerId, true)
+        ?? throw new InvalidOperationException($"Player {playerId} not found in game state.");
+
+    // CurrentPlayer() returns null if the current player is bankrupt; tolerate it.
+    PlayerModel? current;
+    try { current = game.CurrentPlayer(); } catch { current = null; }
+    var isCurrent = current is not null && current.PlayerId == playerId;
+
+    var profile = await PlayerCache.GetPlayerProfile(playerId);
+    const string cur = RuleDictionary.Currency;
+
+    // Every *computed* money figure shown goes through MoneyHelper so it matches
+    // the game's rounding rule (NormaliseAmountToPositive Math.Abs-es, so a
+    // cost-context value always reads positive). Exact ledger amounts (a player's
+    // Money, a loan's Amount/PaidBack) are shown raw.
+    string Cost(long raw, FinancialReason reason) => $"{cur}{MoneyHelper.NormaliseAmountToPositive(raw, rule, reason)}";
+
+    // Capability gates — host-bypass aware, evaluated for the *viewer* (self or
+    // the host). Mock/stub actions still wear their real guards: hidden where the
+    // state forbids them, disabled where the doc wants a persistent button.
+    var canStart = tsp.CanStartTurn(playerId, viewerId);
+    var canEnd = tsp.CanEndTurn(playerId, viewerId);
+    var canPortfolio = tsp.CanPortfolioCommand(playerId, viewerId);
+    var canLeaveJail = tsp.CanLeaveJail(playerId, viewerId);
+    var canBankrupt = tsp.CanDeclareBankruptcy(playerId, viewerId);
+
+    var owned = game.GetOwnedProperties(playerId);
+    var mortgaged = owned.Where(p => p.State == PropertyState.Mortgaged).ToList();
+    var mortgageFeeRaw = (long)mortgaged.Sum(p => (board.GetBoardSpace(p.BoardIndex).PurchaseCost ?? 0) * 0.10);
+
+    var loans = player.Loans;
+    var outstandingLoans = loans.Where(l => l.IsOutstanding).ToList();
+    var loanRemaining = outstandingLoans.Sum(l => (long)l.Amount - l.PaidBack);
+    // 5% of each original amount (Loans rules 5 & 7). Rule says round *up*;
+    // NormaliseAmount rounds to-nearest — acceptable for a display figure.
+    var loanCostRaw = (long)Math.Ceiling(outstandingLoans.Sum(l => l.Amount * 0.05));
+    var canTakeLoan = canPortfolio && outstandingLoans.Count < 3;
+
+    var fpSets = player.FPHandedInSets.Distinct().ToList();
+}
+
+<div class="row justify-content-center">
+    <div class="col-12">
+        <div class="pp-view">
+
+            @* ───────────────── Header (shared across tabs) ───────────────── *@
+            <div class="card mb-2">
+                <div class="card-body d-flex align-items-center gap-3 py-2">
+                    <profile-circle user="profile" size="Lg" />
+                    <div class="flex-grow-1 min-w-0">
+                        <div class="fw-semibold text-truncate fs-5">
+                            @profile.DisplayName
+                            @if (player.IsBankrupt)
+                            {
+                                <span class="badge text-bg-danger ms-1">Bankrupt</span>
+                            }
+                        </div>
+                        <div class="small text-body-secondary d-flex flex-wrap align-items-center gap-2">
+                            <span>Dice <span class="badge text-bg-secondary">@player.Dice1 | @player.Dice2</span></span>
+                            <span class="fw-semibold text-body">@cur@player.Money</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @* Roll / End turn — only for this player on their own turn (mirrors the
+               host turn button), otherwise show whose turn it is. *@
+            @if (isCurrent)
+            {
+                <div class="d-grid mb-2">
+                    @if (cache.TurnState == TurnState.StartOfTurn)
+                    {
+                        <button type="button" class="btn btn-hero-success" data-start-turn disabled="@(!canStart)">
+                            <i class="bi bi-dice-5 me-1"></i> Roll Dice
+                        </button>
+                    }
+                    else if (cache.TurnState == TurnState.EndOfTurn)
+                    {
+                        <button type="button" class="btn btn-hero-danger" data-end-turn disabled="@(!canEnd)">
+                            <i class="bi bi-flag-fill me-1"></i> End Turn
+                        </button>
+                    }
+                    else
+                    {
+                        <button type="button" class="btn btn-hero-light" data-end-turn disabled>
+                            <i class="bi bi-flag-fill me-1"></i> End Turn
+                        </button>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="card mb-2">
+                    <div class="card-body d-flex align-items-center gap-2 py-2">
+                        @if (current is not null)
+                        {
+                            var currentProfile = await PlayerCache.GetPlayerProfile(current.PlayerId);
+                            <profile-circle user="currentProfile" size="Md" />
+                            <span class="small text-body-secondary">
+                                It's <span class="fw-semibold text-body">@currentProfile.DisplayName</span>'s turn
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="small text-body-secondary">Waiting for the next turn…</span>
+                        }
+                    </div>
+                </div>
+            }
+
+            @* ───────────────────────── Tab content ───────────────────────── *@
+            <div class="tab-content pp-content">
+
+                @* ===================== Profile ===================== *@
+                <div class="tab-pane fade show active" id="pp-profile" role="tabpanel">
+
+                    @if (player.IsInJail && canLeaveJail)
+                    {
+                        <div class="d-grid gap-2 mb-3">
+                            @* TODO(no-op): leave-jail (pay) command not built. Guarded by CanLeaveJail. *@
+                            <button type="button" class="btn btn-outline-warning" data-noop>
+                                <i class="bi bi-cash-coin me-1"></i> Leave jail — pay @cur@player.JailCost
+                            </button>
+                            @* TODO(mock): always shown while jailed per Game-UI.md (no Get-Out-of-Jail card model yet). *@
+                            <button type="button" class="btn btn-outline-secondary" data-noop>
+                                <i class="bi bi-ticket-perforated me-1"></i> Leave jail — use card
+                            </button>
+                        </div>
+                    }
+
+                    @* Block 1 — money / jail cost / triple bonus / %cap *@
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <dl class="row mb-0">
+                                <dt class="col-7 text-body-secondary fw-normal"><i class="bi bi-wallet2 me-1"></i> Money</dt>
+                                <dd class="col-5 text-end fw-semibold mb-2">@cur@player.Money</dd>
+
+                                <dt class="col-7 text-body-secondary fw-normal"><i class="bi bi-building-lock me-1"></i> Jail cost</dt>
+                                <dd class="col-5 text-end mb-2">@cur@player.JailCost</dd>
+
+                                <dt class="col-7 text-body-secondary fw-normal"><i class="bi bi-dice-3 me-1"></i> Triple bonus</dt>
+                                <dd class="col-5 text-end mb-2">@cur@player.TripleBonus</dd>
+
+                                <dt class="col-7 text-body-secondary fw-normal"><i class="bi bi-percent me-1"></i> Card %cap</dt>
+                                @* TODO(mock): %cap tier needs a building-state helper (John to provide). *@
+                                <dd class="col-5 text-end mb-0"><span class="badge text-bg-secondary">10%</span></dd>
+                            </dl>
+                        </div>
+                    </div>
+
+                    @* Block 2 — Free Parking hand-ins (accordion, count in header) *@
+                    <div class="accordion mb-3" id="ppFpAccordion">
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#pp-fp-sets">
+                                    Free Parking hand-ins · @fpSets.Count
+                                </button>
+                            </h2>
+                            <div id="pp-fp-sets" class="accordion-collapse collapse" data-bs-parent="#ppFpAccordion">
+                                <div class="accordion-body">
+                                    @if (fpSets.Count == 0)
+                                    {
+                                        <div class="text-body-secondary small text-center py-2">No sets handed into Free Parking.</div>
+                                    }
+                                    else
+                                    {
+                                        <div class="d-grid gap-2">
+                                            @foreach (var s in fpSets)
+                                            {
+                                                <span class="badge text-bg-prop-@(s.ToDisplayName().ToSlug()) w-100 py-2">@s.ToDisplayName()</span>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    @* Block 3 — declare bankruptcy (disabled unless allowed; no-op for now) *@
+                    <div class="d-grid">
+                        @* TODO(no-op): bankruptcy command not built. Disabled via CanDeclareBankruptcy. *@
+                        <button type="button" class="btn btn-outline-danger" data-noop disabled="@(!canBankrupt)">
+                            <i class="bi bi-flag me-1"></i> Declare bankruptcy
+                        </button>
+                    </div>
+                </div>
+
+                @* ===================== Properties ===================== *@
+                <div class="tab-pane fade" id="pp-properties" role="tabpanel">
+
+                    @* Block 1 — bank/building summary (mortgage fee is real; the rest is mock) *@
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <dl class="row mb-0 small">
+                                @if (mortgaged.Count > 0)
+                                {
+                                    <dt class="col-7 text-body-secondary fw-normal">Mortgage fee at GO</dt>
+                                    <dd class="col-5 text-end mb-2">@Cost(mortgageFeeRaw, FinancialReason.MortgageFee)</dd>
+                                }
+                                @* TODO(mock): no building inventory in the model yet. *@
+                                <dt class="col-7 text-body-secondary fw-normal">Houses left</dt>
+                                <dd class="col-5 text-end mb-2">32 <span class="text-body-tertiary">(mock)</span></dd>
+                                <dt class="col-7 text-body-secondary fw-normal">Hotels left</dt>
+                                <dd class="col-5 text-end mb-2">12 <span class="text-body-tertiary">(mock)</span></dd>
+                                <dt class="col-7 text-body-secondary fw-normal">Cost to build all</dt>
+                                <dd class="col-5 text-end mb-0"><span class="text-body-tertiary">— (mock)</span></dd>
+                            </dl>
+                            @* TODO(no-op): build-on-all command not built. *@
+                            <div class="d-grid mt-2">
+                                <button type="button" class="btn btn-outline-success btn-sm" data-noop disabled="@(!canPortfolio)">
+                                    <i class="bi bi-house-add me-1"></i> Build on all properties
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    @* Block 2 — owned properties grouped by set *@
+                    @if (owned.Count == 0)
+                    {
+                        <div class="card">
+                            <div class="card-body text-center text-body-secondary py-4">
+                                <i class="bi bi-houses fs-3 d-block mb-2"></i> You don't own any properties yet.
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        var grouped = owned
+                            .Select(p => (Prop: p, Set: PropertySetHelper.ResolveSet(p.BoardIndex)))
+                            .Where(x => x.Set is not null)
+                            .GroupBy(x => x.Set!.Value)
+                            .OrderBy(g => (int)g.Key)
+                            .ToList();
+
+                        <div class="accordion" id="ppPropAccordion">
+                            @foreach (var grp in grouped)
+                            {
+                                var set = grp.Key;
+                                var slug = set.ToDisplayName().ToSlug();
+                                var setIndexes = PropertySetHelper.GetIndexes(set);
+                                var ownsAll = grp.Count() == setIndexes.Count;
+                                var buildable = set is not (PropertySet.Station or PropertySet.Utility);
+                                var buildCost = buildable ? board.GetBoardSpace(grp.First().Prop.BoardIndex).BuildCost : null;
+                                var paneId = $"pp-set-{slug}";
+
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#@paneId">
+                                            <span class="pp-set-dot me-2 bg-prop-@slug"></span>
+                                            <span class="flex-grow-1">@set.ToDisplayName()</span>
+                                            <span class="badge text-bg-secondary me-2">@grp.Count()/@setIndexes.Count</span>
+                                            @if (ownsAll)
+                                            {
+                                                <span class="badge text-bg-prop-@slug me-2">SET</span>
+                                            }
+                                        </button>
+                                    </h2>
+                                    <div id="@paneId" class="accordion-collapse collapse" data-bs-parent="#ppPropAccordion">
+                                        <div class="accordion-body">
+
+                                            @if (buildable && ownsAll && buildCost is not null)
+                                            {
+                                                var bc = (long)buildCost.Value;
+                                                <div class="d-flex justify-content-between align-items-center small mb-2">
+                                                    <span class="text-body-secondary">
+                                                        Build @Cost(bc, FinancialReason.Build) · Double hotel @Cost(bc * 5, FinancialReason.Build)
+                                                    </span>
+                                                    @* TODO(no-op): build-set command not built. *@
+                                                    <button type="button" class="btn btn-outline-success btn-sm" data-noop disabled="@(!canPortfolio)">Build set</button>
+                                                </div>
+                                            }
+
+                                            <div class="d-grid gap-2">
+                                                @foreach (var x in grp.OrderBy(x => x.Prop.BoardIndex))
+                                                {
+                                                    var prop = x.Prop;
+                                                    var space = board.GetBoardSpace(prop.BoardIndex);
+                                                    var purchase = (long)(space.PurchaseCost ?? 0);
+                                                    var built = prop.BuiltOn();
+
+                                                    <div class="pp-space border border-prop-@slug">
+                                                        <div class="pp-space-head text-bg-prop-@slug">
+                                                            <span class="text-truncate">@space.Name</span>
+                                                            @if (prop.State == PropertyState.Mortgaged)
+                                                            {
+                                                                <span class="badge text-bg-warning">Mortgaged</span>
+                                                            }
+                                                            else if (prop.State == PropertyState.Reserved)
+                                                            {
+                                                                <span class="badge text-bg-info">Reserved</span>
+                                                            }
+                                                        </div>
+                                                        <div class="pp-space-body">
+                                                            <div class="small mb-2">
+                                                                @if (prop.State == PropertyState.Reserved)
+                                                                {
+                                                                    @* Un-reserve = full purchase price (real — Reserved Properties rule 4). *@
+                                                                    <span class="text-body-secondary">Un-reserve:</span>
+                                                                    <span class="fw-semibold">@Cost(purchase, FinancialReason.UnReserve)</span>
+                                                                }
+                                                                else if (prop.State == PropertyState.Mortgaged)
+                                                                {
+                                                                    @* TODO(mock): un-mortgage amount has no engine formula yet. *@
+                                                                    <span class="text-body-secondary">Un-mortgage:</span>
+                                                                    <span class="fw-semibold">@Cost(purchase / 2, FinancialReason.Unmortgage)</span>
+                                                                }
+                                                                else
+                                                                {
+                                                                    @* TODO(mock): mortgage payout has no engine formula yet. *@
+                                                                    <span class="text-body-secondary">Mortgage:</span>
+                                                                    <span class="fw-semibold">@Cost(purchase / 2, FinancialReason.Mortgage)</span>
+                                                                }
+                                                            </div>
+                                                            <div class="d-flex flex-wrap gap-1">
+                                                                @* No-op stubs (no command built); enabled only when the portfolio gate allows. *@
+                                                                @if (buildable && ownsAll)
+                                                                {
+                                                                    <button type="button" class="btn btn-outline-success btn-sm" data-noop disabled="@(!canPortfolio)">Build</button>
+                                                                }
+                                                                @if (built)
+                                                                {
+                                                                    <button type="button" class="btn btn-outline-warning btn-sm" data-noop disabled="@(!canPortfolio)">Sell</button>
+                                                                }
+                                                                @if (prop.State == PropertyState.Reserved)
+                                                                {
+                                                                    <button type="button" class="btn btn-outline-info btn-sm" data-noop disabled="@(!canPortfolio)">Un-reserve</button>
+                                                                }
+                                                                else if (prop.State == PropertyState.Mortgaged)
+                                                                {
+                                                                    <button type="button" class="btn btn-outline-secondary btn-sm" data-noop disabled="@(!canPortfolio)">Un-mortgage</button>
+                                                                }
+                                                                else if (!built)
+                                                                {
+                                                                    <button type="button" class="btn btn-outline-secondary btn-sm" data-noop disabled="@(!canPortfolio)">Mortgage</button>
+                                                                }
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+
+                @* ===================== Cards (deferred) ===================== *@
+                <div class="tab-pane fade" id="pp-cards" role="tabpanel">
+                    <div class="card">
+                        <div class="card-body text-center text-body-secondary py-4">
+                            <i class="bi bi-card-text fs-3 d-block mb-2"></i> You have no cards.
+                        </div>
+                    </div>
+                </div>
+
+                @* ===================== Loans ===================== *@
+                <div class="tab-pane fade" id="pp-loans" role="tabpanel">
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <dl class="row mb-2 small">
+                                <dt class="col-7 text-body-secondary fw-normal">Outstanding loans</dt>
+                                <dd class="col-5 text-end mb-2">@outstandingLoans.Count / 3</dd>
+                                @if (outstandingLoans.Count > 0)
+                                {
+                                    <dt class="col-7 text-body-secondary fw-normal">Total still owed</dt>
+                                    <dd class="col-5 text-end mb-2">@cur@loanRemaining</dd>
+                                    <dt class="col-7 text-body-secondary fw-normal">Repayment at GO / Free Parking</dt>
+                                    <dd class="col-5 text-end mb-0">@Cost(loanCostRaw, FinancialReason.LoanRepay)</dd>
+                                }
+                            </dl>
+                            <div class="d-grid gap-2">
+                                @* TODO(no-op): take-loan command not built. Max 3 outstanding (Loans rule 4). *@
+                                <button type="button" class="btn btn-outline-primary btn-sm" data-noop disabled="@(!canTakeLoan)">
+                                    <i class="bi bi-cash-stack me-1"></i> Take out a loan
+                                </button>
+                                @if (outstandingLoans.Count > 0)
+                                {
+                                    @* TODO(no-op): custom repayment command not built (pays the first loan first). *@
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" data-noop disabled="@(!canPortfolio)">
+                                        <i class="bi bi-coin me-1"></i> Pay a custom amount
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    @if (loans.Count == 0)
+                    {
+                        <div class="card">
+                            <div class="card-body text-center text-body-secondary py-4">
+                                <i class="bi bi-bank fs-3 d-block mb-2"></i> No loans taken.
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="card">
+                            <div class="table-responsive">
+                                <table class="table table-sm mb-0 align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th class="text-end">Borrowed</th>
+                                            <th class="text-end">Paid</th>
+                                            <th class="text-end">Outstanding</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @{ var li = 0; }
+                                        @foreach (var loan in loans)
+                                        {
+                                            li++;
+                                            var rem = (long)loan.Amount - loan.PaidBack;
+                                            <tr class="@(loan.IsOutstanding ? null : "text-body-secondary")">
+                                                <td>@li</td>
+                                                <td class="text-end">@cur@loan.Amount</td>
+                                                <td class="text-end">@cur@loan.PaidBack</td>
+                                                <td class="text-end">@(loan.IsOutstanding ? $"{cur}{rem}" : "Paid")</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                @* ===================== Deal (stub) ===================== *@
+                <div class="tab-pane fade" id="pp-deal" role="tabpanel">
+                    <div class="card">
+                        <div class="card-body text-center text-body-secondary py-5">
+                            <i class="bi bi-arrow-left-right fs-3 d-block mb-2"></i> Deals — coming soon.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @* ───────────────── Bottom tab bar (glassy, sticky, icon-only) ───────────────── *@
+            <nav class="pp-tabbar" role="tablist" aria-label="Profile sections">
+                <button class="pp-tab active" data-bs-toggle="pill" data-bs-target="#pp-profile" type="button" role="tab" title="Profile" aria-label="Profile"><i class="bi bi-person-fill"></i></button>
+                <button class="pp-tab" data-bs-toggle="pill" data-bs-target="#pp-properties" type="button" role="tab" title="Properties" aria-label="Properties"><i class="bi bi-houses-fill"></i></button>
+                <button class="pp-tab" data-bs-toggle="pill" data-bs-target="#pp-cards" type="button" role="tab" title="Cards" aria-label="Cards"><i class="bi bi-card-text"></i></button>
+                <button class="pp-tab" data-bs-toggle="pill" data-bs-target="#pp-loans" type="button" role="tab" title="Loans" aria-label="Loans"><i class="bi bi-cash-coin"></i></button>
+                <button class="pp-tab" data-bs-toggle="pill" data-bs-target="#pp-deal" type="button" role="tab" title="Deal" aria-label="Deal"><i class="bi bi-arrow-left-right"></i></button>
+            </nav>
+
+        </div>
+    </div>
+</div>

@@ -117,3 +117,99 @@ Authorisation everywhere is "the named player **or** the host":
 5. **`/player-profile/{gameId}/{userId}`** — the mobile player profile reused by
    the host's profile drawer.
 
+
+
+---
+
+---
+
+# Player Profile Partial
+
+This is the player profile drawer that appears when a player clicks on their
+profile card; or when viewing their profile on their phone (as the logged in user, not the host).
+
+The page will be split into "pages", aka tabs - but with a unique design: navigation on the bottom, and a clear nav bar.
+This nav bar will be like the main nav bar (glassy and sticky); buttons will be ICONS only, no text.
+
+Pages:
+- Profile/Main (this is basic info)
+- Properties (details out every property, plus build/sell/mortgage/unreserve actions)
+- Cards (details out every card the player has, plus actions to use them if applicable - JUST MOCK FOR NOW!)
+- Loans (details out every loan they have, what their loan cost is (when passing go/FP), and command to take out a new loan)
+- Deal (leave stub) - no design or functionality yet
+
+Every page has a header contianing:
+- Profile card:
+  - Player profile card (like in Setup)
+  - Shows the player profile circle.
+  - Shows their display name
+  - Shows their dice number
+  - Show they money
+- Under profile:
+  - Shows full width button for roll/end turn (like we have on host page), hidden when not their turn
+  - When NOT their turn, shows whose turn it is (like in host page), but just profile circle + name (no dice nums or money)
+
+## Profile Page
+
+If applicable, at the top:
+- Button to leave jail (pay)
+- Button to leave jail (card - if they have leave jail card, for now just always show IF in jail)
+
+1st Card/Block:
+- Shows the player's money (yes, repeat it with an icon too)
+- Shows the player's jail cost
+- Shows the player's triple bonus value
+- Shows the player's %cap for percent cards (just mock for now, ill make a func for it)
+
+2nd Card/Block:
+- List of property sets (types) that have been handed into free parking
+- Shown as a badge list (single column, full width badges, text centered)
+- Collapsable list (accordian), shows count of types in header
+
+3rd Card/Block:
+- Button to declare bankruptcy
+
+
+## Properties Page
+
+1st Card/Block:
+- Shows mortgage fee (if applicable)
+- Shows the number of houses and number of hotels left
+- Shows total cost to build on ALL available properties (MOCK, func to come later)
+- Button to build on all properties (MOCK, func to come later)
+
+2nd Card/Block:
+- Accordian style list of properties, grouped by set type:
+  - Header is set type + number of properties they own in that set
+  - Only shows accordians for set types where they have at least 1 property
+  - Header has special SET badge if they own all properties in that set
+  - Shown in the accordian are space rectangles (like on the board view), with coloured header, then shown in the body of each space rect:
+    - Mortgage value, if not reserved, (or value to UN-mortgage if mortgaged)
+    - UN-reserve value if reserved
+    - button to BUILD house/hotel/double-hotel if applicable
+    - button to SELL house/hotel/double-hotel if applicable
+    - button to Mortgage property (if not reserved, and no buildings)
+  - In each body, above list of owned properties, is:
+    - Build cost + double hotel cost (build cost * 5), if applicable
+    - Button to build on each property (if applicable), so itll put a house on every property in the set
+
+## Cards Page
+
+This is defered for now, just put a blank page with "You have no cards" bootstrap-card.
+
+## Loans Page
+
+1st Card/Block:
+- Button to take out a new loan (if applicable, can only have 3 loans at once)
+- Shows the player's current loan value (if applicable)
+- Shows the player's loan cost (if applicable)
+- Button to page custom loan amount (if applicable), can pay off any amount off loans at any time, always pays off first loan first when custom
+
+2nd Card/Block:
+- List table of loans
+- Shows what they took out, what theyve paid, and whats outstanding
+
+## Deal Page
+
+Stub for now, just a blank with "coming soon"
+

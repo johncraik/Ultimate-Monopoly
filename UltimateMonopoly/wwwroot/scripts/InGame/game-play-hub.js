@@ -31,6 +31,7 @@
     'use strict';
 
     const handlers = new Map();   // $type -> handler
+    const observers = [];         // type-agnostic { onOpen, onClose } prompt observers
     const queued = [];            // { event, callback } raw subscriptions queued pre-connect
     let connection = null;
     let ctx = null;
@@ -38,6 +39,14 @@
 
     function registerPrompt(handler) {
         if (handler && handler.type) handlers.set(handler.type, handler);
+    }
+
+    // Type-agnostic prompt observer — notified for *every* prompt regardless of
+    // type, through the same dispatch path as the typed handlers (so it also
+    // fires on the reconnect/initial resync, not just live PromptOpened events).
+    // Used by the host drawer to auto-open on the prompt's player.
+    function observePrompts(observer) {
+        if (observer) observers.push(observer);
     }
 
     function on(event, callback) {
@@ -56,12 +65,14 @@
         if (!msg || !msg.prompt) return;
         const handler = handlers.get(msg.prompt['$type']);
         if (handler) handler.onOpen(msg.prompt, msg.concurrencyStamp, ctx);
+        observers.forEach(o => { if (o.onOpen) o.onOpen(msg.prompt, msg.concurrencyStamp, ctx); });
     }
 
     // Only one prompt is ever open at a time, and PromptClosed carries no type,
     // so tell every handler — each ignores a close for a prompt it isn't showing.
     function dispatchClose(promptId) {
         handlers.forEach(h => { if (h.onClose) h.onClose(promptId); });
+        observers.forEach(o => { if (o.onClose) o.onClose(promptId); });
     }
 
     async function refresh() {
@@ -150,7 +161,7 @@
             .catch(err => console.error('Game play hub failed to connect:', err));
     }
 
-    window.GamePlayHub = { registerPrompt: registerPrompt, on: on, invoke: invoke };
+    window.GamePlayHub = { registerPrompt: registerPrompt, observePrompts: observePrompts, on: on, invoke: invoke };
 
     // Defer start until handler modules loaded after this script have registered.
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);

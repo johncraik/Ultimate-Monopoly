@@ -22,9 +22,11 @@
     <partial name="Play/_PlayView" model="Model.Engine" />
 </div>
 
-@* ───────── Player profile drawer (left pull-out + full-page backdrop) ─────────
-   TODO: render the real /player-profile/{gameId}/{userId} view inside the body
-   (a partial, not an iframe — Game-UI.md). For now it's a placeholder. *@
+@* ───────── Player profile drawer (left pull-out) ─────────
+   Body is loaded by player-drawer.js — it fetches the real /player-profile
+   partial (Index handler=State) for the selected player. Opens manually (the
+   "View" buttons) and automatically on that player when a prompt fires; the
+   prompt modals below render over it. See Game-UI.md / player-drawer.js. *@
 <div class="player-drawer-backdrop" data-drawer-backdrop></div>
 <aside class="player-drawer" data-player-drawer aria-hidden="true">
     <div class="player-drawer-header d-flex align-items-center justify-content-between gap-2 p-2 border-bottom">
@@ -46,13 +48,28 @@
     </div>
 </aside>
 
+@* ───────── Engine prompts ─────────
+   Player-facing prompts surface here on the tablet (the host controller renders
+   every prompt and answers on a player's behalf via host-bypass) inside the
+   auto-opened drawer for that player. The handler modules self-filter: a phone
+   shows only its own, the tablet (no userId) shows all. *@
+<partial name="Play/_DiceRollPrompt" />
+<partial name="Play/_AcknowledgePrompt" />
+<partial name="Play/_AcquirePropertyPrompt" />
+
 @section Styles {
     <link rel="stylesheet" href="~/css/play.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/player-profile.css" asp-append-version="true" />
 }
 
 @section Scripts {
-    @* Coordinator first (owns the connection); play-state listens for StateChanged. *@
+    @* Coordinator first (owns the connection); the rest register against it. *@
     <script src="~/scripts/InGame/game-play-hub.js" asp-append-version="true"></script>
     <script src="~/scripts/InGame/play-state.js" asp-append-version="true"></script>
     <script src="~/scripts/InGame/play-page.js" asp-append-version="true"></script>
+    <script src="~/scripts/InGame/player-drawer.js" asp-append-version="true"></script>
+    @* Prompt handlers — render the prompt modals over the auto-opened drawer. *@
+    <script src="~/scripts/InGame/Prompts/dice-roll-prompt.js" asp-append-version="true"></script>
+    <script src="~/scripts/InGame/Prompts/acknowledge-prompt.js" asp-append-version="true"></script>
+    <script src="~/scripts/InGame/Prompts/acquire-property-prompt.js" asp-append-version="true"></script>
 }

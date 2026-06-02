@@ -27,10 +27,10 @@
     }
 
     function onOpen(prompt, stamp, hubCtx) {
-        // Render only for the player this profile page belongs to (the host
-        // answers on a player's behalf server-side; the page is still that
-        // player's profile, so the playerId check holds for both).
-        if (prompt.playerId !== hubCtx.userId) return;
+        // Phones (carry a userId) render only their own player's prompt; the
+        // host tablet (no userId — the controller) renders every prompt and
+        // answers on a player's behalf server-side via host-bypass.
+        if (hubCtx.userId && prompt.playerId !== hubCtx.userId) return;
 
         ctx = hubCtx;
         current = { promptId: prompt.promptId, stamp: stamp };
