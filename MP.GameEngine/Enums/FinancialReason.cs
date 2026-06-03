@@ -20,6 +20,9 @@ public enum FinancialReason
     
     /// <summary>Bonus for your number being rolled.</summary>
     DiceNumBonus,
+    
+    /// <summary>Bonus for rolling snake eyes</summary>
+    SneakEyes,
 
     /// <summary>Paying out of jail.</summary>
     JailFee,

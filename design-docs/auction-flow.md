@@ -169,8 +169,12 @@ Settlement:
 
 1. `TransactionService.WinAuction(winner, CurrentHighBid, BoardIndex)` — paid
    to the bank, `allowShortfall: false` (it never shortfalls — see §8).
-2. `PropertyModel.OwnProperty(winner)`, then
-   `PropertyService.NormaliseRentLevels(winner)`.
+2. `PropertyModel.OwnProperty(winner)`. If that completed a colour set for the
+   winner while the reserve rule was still active, the rule is switched off
+   (`GameModel.CheckReservationRuleSetObtained`) — winning a set-completing
+   property at auction is one of the ways a player "breaks through" to a full
+   set, which ends the reservation mechanic for everyone (`game-rules.md`
+   Reserved Properties). Then `PropertyService.NormaliseRentLevels`.
 3. An `AcknowledgePrompt` to the winner.
 
 **The winning bid *is* the price.** No station price-scaling and no other

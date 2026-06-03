@@ -13,12 +13,15 @@ public class GamePlayHub : GameBaseHub
 
     private readonly IGameEngineFactory _engineFactory;
     private readonly GameService _gameService;
+    private readonly PlayerProfileService _playerProfiles;
 
-    public GamePlayHub(GameService gameService, IGameEngineFactory engineFactory)
+    public GamePlayHub(GameService gameService, IGameEngineFactory engineFactory,
+        PlayerProfileService playerProfiles)
         : base(gameService)
     {
         _engineFactory = engineFactory;
         _gameService = gameService;
+        _playerProfiles = playerProfiles;
     }
 
     protected override string GroupPrefix => Prefix;
@@ -118,6 +121,41 @@ public class GamePlayHub : GameBaseHub
             return false;
 
         _gameService.EnqueueEndTurn(gameId, Context.UserIdentifier);
+        return true;
+    }
+
+
+    // ─── Portfolio commands ──────────────────────────────────────────────
+    // Player-initiated property actions on the named property (boardIndex). Each
+    // gates on the host-bypass-aware CanPortfolioCommand as an early-out, then
+    // hands to PlayerProfileService to enqueue on the single-writer executor
+    // (which re-checks authoritatively). The engine command opens its
+    // AcquirePropertyPrompt confirmation, which returns over this same connection.
+
+    public Task<bool> MortgageProperty(ushort boardIndex)
+        => RunPortfolioCommand(boardIndex, _playerProfiles.EnqueueMortgage);
+
+    public Task<bool> UnmortgageProperty(ushort boardIndex)
+        => RunPortfolioCommand(boardIndex, _playerProfiles.EnqueueUnmortgage);
+
+    public Task<bool> UnReserveProperty(ushort boardIndex)
+        => RunPortfolioCommand(boardIndex, _playerProfiles.EnqueueUnReserve);
+
+    private async Task<bool> RunPortfolioCommand(ushort boardIndex, Action<string, string, ushort> enqueue)
+    {
+        var gameId = GetGameId();
+        if (string.IsNullOrEmpty(gameId) || string.IsNullOrEmpty(Context.UserIdentifier))
+            return false;
+
+        var engine = await _engineFactory.GetAsync(gameId);
+        var current = engine.Cache.Game.CurrentPlayer();
+        if (current is null) return false;
+
+        // Optimistic pre-check; the enqueued work item re-checks authoritatively on the pump.
+        if (!engine.TurnStateProvider.CanPortfolioCommand(current.PlayerId, Context.UserIdentifier))
+            return false;
+
+        enqueue(gameId, Context.UserIdentifier, boardIndex);
         return true;
     }
 }

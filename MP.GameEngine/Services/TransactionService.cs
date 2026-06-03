@@ -35,8 +35,9 @@ public class TransactionService
     /// owner in jail per <c>game-rules.md</c> Default rule 2). Triggers a
     /// shortfall prompt if the player can't afford the rent.
     /// </summary>
-    public async Task PayRent(Framework.GameEngine engine, PlayerModel player, ushort propertyIndex, CancellationToken ct)
+    public async Task PayRent(Framework.GameEngine engine, PlayerModel player, uint rent, ushort propertyIndex, CancellationToken ct)
     {
+        //Safeguard checks repeated here as well as call sight:
         var space = engine.Cache.Board.GetBoardSpace(propertyIndex);
         if (!space.IsRentable) return;
 
@@ -48,10 +49,8 @@ public class TransactionService
         if (owner is null) return;                                       // bankrupt owner; shouldn't own anything but defensive
         if (owner.IsInJail) return;                                      // game-rules Default rule 2
 
-        var rent = space.GetRent(property.RentLevel)
-            ?? throw new InvalidOperationException($"No rent defined for {property.Name} at {property.RentLevel}.");
-
-        await Move(engine, player, -(long)rent, FinancialReason.Rent,
+        //Amount is passed in, computed/retrieved from call sight and not checked
+        await Move(engine, player, -rent, FinancialReason.Rent,
             counterparty: TransactionCounterparty.Player,
             counterpartyPlayer: owner,
             counterpartyPropertyIndex: propertyIndex,
@@ -238,6 +237,10 @@ public class TransactionService
             counterpartyPlayer: counterpartyPlayer,
             ct: ct);
 
+    public Task ReceiveSnakeEyes(Framework.GameEngine engine, PlayerModel player, CancellationToken ct)
+        => Move(engine, player, RuleDictionary.SnakeEyesBonus, FinancialReason.SneakEyes, 
+            counterparty: TransactionCounterparty.Bank,
+            ct: ct);
 
     // ───────────────────── Player-to-player ─────────────────────
 
@@ -423,46 +426,55 @@ public class TransactionService
         ushort? counterpartyPropertyIndex,
         CancellationToken ct)
     {
-        var response = await engine.PromptProvider.RequestAsync(new ShortfallPrompt
+        var remainingShortfall = shortfallAmount;
+        while (remainingShortfall != 0)
         {
-            PlayerId = player.PlayerId,
-            Title = "You can't afford this",
-            Body = $"You owe {RuleDictionary.Currency}{shortfallAmount} but only have {RuleDictionary.Currency}{player.Money}. Choose how to settle.",
-            PlayerBalance = player.Money,
-            Cost = shortfallAmount,
-            OwedToPlayerId = owedToPlayerId
-        }, ct);
+            var response = await engine.PromptProvider.RequestAsync(new ShortfallPrompt
+            {
+                PlayerId = player.PlayerId,
+                Title = "You can't afford this",
+                Body = $"You owe {RuleDictionary.Currency}{shortfallAmount} but only have {RuleDictionary.Currency}{player.Money}. Choose how to settle.",
+                PlayerBalance = player.Money,
+                Cost = shortfallAmount,
+                OwedToPlayerId = owedToPlayerId
+            }, ct);
 
-        switch (response.Action)
-        {
-            case ShortfallAction.TakeLoan:
-                //TODO LoanService.TakeLoanForShortfall(engine, player, shortfallAmount, ct);
-                return ShortfallOutcome.FundsRaised;
+            //TODO: These methods needs to modify remaining shortfall amount:
+            //This is so we can keep prompting for shortfall until the player has raised enough.
+            //original shortfallAmount variable kept for prompt, and final settlement - shortfallAmount = amount owed
+            switch (response.Action)
+            {
+                case ShortfallAction.TakeLoan:
+                    //TODO LoanService.TakeLoanForShortfall(engine, player, shortfallAmount, ct);
+                    return ShortfallOutcome.FundsRaised;
 
-            case ShortfallAction.Mortgage:
-                //TODO MortgageService.MortgageForShortfall(engine, player, shortfallAmount, ct);
-                return ShortfallOutcome.FundsRaised;
+                case ShortfallAction.Mortgage:
+                    //TODO MortgageService.MortgageForShortfall(engine, player, shortfallAmount, ct);
+                    return ShortfallOutcome.FundsRaised;
 
-            case ShortfallAction.SellHouses:
-                //TODO PropertyService.SellBuildingsForShortfall(engine, player, shortfallAmount, ct);
-                return ShortfallOutcome.FundsRaised;
+                case ShortfallAction.SellHouses:
+                    //TODO PropertyService.SellBuildingsForShortfall(engine, player, shortfallAmount, ct);
+                    return ShortfallOutcome.FundsRaised;
 
-            case ShortfallAction.ProposeDeal:
-                //TODO DealService.ProposeSettlingDeal(engine, player, owedToPlayerId!, shortfallAmount, ct);
-                //  A creditor-deal that's accepted DISCHARGES the original debt — the
-                //  deal itself is the settlement (game-rules.md Default rule 7). Return
-                //  DebtSettled so the outer transaction does NOT apply.
-                //  A creditor-deal that's rejected re-opens the shortfall prompt; the
-                //  deal sub-service handles that loop internally before returning here.
-                return ShortfallOutcome.DebtSettled;
+                case ShortfallAction.ProposeDeal:
+                    //TODO DealService.ProposeSettlingDeal(engine, player, owedToPlayerId!, shortfallAmount, ct);
+                    //  A creditor-deal that's accepted DISCHARGES the original debt — the
+                    //  deal itself is the settlement (game-rules.md Default rule 7). Return
+                    //  DebtSettled so the outer transaction does NOT apply.
+                    //  A creditor-deal that's rejected re-opens the shortfall prompt; the
+                    //  deal sub-service handles that loop internally before returning here.
+                    return ShortfallOutcome.DebtSettled;
 
-            case ShortfallAction.DeclareBankruptcy:
-                //TODO BankruptcyService.Declare(engine, player, owedToPlayerId, ct);
-                return ShortfallOutcome.Bankrupted;
+                case ShortfallAction.DeclareBankruptcy:
+                    //TODO BankruptcyService.Declare(engine, player, owedToPlayerId, ct);
+                    return ShortfallOutcome.Bankrupted;
 
-            default:
-                throw new ArgumentOutOfRangeException(
-                    nameof(response.Action), response.Action, "Unhandled shortfall action.");
+                default:
+                    throw new ArgumentOutOfRangeException(
+                        nameof(response.Action), response.Action, "Unhandled shortfall action.");
+            }
         }
+
+        return ShortfallOutcome.DebtSettled;
     }
 }

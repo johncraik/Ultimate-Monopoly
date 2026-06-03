@@ -4,7 +4,9 @@
 @using MP.GameEngine.Helpers.RuleSet
 @using UltimateMonopoly.Helpers
 @using UltimateMonopoly.Models.ViewModels.Games
+@using UltimateMonopoly.Services.Cache
 @model BoardViewModel
+@inject PlayerCacheService PlayerCache
 @{
     // Live ownership state keyed by board index. A space is "ownable" (banner +
     // state tint, no text label) iff it has a PropertySet; everything else
@@ -41,7 +43,7 @@
             if (ownable)
             {
                 tipTitle = space.Name;
-                var owner = prop?.OwnerPlayerId ?? "Available";
+                var owner = string.IsNullOrEmpty(prop?.OwnerPlayerId) ? "Available" : await PlayerCache.GetPlayerName(prop.OwnerPlayerId);
                 tipContent = $"Cost: {RuleDictionary.Currency}{space.PurchaseCost}";
                 if (space.IsBuildable)
                     tipContent += $"\nBuild: {RuleDictionary.Currency}{space.BuildCost}";

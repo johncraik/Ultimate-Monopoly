@@ -1,5 +1,6 @@
 using MP.GameEngine.Enums.Properties;
 using MP.GameEngine.Helpers;
+using MP.GameEngine.Helpers.RuleSet;
 using MP.GameEngine.Models.Boards;
 using MP.GameEngine.Models.Snapshot.Cards;
 
@@ -299,9 +300,300 @@ public class GameModel
                                       || p.StreetRuleQualifier == StreetRuleQualifier.Qualified) 
                                      && streetIndexes.Contains(p.BoardIndex)) == streetIndexes.Count;
     }
+
+
+    public void CheckReservationRule(string playerId)
+    {
+        if(!ReserveRuleActive)
+            //Never can be turned back on
+            return;
+
+        var players = GetPlayers(playerId);
+        var playersWithReservationsCount = players
+            .Select(player => GetOwnedProperties(player.PlayerId))
+            .Count(props => props.Any(p => p.State == PropertyState.Reserved));
+
+        if (playersWithReservationsCount < players.Count)
+            //Not all players have reservations
+            return;
+        
+        //Passed all validation:
+        //-Rule is active
+        //-All players (except player passed in) have reservations
+        //Therefore, rule can be disabled, as last player is "reserving" (breaks reservation deadlock)
+        ReserveRuleActive = false;
+    }
+
+    /// <summary>
+    /// Turns off the reservation rule when <paramref name="playerId"/> has just
+    /// obtained a complete colour set outright — e.g. winning it at auction, a
+    /// deal, or a Free Parking take. One player breaking through to a full set
+    /// ends the mechanic for everyone (game-rules.md Reserved Properties).
+    /// Reserved properties don't count (a reservation isn't a completed set);
+    /// stations and utilities are never reservable, so they never trigger it.
+    /// No-op once the rule is already off — it never turns back on.
+    /// </summary>
+    public void CheckReservationRuleSetObtained(string playerId)
+    {
+        if(!ReserveRuleActive)
+            return;
+
+        var owned = GetOwnedProperties(playerId, includeReserved: false);
+        var hasColourSet = owned
+            .GroupBy(p => PropertySetHelper.ResolveSet(p.BoardIndex))
+            .Any(g => g.Key is { } set
+                      and not PropertySet.Station
+                      and not PropertySet.Utility
+                      && g.Count() == PropertySetHelper.GetIndexes(set).Count);
+
+        if(hasColourSet)
+            ReserveRuleActive = false;
+    }
+
+    #endregion
+
+
+
+    #region Build on (houses/hotels) Properties Methods
+
+    
+    public (ushort HousesTaken, ushort HotelsTaken) GetHousesAndHotelsTaken(string? playerId = null)
+    {
+        var ownedProperties = string.IsNullOrEmpty(playerId) 
+            ? Properties.Where(p => !string.IsNullOrEmpty(p.OwnerPlayerId)).ToList() 
+            : GetOwnedProperties(playerId);
+
+        var houseCount = ownedProperties.Count(p => p.RentLevel == RentLevel.ONE_HOUSE);
+        houseCount += ownedProperties.Count(p => p.RentLevel == RentLevel.TWO_HOUSES) * 2;
+        houseCount += ownedProperties.Count(p => p.RentLevel == RentLevel.THREE_HOUSES) * 3;
+        houseCount += ownedProperties.Count(p => p.RentLevel == RentLevel.FOUR_HOUSES) * 4;
+        var hotelCount = ownedProperties.Count(p => p.RentLevel == RentLevel.HOTEL);
+        hotelCount += ownedProperties.Count(p => p.RentLevel == RentLevel.DOUBLE_HOTEL) * 2;
+
+        return ((ushort)houseCount, (ushort)hotelCount);
+    }
+
+    public (ushort HousesLeft, ushort HotelsLeft) GetHousesAndHotelsLeft()
+    {
+        var (houses, hotels) = GetHousesAndHotelsTaken();
+        return ((ushort)(RuleDictionary.HouseCount - houses), (ushort)(RuleDictionary.HotelCount - hotels));
+    }
+
+
+    private (bool Success, List<PropertyModel> OwnedInSet, PropertyModel? Property) RentLevelBuySellCheck(string playerId, ushort boardIndex)
+    {
+        var resolvedSet = PropertySetHelper.ResolveSet(boardIndex);
+        //Cant buy/sell on utility or station (or null set, aka not a property space)
+        if (resolvedSet is null or PropertySet.Utility or PropertySet.Station)
+            return (false, [], null);
+        
+        var set = (PropertySet)resolvedSet;
+        var ownedInSet = GetOwnedProperties(playerId, set);
+        
+        var property = ownedInSet.FirstOrDefault(p => p.BoardIndex == boardIndex);
+        //Cant buy/sell on a property that is not owned by the player
+        if(property is null)
+            return (false, ownedInSet, null);
+        
+        //Cant buy/sell on the property if you do not own the set
+        if(ownedInSet.Count != PropertySetHelper.GetIndexes(set).Count)
+            return (false, ownedInSet, property);
+        
+        //Cant buy/sell on a mortgaged or reserved property; or any property in the set that has a mortgaged or reserved property
+        if (ownedInSet.Any(p => p.State is PropertyState.Mortgaged or PropertyState.Reserved))
+            return (false, ownedInSet, property);
+        
+        //Passed all main checks for buy/sell
+        return (true, ownedInSet, property);
+    }
+    
+    
+    public bool CanIncreaseRentLevel(ushort boardIndex)
+        => CanIncreaseRentLevel(Metadata.CurrentPlayerId, boardIndex);
+    
+    public bool CanIncreaseRentLevel(string playerId, ushort boardIndex)
+    {
+       var (success, ownedInSet, property) = RentLevelBuySellCheck(playerId, boardIndex);
+       if(!success || property == null) return false;
+        
+       //Cant build on a property that has already been built on this turn
+       if(property.HasBeenBuiltOnThisTurn)
+           return false;
+
+        //Cant build more than a double hotel on a property
+        if(property.RentLevel == RentLevel.DOUBLE_HOTEL)
+            return false;
+
+        //Cant build more double hotels on a property if already at max per set
+        if(property.RentLevel == RentLevel.HOTEL 
+           && ownedInSet.Count(p => p.RentLevel == RentLevel.DOUBLE_HOTEL) >= RuleDictionary.MaxDoubleHotelsPerSet)
+            return false;
+
+        var rentLevelValues = ownedInSet.Select(p => (int)p.RentLevel).ToList();
+        //Cant build on this property since other properties in the set are lower than this property's rent level
+        if(rentLevelValues.Any(l => l < (int)property.RentLevel))
+            return false;
+
+        //Passed all the checks, this property's rent level can be increased
+        return true;
+    }
+    
+    public bool CanIncreaseRentLevelForAllInSet(PropertySet set)
+        => CanIncreaseRentLevelForAllInSet(Metadata.CurrentPlayerId, set);
+
+    public bool CanIncreaseRentLevelForAllInSet(string playerId, PropertySet set)
+    {
+        var canIncreaseAll = true;
+        var indexes = PropertySetHelper.GetIndexes(set);
+        foreach (var i in indexes)
+        {
+            canIncreaseAll = CanIncreaseRentLevel(playerId, i);
+            if(!canIncreaseAll) break;
+        }
+        
+        if(!canIncreaseAll)
+            return false;
+        
+        //Final double hotel check (false when building double hotels)
+        //You can ONLY build ONE double hotel PER set, and ONLY when you have all 3 hotels
+        //Therefore, any hotels on a property in the set will prevent a "build on all" in the set,
+        //since hotel is the max (for bulk build)
+        var ownedProperties = GetOwnedProperties(playerId, set);
+        return ownedProperties.All(p => p.RentLevel != RentLevel.HOTEL);
+    }
+    
+    
+    public bool CanIncreaseRentLevelForAll()
+        => CanIncreaseRentLevelForAll(Metadata.CurrentPlayerId);
+
+    public bool CanIncreaseRentLevelForAll(string playerId)
+    {
+        var canIncreaseAll = true;
+        var ownedProperties = GetOwnedProperties(playerId, includeMortgaged: false, includeReserved: false);
+        foreach (var prop in ownedProperties)
+        {
+            var resolvedSet = PropertySetHelper.ResolveSet(prop.BoardIndex);
+            if(resolvedSet is null or PropertySet.Station or PropertySet.Utility)
+                //Not a buildable set
+                continue;
+            
+            var set = (PropertySet)resolvedSet;
+            var inSet = ownedProperties
+                .Where(p => PropertySetHelper.ResolveSet(p.BoardIndex) == set)
+                .ToList();
+            if(inSet.Count != PropertySetHelper.GetIndexes(set).Count)
+                //Not all properties in the set
+                continue;
+            
+            canIncreaseAll = CanIncreaseRentLevelForAllInSet(playerId, set);
+            if(!canIncreaseAll) break;
+        }
+        
+        return canIncreaseAll;
+    }
+    
+    
+    
+    public bool CanDecreaseRentLevel(ushort boardIndex)
+        => CanDecreaseRentLevel(Metadata.CurrentPlayerId, boardIndex);
+
+    public bool CanDecreaseRentLevel(string playerId, ushort boardIndex)
+    {
+        var (success, ownedInSet, property) = RentLevelBuySellCheck(playerId, boardIndex);
+        if(!success || property == null) return false;
+        
+        //Cannot sell houses on a purged property (purged flag removed when rent level stabilises)
+        if(property.IsPurged)
+            return false;
+        
+        //Cant sell more than SET level (no houses left to sell) on a property
+        if(property.RentLevel == RentLevel.SET)
+            return false;
+        
+        //Exclude purged properties from rent level values
+        //this allows other properties in a set to sell houses, while purged property remains well below rent level in set
+        var rentLevelValues = ownedInSet.Where(p => !p.IsPurged)
+            .Select(p => (int)p.RentLevel).ToList();
+        
+        //Cant sell on this property since other properties in the set are higher than this property's rent level
+        if(rentLevelValues.Any(l => l > (int)property.RentLevel))
+            return false;
+        
+        //Passed all the checks, this property's rent level can be decreased
+        return true;
+    }
+    
+    
+    public bool CanDecreaseRentLevelForAllInSet(PropertySet set)
+        => CanDecreaseRentLevelForAllInSet(Metadata.CurrentPlayerId, set);
+
+    public bool CanDecreaseRentLevelForAllInSet(string playerId, PropertySet set)
+    {
+        var canDecreaseAll = true;
+        var indexes = PropertySetHelper.GetIndexes(set);
+        foreach (var i in indexes)
+        {
+            canDecreaseAll = CanDecreaseRentLevel(playerId, i);
+            if(!canDecreaseAll) break;
+        }
+        
+        return canDecreaseAll;
+    }
+    
+    
+    public bool CanDecreaseRentLevelForAll()
+        => CanDecreaseRentLevelForAll(Metadata.CurrentPlayerId);
+
+    public bool CanDecreaseRentLevelForAll(string playerId)
+    {
+        var canDecreaseAll = true;
+        var ownedProperties = GetOwnedProperties(playerId, includeMortgaged: false, includeReserved: false);
+        foreach (var prop in ownedProperties)
+        {
+            var resolvedSet = PropertySetHelper.ResolveSet(prop.BoardIndex);
+            if(resolvedSet is null or PropertySet.Station or PropertySet.Utility)
+                //Not a buildable set
+                continue;
+            
+            var set = (PropertySet)resolvedSet;
+            var inSet = ownedProperties
+                .Where(p => PropertySetHelper.ResolveSet(p.BoardIndex) == set)
+                .ToList();
+            if(inSet.Count != PropertySetHelper.GetIndexes(set).Count)
+                //Not all properties in the set
+                continue;
+            
+            canDecreaseAll = CanDecreaseRentLevelForAllInSet(playerId, set);
+            if(!canDecreaseAll) break;
+        }
+        
+        return canDecreaseAll;
+    }
+
+
+    public bool CanMortgageProperty(ushort boardIndex)
+        => CanMortgageProperty(Metadata.CurrentPlayerId, boardIndex);
+
+    public bool CanMortgageProperty(string playerId, ushort boardIndex)
+    {
+        var resolvedSet = PropertySetHelper.ResolveSet(boardIndex);
+        if (resolvedSet is null)
+            return false;
+        
+        var set = (PropertySet)resolvedSet;
+        var ownedInSet = GetOwnedProperties(playerId, set);
+        
+        var property = ownedInSet.FirstOrDefault(p => p.BoardIndex == boardIndex);
+        if(property is null)
+            return false;
+        
+        //Cant mortgage a property that is already mortgaged (or reserved)
+        if(property.State != PropertyState.Owned)
+            return false;
+        
+        //Cannot mortgage a property that has any houses/hotels in the set
+        return !ownedInSet.Any(p => p.RentLevel is > RentLevel.SET and <= RentLevel.DOUBLE_HOTEL); 
+    }
     
     #endregion
-    
-    
-    
 }

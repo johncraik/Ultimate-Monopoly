@@ -14,6 +14,13 @@ public class PropertyModel
     
     public StreetRuleQualifier StreetRuleQualifier { get; set; }
 
+    public bool IsPurged { get; set; }
+    
+    public bool HasBeenBuiltOnThisTurn { get; set; }
+    
+    public bool ChargeRent(string playerId) 
+        => OwnerPlayerId != null && OwnerPlayerId != playerId && State == PropertyState.Owned;
+    
     public PropertyModel()
     {
     }
@@ -26,6 +33,9 @@ public class PropertyModel
         OwnerPlayerId = model.OwnerPlayerId;
         State = model.State;
         RentLevel = model.RentLevel;
+        
+        IsPurged = model.IsPurged;
+        HasBeenBuiltOnThisTurn = model.HasBeenBuiltOnThisTurn;
         
         StreetRuleQualifier = model.StreetRuleQualifier;
     }
@@ -76,12 +86,28 @@ public class PropertyModel
         State = PropertyState.Mortgaged;
     }
     
+    public void UnmortgageProperty()
+    {
+        if(OwnerPlayerId == null || State != PropertyState.Mortgaged)
+            return;
+        
+        State = PropertyState.Owned;
+    }
+    
     public void ReserveProperty()
     {
         if(OwnerPlayerId == null || State == PropertyState.Mortgaged)
             return;
         
         State = PropertyState.Reserved;
+    }
+    
+    public void UnreserveProperty()
+    {
+        if(OwnerPlayerId == null || State != PropertyState.Reserved)
+            return;
+        
+        State = PropertyState.Owned;
     }
     
     public bool BuiltOn() 

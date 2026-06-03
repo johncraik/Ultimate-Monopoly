@@ -113,9 +113,31 @@ public static class MoneyHelper
         return NormaliseAmount(price, roundingRule, FinancialReason.Purchase);
     }
     
+    public static uint UnMortgageCost(ushort index, Board board, GameRoundingRule roundingRule)
+    {
+        var space = board.GetBoardSpace(index);
+        if(!space.IsPurchasable || space.PurchaseCost == null)
+            return 0;
+        
+        var price = HalfPrice((uint)space.PurchaseCost);
+        //Unmortgage fee is 10% of the purchase price
+        var unmortgageFee = Math.Round((price * 0.1), MidpointRounding.AwayFromZero);
+        
+        price += (uint)unmortgageFee;
+        return NormaliseAmount(price, roundingRule, FinancialReason.Purchase);
+        
+    }
+    
+    public static uint MortgageValue(ushort index, Board board, GameRoundingRule roundingRule)
+        //Mortgage value is half the purchase price, same as reserve price
+        //NOTE: checks if purchasable, but all mortgageable properties are purchasable
+        => ReservePrice(index, board, roundingRule);
+    
     public static uint MinAuctionBid(ushort index, Board board, GameRoundingRule roundingRule)
         //Minimum bid price is half the purchase price, same as reserve price
         => ReservePrice(index, board, roundingRule);
+    
+    
 
     public static ushort[] AuctionIncrements(GameRoundingRule roundingRule)
     {

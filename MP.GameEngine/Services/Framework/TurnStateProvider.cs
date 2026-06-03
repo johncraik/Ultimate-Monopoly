@@ -198,6 +198,7 @@ public class TurnStateProvider(GameCacheModel cache, ISnapshotService snapshotSe
             player.TriplesInRow = 0;
         }
         
+        ClearBuiltOnTurnFlags();
         UpdateMetadata(player.PlayerId);
 
         cache.ClearEvents();
@@ -221,6 +222,7 @@ public class TurnStateProvider(GameCacheModel cache, ISnapshotService snapshotSe
     {
         Expect(TurnState.EndOfTurn);
 
+        ClearBuiltOnTurnFlags();
         AdvancePlayer();
 
         cache.ClearEvents();
@@ -316,5 +318,14 @@ public class TurnStateProvider(GameCacheModel cache, ISnapshotService snapshotSe
         // Metadata.CurrentTurnId as part of CreateSnapshotAsync.
         cache.Game.Metadata.CurrentPlayerId = playerId;
         cache.Game.Metadata.TurnNumber++;
+    }
+
+    private void ClearBuiltOnTurnFlags()
+    {
+        var properties = cache.Game.Properties;
+        foreach (var property in properties)
+        {
+            property.HasBeenBuiltOnThisTurn = false;
+        }
     }
 }

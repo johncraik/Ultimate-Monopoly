@@ -4,11 +4,11 @@ The single seam every money movement in the engine flows through. Pairs with
 the event-receipt stream (`event-receipts.md`) — receipts are the *narrative*,
 this service is the *mechanism*.
 
-**Status:** built (foundation level). Public surface complete; the five
-shortfall sub-services it dispatches to (Loan, Mortgage, sell-building,
-settling-deal, Bankruptcy) are TODO-stubbed inside `ResolveShortfall`. No
-live caller yet — the orchestrator wires up once dice + movement + landing
-resolution land.
+**Status:** built and live. Public surface complete and driven by real
+callers — the turn orchestrator and the `Property` / `Jail` / `Go` / `Player`
+sub-services route every money movement through here. The five shortfall
+sub-services it dispatches to (Loan, Mortgage, sell-building, settling-deal,
+Bankruptcy) are still TODO-stubbed inside `ResolveShortfall`.
 
 ---
 
@@ -187,22 +187,35 @@ rent via the deal" — the deal **is** the settlement.
 
 ---
 
-## 7. Quirk: SaveChanges happens mid-transaction
+## 7. Quirk: `Move` never commits — the turn boundary does
 
-Every successful `Move` ends with `engine.Cache.SaveChanges()` — promoting
-the working state into `_game`. This means a partial state (player
-debited, but the caller's follow-up like `OwnProperty` not yet run) is
-briefly committed to the cache.
+`Move` mutates **only the cache working copy** (`_working`) and returns. It
+does **not** call `engine.Cache.SaveChanges()`. Promotion of the working
+copy into committed state (`_working` → `_game`) happens in exactly one
+place: a turn-state change, via `GameCacheModel.SetTurnState` (and the
+snapshot write-back at `TransitionToNextPlayer` / `TransitionToExtraTurn`).
+A whole turn's money movements therefore accumulate on one `_working`
+instance and commit once, at the boundary.
 
-This is intentional and depends on the engine's rollback model
-([[feedback_engine_error_bubbling]]): any exception bubbles to the web
-layer, which reloads from the last snapshot. Mid-flow commits are
-recoverable by snapshot-rollback, not by in-memory cache rollback.
+> **Reversed 2026-06-02.** This section originally described a
+> `SaveChanges()` at the end of every `Move`. That was removed: committing
+> mid-`Move` promotes `_working` to `_game` and **nulls `_working`**, which
+> detaches the `PlayerModel` / `PropertyModel` references the orchestrator
+> (and any later `Move` in the same turn) still holds — their subsequent
+> mutations then land on an orphaned copy and are silently dropped on the
+> next commit. Three bugs traced to this shape before the rule was made
+> structural. The code keeps the dead `SaveChanges()` call commented at the
+> foot of `Move` with this reasoning, so it isn't re-added.
 
-If finer rollback granularity is ever wanted — e.g., money-and-ownership
-as a single atomic unit — this is where to look. For now, pair the money
-move and the state change inside the same orchestrator method so the
-window between them is minimal.
+The rule, stated plainly: **a turn's mutations are committed exactly once,
+at the turn-state boundary; rule services must never call `SaveChanges`
+mid-turn.** See [[feedback_engine_error_bubbling]] and `turn-state.md` §7.
+
+Recovery is unchanged and still snapshot-based: any exception bubbles to the
+web layer, which evicts the cache and re-hydrates from the last snapshot
+(the recovery boundary) — never an in-memory per-mutation rollback. Because
+nothing commits until the boundary, an uncommitted turn simply vanishes on a
+fault, leaving the previous snapshot intact.
 
 ---
 
@@ -236,10 +249,10 @@ receipt stream — there is no balance to query.
    the transaction — the recipient gets nothing. `BankruptcyService`
    will need to know the original creditor + reason to wire this up;
    `ResolveShortfall` may need to pass the `FinancialReason` through.
-4. **Tests.** The sign algebra in `Move`, the shortfall outcome
-   dispatch, and each public method's rule gates are all
-   unit-testable against a stub `IPromptProvider` once the suite
-   is written.
+4. ~~**Tests.**~~ Done — `MP.GameEngine.Tests/ServiceTests/TransactionService_Tests.cs`
+   covers every public transaction type (debits, credits, player-to-player
+   mirroring, the Free Parking pot algebra, board-driven rent, rounding, the
+   shortfall flow, and the no-op rules) against a stub `IPromptProvider`.
 
 ---
 

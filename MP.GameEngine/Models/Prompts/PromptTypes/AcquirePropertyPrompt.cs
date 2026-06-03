@@ -34,9 +34,24 @@ public sealed class AcquirePropertyPrompt : Prompt<AcquirePropertyResponse>
     public uint Cost { get; init; }
     
     /// <summary>
-    /// Whether the player is acquiring a standard property or a reservation.
+    /// The type of property aquisition the player is asking for.
     /// </summary>
-    public bool IsReserve { get; init; }
+    public AcquirePropertyType Type { get; init; }
 
     public override PromptTarget Target => PromptTarget.SinglePlayer(PlayerId);
+}
+
+public enum AcquirePropertyType
+{
+    Buy,
+    Reserve,
+    UnReserve,
+    Mortgage,
+    UnMortgage,
+    Build,
+    BuildAllInSet,
+    BuildAll,
+    Sell,
+    SellAllInSet,
+    SellAll
 }

@@ -15,10 +15,11 @@
 @*
     ACQUIRE-PROPERTY PROMPT  (player profile only — Game-UI.md "Where prompts surface")
     A static-backdrop modal driven by the engine's AcquirePropertyPrompt — a binary
-    take-it / decline. It covers both BUY (decline → auction) and RESERVE (decline →
-    no-op), switched by the prompt's IsReserve flag; the handler sets the wording and
-    button labels. Markup only; all behaviour (show/hide on PromptOpened/PromptClosed,
-    colour-by-set, submit) lives in /scripts/InGame/Prompts/acquire-property-prompt.js.
+    confirm / decline for any property action. The prompt's Type (AcquirePropertyType:
+    Buy, Reserve, UnReserve, Mortgage, UnMortgage, Build/…All, Sell/…All) drives the
+    title and button wording (e.g. Buy → Buy/Auction, Reserve → Reserve/Ignore, the
+    rest → <action>/Cancel). Markup only; all behaviour (show/hide on PromptOpened/
+    PromptClosed, colour-by-set, submit) lives in /scripts/InGame/Prompts/acquire-property-prompt.js.
     The element ids + the colour-map script id below are that script's contract — keep
     them in sync.
 

@@ -34,4 +34,9 @@ public static class RuleDictionary
     public const ushort SecondStationCost = SingleStationCost + 50; //2 stations grants rent of 50, so increase by 50
     public const ushort ThirdStationCost = SingleStationCost + 100; //3 stations grants rent of 100, so increase by 100
     public const ushort FourthStationCost = SingleStationCost + 200; //4 stations grants rent of 200, so increase by 200
+    
+    //Houses and Hotels
+    public const ushort HouseCount = 32;
+    public const ushort HotelCount = 12;
+    public const ushort MaxDoubleHotelsPerSet = 1;
 }

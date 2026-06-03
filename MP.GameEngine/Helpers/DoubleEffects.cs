@@ -12,7 +12,7 @@ public static class DoubleEffects
         IReadOnlyList<int> OtherPlayerSteps,
         bool RollerMissesTurn = false,
         bool OtherPlayerMissesTurn = false,
-        ushort? SnakeEyesBonus = null);
+        bool SnakeEyesBonus = false);
 
     public static DoubleEffect For(ushort diceValue)
         => diceValue switch
@@ -20,7 +20,7 @@ public static class DoubleEffects
             1 => new DoubleEffect(DoubleDiceDictionary.DoubleOneTitle,
                 DoubleDiceDictionary.DoubleOneBody, 1,
                 [DoubleDiceDictionary.DoubleOneMovement], [],
-                SnakeEyesBonus: RuleDictionary.SnakeEyesBonus),
+                SnakeEyesBonus: true),
             2 => new DoubleEffect(DoubleDiceDictionary.DoubleTwoTitle,
                 DoubleDiceDictionary.DoubleTwoBody, 2,
                 [DoubleDiceDictionary.DoubleTwoMovement], [],

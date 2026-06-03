@@ -543,7 +543,7 @@ public class TransactionService_Tests
         var txn = CreateService();
 
         // SINGLE rent for the fixture property is £2.
-        await txn.PayRent(engine, cache.Game.GetPlayer(P1)!, PropertyIndex, CancellationToken.None);
+        await txn.PayRent(engine, cache.Game.GetPlayer(P1)!, 2u, PropertyIndex, CancellationToken.None);
 
         Assert.Equal(498u, Money(cache, P1));
         Assert.Equal(502u, Money(cache, P2));
@@ -564,7 +564,7 @@ public class TransactionService_Tests
         var engine = CreateEngine(cache);
         var txn = CreateService();
 
-        await txn.PayRent(engine, cache.Game.GetPlayer(P1)!, PropertyIndex, CancellationToken.None);
+        await txn.PayRent(engine, cache.Game.GetPlayer(P1)!, 2u, PropertyIndex, CancellationToken.None);
 
         Assert.Equal(500u, Money(cache, P1));
         Assert.Empty(Receipts(cache));
@@ -577,7 +577,7 @@ public class TransactionService_Tests
         var engine = CreateEngine(cache);
         var txn = CreateService();
 
-        await txn.PayRent(engine, cache.Game.GetPlayer(P1)!, PropertyIndex, CancellationToken.None);
+        await txn.PayRent(engine, cache.Game.GetPlayer(P1)!, 2u, PropertyIndex, CancellationToken.None);
 
         Assert.Equal(500u, Money(cache, P1));
         Assert.Equal(500u, Money(cache, P2));
@@ -591,7 +591,7 @@ public class TransactionService_Tests
         var engine = CreateEngine(cache);
         var txn = CreateService();
 
-        await txn.PayRent(engine, cache.Game.GetPlayer(P1)!, PropertyIndex, CancellationToken.None);
+        await txn.PayRent(engine, cache.Game.GetPlayer(P1)!, 2u, PropertyIndex, CancellationToken.None);
 
         Assert.Equal(500u, Money(cache, P1));
         Assert.Empty(Receipts(cache));
@@ -604,7 +604,7 @@ public class TransactionService_Tests
         var engine = CreateEngine(cache);
         var txn = CreateService();
 
-        await txn.PayRent(engine, cache.Game.GetPlayer(P1)!, PropertyIndex, CancellationToken.None);
+        await txn.PayRent(engine, cache.Game.GetPlayer(P1)!, 2u, PropertyIndex, CancellationToken.None);
 
         Assert.Equal(500u, Money(cache, P1));     // game-rules.md Default rule 2
         Assert.Empty(Receipts(cache));
@@ -618,7 +618,7 @@ public class TransactionService_Tests
         var engine = CreateEngine(cache);
         var txn = CreateService();
 
-        await txn.PayRent(engine, cache.Game.GetPlayer(P1)!, TaxIndex, CancellationToken.None);
+        await txn.PayRent(engine, cache.Game.GetPlayer(P1)!, 200, TaxIndex, CancellationToken.None);
 
         Assert.Equal(500u, Money(cache, P1));
         Assert.Empty(Receipts(cache));
@@ -633,7 +633,7 @@ public class TransactionService_Tests
         var engine = CreateEngine(cache);
         var txn = CreateService();
 
-        await txn.PayRent(engine, cache.Game.GetPlayer(P1)!, PropertyIndex, CancellationToken.None);
+        await txn.PayRent(engine, cache.Game.GetPlayer(P1)!, 2u, PropertyIndex, CancellationToken.None);
 
         Assert.Equal(500u, Money(cache, P1));
         Assert.Equal(500u, Money(cache, P2));

@@ -374,23 +374,42 @@ A player who runs short of money may borrow from the bank.
 4. **Maximum of three loans.** A player may have at most 3 outstanding loans at
    any time.
 
-5. **Repayment on passing GO or Free Parking.** Each time a player passes GO or
-   Free Parking they repay a minimum of 5% of the loan, rounded up according to
-   the game's rounding rule. The 5% is based on the amount originally borrowed,
-   not the outstanding balance, and it compounds — passing both GO and Free
-   Parking on the same pass repays 10%. A player may take out a loan to cover a
-   loan repayment.
+5. **Repayment on passing GO.** Each time a player passes GO they repay a minimum
+   instalment toward their loans. The instalment is **10% of the total amount
+   originally borrowed across all of the player's currently-outstanding loans**,
+   rounded according to the game's rounding rule (and never to zero — an
+   instalment that would round to nothing is charged at the minimum grid amount
+   instead, e.g. £50 under round-to-50). The 10% is based on the amounts
+   *originally borrowed*, not the outstanding balances, and is recalculated on
+   each pass from whichever loans are still outstanding. Only **GO** triggers a
+   repayment — passing Free Parking does **not**.
 
-6. **Paying more, or paying early.** A player may repay more than the minimum
-   5% when passing GO or Free Parking, and may repay any amount during their
-   own turn.
+6. **Loans are repaid one at a time, in order, and overpayment is not carried
+   over.** The instalment is applied to the player's **oldest outstanding loan**
+   (loans clear in the order they were taken). It is never capped to that loan's
+   remaining balance: the full instalment is paid even when it exceeds what the
+   loan needs, so the player slightly **overpays** the loan being cleared — and
+   any excess beyond clearing it is **lost, not carried over to the next loan**.
+   Once a loan is cleared, the next pass recomputes the 10% from the loans still
+   outstanding and begins paying the next one. The more loans a player holds, the
+   faster the first clears (the 10% is of the combined total); whether and how
+   much they overpay depends on their loan amounts — a small, deliberate penalty
+   for borrowing.
 
-7. **Instalments are never capped.** Every loan instalment — including the last
-   — is a full 5% of the original amount borrowed, rounded up according to the
-   game's rounding rule (as in rule 5). The final instalment is not reduced to
-   match the balance still owed, so a player may repay slightly more than they
-   borrowed. As a loan carries no interest, this small overpayment is the only
-   cost of borrowing.
+   *Example (rounding to 50).* Loans of £500, £800, £150 (oldest first). While all
+   three are outstanding the instalment is 10% × (500 + 800 + 150) = £145 →
+   **£150**. Successive GO passes take £150 off the first loan: 500 → 350 → 200 →
+   50 → 0 — the last £150 clears the £50 remaining and the extra £100 is lost
+   (*not* applied to the £800 loan). The total now recomputes to 800 + 150 = £950
+   → 10% = £95 → **£100**, paid off the £800 loan: 800 → 700 → … → 100 → 0.
+   Finally the £150 loan: 10% × 150 = £15 → **£50** (the grid minimum): 150 → 100
+   → 50 → 0.
+
+7. **Paying more, or paying early.** A player may repay more than the minimum
+   instalment when passing GO, and may repay any amount toward a loan during
+   their own turn. A player may also take out a loan to cover a loan repayment.
+   As a loan carries no interest, the only cost of borrowing is the
+   rounding/overpayment described in rule 6.
 
 ---
 
@@ -532,6 +551,30 @@ of the table by auction (see Default Monopoly Rules, rule 6).
 3. **No surcharge for non-purchase acquisitions.** A player pays no surcharge
    for a station gained through Free Parking, a card, or a deal — the scaling
    price applies only to buying a station outright.
+
+---
+
+## Utilities
+
+The two utility spaces work as in standard Monopoly: they charge rent based on a
+dice roll rather than a fixed amount, and cannot be built on.
+
+1. **Rent is a dice value times a multiplier.** A player who lands on a utility
+   owned by another player pays rent equal to the utility's rent multiplier times
+   the dice value that moved them onto it — exactly as rent is paid on any
+   landed-on property (Movement rule 4), the dice value being the input rather
+   than a fixed rent figure.
+
+2. **Which dice count depends on how the player arrived.** When a player lands on
+   the utility on **their own roll**, the dice value is the **sum of the two main
+   dice**. When they are moved onto it by the **third die** (third-die movement),
+   the dice value is the **third die alone**.
+
+3. **Owning one utility vs both changes the multiplier.** Owning a single utility
+   applies the lower multiplier; owning both applies the higher one (the utility
+   pair's "set" multiplier) — the same single-vs-set step the colour and station
+   rents use. A mortgaged utility earns no rent and does not count toward the pair
+   (Mortgaging rule 4).
 
 ---
 

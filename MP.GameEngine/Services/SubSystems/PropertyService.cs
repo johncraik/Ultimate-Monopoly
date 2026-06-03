@@ -51,12 +51,20 @@ public class PropertyService
             //No-op - property already owned
             return;
         
-        var reservationRule = engine.Cache.Game.ReserveRuleActive;
         var ownedInSet = engine.Cache.Game.GetOwnedProperties(player.PlayerId, space.PropertySet);
         
         //PropSet cannot be null (or shouldn't, since it is a property and purchasable)
-        var mustReserve = reservationRule && PropertySetHelper.MustReserve((PropertySet)space.PropertySet!, ownedInSet);
-        if(mustReserve)
+        var buyingLastInSet = PropertySetHelper.MustReserve((PropertySet)space.PropertySet!, ownedInSet);
+        if (buyingLastInSet)
+            //This will turn off the reservation rule if everyone else has a reservation
+            engine.Cache.Game.CheckReservationRule(player.PlayerId);
+        
+        //Reserve route needs BOTH the rule active AND this being the player's
+        //set-completing property — a non-completer is a normal buy/auction even
+        //during the reserve phase. The deadlock check above may also have just
+        //turned the rule off (everyone else already reserved), in which case this
+        //set-completer falls through to an outright buy.
+        if(buyingLastInSet && engine.Cache.Game.ReserveRuleActive)
             //Reservation route (A)
             await ReserveProperty(engine, player, space, property, ct);
         else
@@ -88,7 +96,7 @@ public class PropertyService
             Body = $"Would you like to reserve {property.Name} for {RuleDictionary.Currency}{cost}?",
             BoardIndex = space.Index,
             Cost = cost,
-            IsReserve = true
+            Type = AcquirePropertyType.Reserve
         }, ct: ct);
         
         if(!response.Accept)
@@ -104,8 +112,9 @@ public class PropertyService
         NormaliseRentLevels(engine);
     }
 
-    private async Task UnownedProperty(Framework.GameEngine engine, PlayerModel player,
-        BoardSpace space, PropertyModel property, CancellationToken ct)
+
+    private async Task<uint> GetPropertyCost(Framework.GameEngine engine, PlayerModel player,
+        BoardSpace space, PropertyModel property)
     {
         if(space.PurchaseCost is null or 0)
             //Throws because this space IS a purchasable property, and MUST have a purchase cost
@@ -127,7 +136,14 @@ public class PropertyService
             };
         }
         
-        cost = MoneyHelper.NormaliseAmount(cost, engine.Cache.RoundingRule, FinancialReason.Purchase);
+        return MoneyHelper.NormaliseAmount(cost, engine.Cache.RoundingRule, FinancialReason.Purchase);
+    }
+    
+    
+    private async Task UnownedProperty(Framework.GameEngine engine, PlayerModel player,
+        BoardSpace space, PropertyModel property, CancellationToken ct)
+    {
+        var cost = await GetPropertyCost(engine, player, space, property);
         var canAfford = player.Money >= cost;
         
         var runAuction = false;
@@ -141,7 +157,7 @@ public class PropertyService
                 Body = $"Would you like to purchase {property.Name} for {RuleDictionary.Currency}{cost}, or auction it?",
                 BoardIndex = property.BoardIndex,
                 Cost = cost,
-                IsReserve = false
+                Type = AcquirePropertyType.Buy
             }, ct: ct);
 
             //If they do not accept to buy, auction will be held
@@ -175,18 +191,32 @@ public class PropertyService
             await _transactionService.PurchaseProperty(engine, owningPlayer, cost, property.BoardIndex, ct);
         
         property.OwnProperty(owningPlayer.PlayerId);
+        //An auction win can complete a set for the winner even while the reserve
+        //rule is active (the lander declined a property that didn't complete *their*
+        //set). A player breaking through to a full set ends the mechanic for everyone
+        //— game-rules.md Reserved Properties; auction-flow.md §7. No-op on the plain
+        //buy path (a set-completing buy is handled by the reserve route upstream).
+        engine.Cache.Game.CheckReservationRuleSetObtained(owningPlayer.PlayerId);
         NormaliseRentLevels(engine);
     }
-    
+
 
     public async Task PayPropertyRent(Framework.GameEngine engine, PlayerModel player, 
         BoardSpace space, PropertyModel property, CancellationToken ct)
     {
-        if(!space.IsRentable)
+        if(!space.IsRentable || !property.ChargeRent(player.PlayerId))
+            //Not rentable or the player owns this property, therefore a no-op
             return;
 
         var rent = space.GetRent(property.RentLevel);
         if(rent == null) throw new InvalidOperationException("Rent cannot be null for rentable space");
+
+        if (space.PropertySet == PropertySet.Utility)
+            rent = (ushort)(engine.Cache.Game.Metadata.CurrentPlayerId == player.PlayerId
+                //Is the player paying rent the turn roller (their turn)?
+                //If so, utility multiplier multiplied by (die1 + die2); otherwise by third die
+                ? (ushort)rent * (engine.Cache.TurnDiceRoll?.Die1 + engine.Cache.TurnDiceRoll?.Die2 ?? 0) //Should not be null, defensive
+                : (ushort)rent * (engine.Cache.TurnDiceRoll?.ThirdDie ?? 0)); //Should not be null, defensive
         
         var cost = MoneyHelper.NormaliseAmount((uint)rent, engine.Cache.RoundingRule, FinancialReason.Rent);
         if(cost == 0)
@@ -196,9 +226,7 @@ public class PropertyService
         _ = await engine.PromptProvider.Acknowledge(player.PlayerId, $"Rent for {property.Name}",
             $"You owe {RuleDictionary.Currency}{cost} in rent for landing on {property.Name}.", ct: ct);
         
-        //Cost is computed in transaction service
-        //Cost above is for acknowledge prompt only, shortfall handled in transaction service
-        await _transactionService.PayRent(engine, player, property.BoardIndex, ct);
+        await _transactionService.PayRent(engine, player, (uint)rent, property.BoardIndex, ct);
     }
 
 
@@ -247,24 +275,153 @@ public class PropertyService
 
     #region Player Command Actions
 
-    public async Task<bool> TryUnReserveProperty(Framework.GameEngine engine, ushort boardIndex, CancellationToken ct)
+    private async Task<(bool Success, PlayerModel? Player, BoardSpace? Space, PropertyModel? Property)> 
+        PropertyActionValidation(Framework.GameEngine engine, ushort boardIndex, CancellationToken ct)
     {
-        //TODO - This will unreserve the property owned by the current player (if unowned, it throws, all other it no-ops)
-        return true;
-    }
+        //Get and check the current player:
+        var player = engine.Cache.Game.CurrentPlayer();
+        if (player is null)
+            return (false, null, null, null);
+        
+        //Get and check the board space:
+        var space = engine.Cache.Board.GetBoardSpace(boardIndex);
+        if (space.PropertySet is null)
+            //Not a property, therefore a no-op
+            return (false, player, null, null);
+        
+        //Get and check the property linked to the board space:
+        var property = engine.Cache.Game.GetPropertySpace(boardIndex);
+        if (property is null)
+            return (false, player, space, null);
 
-    public async Task<bool> TryMortgageProperty(Framework.GameEngine engine, ushort boardIndex, CancellationToken ct)
-    {
-        //TODO - This will mortgage the property owned by the current player (if unowned, it throws, all other it no-ops)
-        return true;
+        //Return success if player owns property
+        return (property.OwnerPlayerId == player.PlayerId, player, space, property);
     }
     
-    public async Task<bool> TryUnmortgageProperty(Framework.GameEngine engine, ushort boardIndex, CancellationToken ct)
+    
+    public async Task TryUnReserveProperty(Framework.GameEngine engine, ushort boardIndex, CancellationToken ct)
     {
-        //TODO - This will unmortgage the property owned by the current player (if unowned, it throws, all other it no-ops)
-        return true;
+        //Cannot unreserve if the reserve rule is active (everyone else must reserve)
+        if (engine.Cache.Game.ReserveRuleActive)
+            return;
+
+        //Validate
+        var (success, player, space, property) = await PropertyActionValidation(engine, boardIndex, ct);
+        if (!success || player is null || space is null || property is null)
+            return;
+
+        //Check property IS reserved, return if not
+        if (property.State != PropertyState.Reserved)
+            return;
+        
+        var cost = await GetPropertyCost(engine, player, space, property);
+        if (player.Money < cost)
+        {
+            _ = await engine.PromptProvider.Acknowledge(player.PlayerId, "Cannot Un-Reserve",
+                $"You do not have enough money to un-reserve {property.Name}.", ct: ct);
+            return;
+        }
+        
+        //Ask to confirm they want to unreserve the property:
+        var response = await engine.PromptProvider.RequestAsync(new AcquirePropertyPrompt
+        {
+            PlayerId = player.PlayerId,
+            Title = $"Un-Reserve {property.Name}",
+            Body = $"Would you like to un-reserve {property.Name} for {RuleDictionary.Currency}{cost}?",
+            BoardIndex = property.BoardIndex,
+            Cost = cost,
+            Type = AcquirePropertyType.UnReserve
+        }, ct: ct);
+        
+        if(!response.Accept)
+            return;
+        
+        await _transactionService.UnReserveProperty(engine, player, cost, property.BoardIndex, ct);
+        
+        property.UnreserveProperty();
+        NormaliseRentLevels(engine);
     }
 
+    public async Task TryMortgageProperty(Framework.GameEngine engine, ushort boardIndex, CancellationToken ct)
+    {
+        //Validate
+        var (success, player, space, property) = await PropertyActionValidation(engine, boardIndex, ct);
+        if (!success || player is null || space is null || property is null)
+            return;
+        
+        //Ensures property is owned
+        if(property.State != PropertyState.Owned)
+            return;
+        
+        var canMortgage = engine.Cache.Game.CanMortgageProperty(player.PlayerId, property.BoardIndex);
+        if(!canMortgage)
+        {
+            _ = await engine.PromptProvider.Acknowledge(player.PlayerId, "Cannot Mortgage",
+                $"You cannot mortgage {property.Name} at this time.", ct: ct);
+            return;
+        }
+        
+        var mortgageValue = MoneyHelper.MortgageValue(property.BoardIndex, engine.Cache.Board, engine.Cache.RoundingRule);
+        //Ask to confirm they want to unmortgage the property:
+        var response = await engine.PromptProvider.RequestAsync(new AcquirePropertyPrompt
+        {
+            PlayerId = player.PlayerId,
+            Title = $"Mortgage {property.Name}",
+            Body = $"Would you like to mortgage {property.Name} and receive {RuleDictionary.Currency}{mortgageValue}?",
+            BoardIndex = property.BoardIndex,
+            Cost = mortgageValue,
+            Type = AcquirePropertyType.Mortgage
+        }, ct: ct);
+        
+        if(!response.Accept)
+            return;
+        
+        await _transactionService.ReceiveForMortgage(engine, player, mortgageValue, property.BoardIndex, ct);
+        
+        property.MortgageProperty();
+        NormaliseRentLevels(engine);
+    }
+    
+    public async Task TryUnmortgageProperty(Framework.GameEngine engine, ushort boardIndex, CancellationToken ct)
+    {
+        //Validate
+        var (success, player, space, property) = await PropertyActionValidation(engine, boardIndex, ct);
+        if (!success || player is null || space is null || property is null)
+            return;
+
+        //Check property IS mortgaged, return if not
+        if (property.State != PropertyState.Mortgaged)
+            return;
+        
+        var cost = MoneyHelper.UnMortgageCost(property.BoardIndex, engine.Cache.Board, engine.Cache.RoundingRule);
+        if (player.Money < cost)
+        {
+            _ = await engine.PromptProvider.Acknowledge(player.PlayerId, "Cannot Unmortgage",
+                $"You do not have enough money to unmortgage {property.Name}.", ct: ct);
+            return;
+        }
+        
+        //Ask to confirm they want to un-mortgage the property:
+        var response = await engine.PromptProvider.RequestAsync(new AcquirePropertyPrompt
+        {
+            PlayerId = player.PlayerId,
+            Title = $"Unmortgage {property.Name}",
+            Body = $"Would you like to unmortgage {property.Name} for {RuleDictionary.Currency}{cost}?",
+            BoardIndex = property.BoardIndex,
+            Cost = cost,
+            Type = AcquirePropertyType.UnMortgage
+        }, ct: ct);
+        
+        if(!response.Accept)
+            return;
+        
+        await _transactionService.PayToUnmortgage(engine, player, cost, property.BoardIndex, ct);
+        
+        property.UnmortgageProperty();
+        NormaliseRentLevels(engine);
+    }
+
+    
     public async Task<bool> TryBuildOnProperty(Framework.GameEngine engine, ushort boardIndex, CancellationToken ct)
         => await TryBuildOnProperties(engine, [boardIndex], ct);
 

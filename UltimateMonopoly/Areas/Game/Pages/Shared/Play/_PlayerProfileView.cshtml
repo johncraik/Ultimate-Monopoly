@@ -54,6 +54,14 @@
     var mortgaged = owned.Where(p => p.State == PropertyState.Mortgaged).ToList();
     var mortgageFeeRaw = (long)mortgaged.Sum(p => (board.GetBoardSpace(p.BoardIndex).PurchaseCost ?? 0) * 0.10);
 
+    // Houses/hotels: this player's built count (pass the id) vs the table-wide
+    // remaining pool (no id → global). Two distinct figures, per Game-UI.md.
+    var (housesBuilt, hotelsBuilt) = game.GetHousesAndHotelsTaken(playerId);
+    var (housesLeft, hotelsLeft) = game.GetHousesAndHotelsLeft();
+    // Real bulk build/sell guards for the "on all" buttons (still AND-ed with the portfolio gate).
+    var canBuildAll = canPortfolio && game.CanIncreaseRentLevelForAll(playerId);
+    var canSellAll = canPortfolio && game.CanDecreaseRentLevelForAll(playerId);
+
     var loans = player.Loans;
     var outstandingLoans = loans.Where(l => l.IsOutstanding).ToList();
     var loanRemaining = outstandingLoans.Sum(l => (long)l.Amount - l.PaidBack);
@@ -223,18 +231,25 @@
                                     <dt class="col-7 text-body-secondary fw-normal">Mortgage fee at GO</dt>
                                     <dd class="col-5 text-end mb-2">@Cost(mortgageFeeRaw, FinancialReason.MortgageFee)</dd>
                                 }
-                                @* TODO(mock): no building inventory in the model yet. *@
+                                <dt class="col-7 text-body-secondary fw-normal">Houses built</dt>
+                                <dd class="col-5 text-end mb-2">@housesBuilt</dd>
                                 <dt class="col-7 text-body-secondary fw-normal">Houses left</dt>
-                                <dd class="col-5 text-end mb-2">32 <span class="text-body-tertiary">(mock)</span></dd>
+                                <dd class="col-5 text-end mb-2">@housesLeft</dd>
+                                <dt class="col-7 text-body-secondary fw-normal">Hotels built</dt>
+                                <dd class="col-5 text-end mb-2">@hotelsBuilt</dd>
                                 <dt class="col-7 text-body-secondary fw-normal">Hotels left</dt>
-                                <dd class="col-5 text-end mb-2">12 <span class="text-body-tertiary">(mock)</span></dd>
+                                <dd class="col-5 text-end mb-2">@hotelsLeft</dd>
+                                @* TODO(mock): total build cost needs a cost helper (not built yet). *@
                                 <dt class="col-7 text-body-secondary fw-normal">Cost to build all</dt>
                                 <dd class="col-5 text-end mb-0"><span class="text-body-tertiary">— (mock)</span></dd>
                             </dl>
-                            @* TODO(no-op): build-on-all command not built. *@
-                            <div class="d-grid mt-2">
-                                <button type="button" class="btn btn-outline-success btn-sm" data-noop disabled="@(!canPortfolio)">
-                                    <i class="bi bi-house-add me-1"></i> Build on all properties
+                            @* TODO(no-op): build/sell-on-all commands not built. Guards are real (CanIncrease/DecreaseRentLevelForAll + portfolio gate). *@
+                            <div class="d-flex gap-2 mt-2">
+                                <button type="button" class="btn btn-success btn-sm flex-fill" data-noop disabled="@(!canBuildAll)">
+                                    <i class="bi bi-house-add me-1"></i> Build on all
+                                </button>
+                                <button type="button" class="btn btn-warning btn-sm flex-fill" data-noop disabled="@(!canSellAll)">
+                                    <i class="bi bi-house-dash me-1"></i> Sell on all
                                 </button>
                             </div>
                         </div>
@@ -287,12 +302,17 @@
                                             @if (buildable && ownsAll && buildCost is not null)
                                             {
                                                 var bc = (long)buildCost.Value;
-                                                <div class="d-flex justify-content-between align-items-center small mb-2">
+                                                var canBuildSet = canPortfolio && game.CanIncreaseRentLevelForAllInSet(playerId, set);
+                                                var canSellSet = canPortfolio && game.CanDecreaseRentLevelForAllInSet(playerId, set);
+                                                <div class="d-flex justify-content-between align-items-center small mb-2 gap-2">
                                                     <span class="text-body-secondary">
                                                         Build @Cost(bc, FinancialReason.Build) · Double hotel @Cost(bc * 5, FinancialReason.Build)
                                                     </span>
-                                                    @* TODO(no-op): build-set command not built. *@
-                                                    <button type="button" class="btn btn-outline-success btn-sm" data-noop disabled="@(!canPortfolio)">Build set</button>
+                                                    @* TODO(no-op): build/sell-set commands not built. Guards are real (CanIncrease/DecreaseRentLevelForAllInSet + portfolio gate). *@
+                                                    <div class="d-flex gap-1 flex-shrink-0">
+                                                        <button type="button" class="btn btn-success btn-sm" data-noop disabled="@(!canBuildSet)">Build set</button>
+                                                        <button type="button" class="btn btn-warning btn-sm" data-noop disabled="@(!canSellSet)">Sell set</button>
+                                                    </div>
                                                 </div>
                                             }
 
@@ -326,38 +346,38 @@
                                                                 }
                                                                 else if (prop.State == PropertyState.Mortgaged)
                                                                 {
-                                                                    @* TODO(mock): un-mortgage amount has no engine formula yet. *@
-                                                                    <span class="text-body-secondary">Un-mortgage:</span>
-                                                                    <span class="fw-semibold">@Cost(purchase / 2, FinancialReason.Unmortgage)</span>
+                                                                    @* Real un-mortgage cost = mortgage value + 10%, grid-rounded (MoneyHelper). *@
+                                                                    <span class="text-body-secondary">Unmortgage:</span>
+                                                                    <span class="fw-semibold">@cur@MoneyHelper.UnMortgageCost(prop.BoardIndex, board, rule)</span>
                                                                 }
                                                                 else
                                                                 {
-                                                                    @* TODO(mock): mortgage payout has no engine formula yet. *@
+                                                                    @* Real mortgage payout = half purchase price, grid-rounded (MoneyHelper). *@
                                                                     <span class="text-body-secondary">Mortgage:</span>
-                                                                    <span class="fw-semibold">@Cost(purchase / 2, FinancialReason.Mortgage)</span>
+                                                                    <span class="fw-semibold">@cur@MoneyHelper.MortgageValue(prop.BoardIndex, board, rule)</span>
                                                                 }
                                                             </div>
                                                             <div class="d-flex flex-wrap gap-1">
-                                                                @* No-op stubs (no command built); enabled only when the portfolio gate allows. *@
+                                                                @* No-op stubs (no command built); enabled only when the real build/sell + portfolio gates allow. *@
                                                                 @if (buildable && ownsAll)
                                                                 {
-                                                                    <button type="button" class="btn btn-outline-success btn-sm" data-noop disabled="@(!canPortfolio)">Build</button>
+                                                                    <button type="button" class="btn btn-success btn-sm" data-noop disabled="@(!(canPortfolio && game.CanIncreaseRentLevel(playerId, prop.BoardIndex)))">Build</button>
+                                                                    <button type="button" class="btn btn-warning btn-sm" data-noop disabled="@(!(canPortfolio && game.CanDecreaseRentLevel(playerId, prop.BoardIndex)))">Sell</button>
                                                                 }
-                                                                @if (built)
-                                                                {
-                                                                    <button type="button" class="btn btn-outline-warning btn-sm" data-noop disabled="@(!canPortfolio)">Sell</button>
-                                                                }
+                                                                @* Live commands (engine built) — carry data-cmd + board index; the
+                                                                   page JS invokes the matching GamePlayHub method, which opens an
+                                                                   AcquirePropertyPrompt confirmation. *@
                                                                 @if (prop.State == PropertyState.Reserved)
                                                                 {
-                                                                    <button type="button" class="btn btn-outline-info btn-sm" data-noop disabled="@(!canPortfolio)">Un-reserve</button>
+                                                                    <button type="button" class="btn btn-info btn-sm" data-cmd="unreserve" data-board-index="@prop.BoardIndex" disabled="@(!canPortfolio)">Un-reserve</button>
                                                                 }
                                                                 else if (prop.State == PropertyState.Mortgaged)
                                                                 {
-                                                                    <button type="button" class="btn btn-outline-secondary btn-sm" data-noop disabled="@(!canPortfolio)">Un-mortgage</button>
+                                                                    <button type="button" class="btn btn-outline-secondary btn-sm" data-cmd="unmortgage" data-board-index="@prop.BoardIndex" disabled="@(!canPortfolio)">Unmortgage</button>
                                                                 }
                                                                 else if (!built)
                                                                 {
-                                                                    <button type="button" class="btn btn-outline-secondary btn-sm" data-noop disabled="@(!canPortfolio)">Mortgage</button>
+                                                                    <button type="button" class="btn btn-danger btn-sm" data-cmd="mortgage" data-board-index="@prop.BoardIndex" disabled="@(!canPortfolio)">Mortgage</button>
                                                                 }
                                                             </div>
                                                         </div>

@@ -1,8 +1,6 @@
 using MP.GameEngine.Enums;
-using MP.GameEngine.Enums.Players;
 using MP.GameEngine.Helpers;
 using MP.GameEngine.Helpers.RuleSet;
-using MP.GameEngine.Models.Snapshot;
 using MP.GameEngine.Services.SubSystems;
 
 namespace MP.GameEngine.Services;
@@ -10,18 +8,21 @@ namespace MP.GameEngine.Services;
 public class PlayerTurnOrchestrator
 {
     private readonly DiceService _diceService;
+    private readonly TransactionService _transactionService;
     private readonly MovementService _movementService;
     private readonly PlayerService _playerService;
     private readonly JailService _jailService;
     private readonly BoardService _boardService;
 
     public PlayerTurnOrchestrator(DiceService diceService,
+        TransactionService transactionService,
         MovementService movementService,
         PlayerService playerService,
         JailService jailService,
         BoardService boardService)
     {
         _diceService = diceService;
+        _transactionService = transactionService;
         _movementService = movementService;
         _playerService = playerService;
         _jailService = jailService;
@@ -84,12 +85,18 @@ public class PlayerTurnOrchestrator
             case DiceRollType.Double:
                 if (player.DoublesInRow < RuleDictionary.DoublesBeforeJail)
                 {
+                    //TODO: Take a double card!!!
+                    
                     //Will move player OUT of jail if in jail
                     await _jailService.CheckAndLeaveJail(engine, player, ct);
                     
                     //Get the double effect record, and notify player
                     var effect = DoubleEffects.For(dice.Die1);
                     _ = await engine.PromptProvider.Acknowledge(player.PlayerId, effect.Title, effect.Body, ct: ct);
+                    
+                    //Apply snake eyes bonus (if applicable)
+                    if(effect.SnakeEyesBonus)
+                        await _transactionService.ReceiveSnakeEyes(engine, player, ct);
                     
                     //Move the player based on the effect steps:
                     if(effect.RollerSteps.Count > 0)
@@ -133,6 +140,8 @@ public class PlayerTurnOrchestrator
             case DiceRollType.Triple:
                 if (player.TriplesInRow < RuleDictionary.TriplesBeforeJail)
                 {
+                    //TODO: Take a triple card!!!
+                    
                     //Will move player OUT of jail if in jail
                     await _jailService.CheckAndLeaveJail(engine, player, ct);
                     

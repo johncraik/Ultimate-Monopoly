@@ -1,0 +1,59 @@
+@using System.Text.Json
+@using JC.Core.Extensions
+@using MP.GameEngine.Helpers
+@using MP.GameEngine.Helpers.RuleSet
+@{
+    // Board index → property-set slug, same map (and rationale) as the acquire
+    // prompt: the index→set rules live in the engine (PropertySetHelper), not JS.
+    // The handler colours the card by the auctioned property's set (BoardIndex).
+    var propColours = IndexHelper.AllPropertyIndexes
+        .Where(i => PropertySetHelper.ResolveSet(i) is not null)
+        .ToDictionary(i => i, i => PropertySetHelper.ResolveSet(i)!.Value.ToDisplayName().ToSlug());
+}
+@*
+    AUCTION-BID PROMPT  (player profile / host drawer — Game-UI.md "Where prompts surface")
+    A static-backdrop modal driven by the engine's AuctionBidPrompt. The bidder either
+    raises by a grid increment — one button per AllowedIncrements, each submitting
+    CurrentHighBid + increment as a Bid (gated against their balance: game-rules.md Default
+    rule 7) — or passes, which drops them out of the auction for good. Markup + the
+    colour-map only; all behaviour (show/hide on PromptOpened/PromptClosed, building the
+    increment buttons, balance gating, submit) lives in
+    /scripts/InGame/Prompts/auction-bid-prompt.js. The element ids, the colour-map id, and
+    the data-currency hook below are that script's contract — keep them in sync.
+
+    Card coloured by the auctioned property's set, same as the acquire prompt.
+*@
+<script type="application/json" id="auctionBidColours">@Html.Raw(JsonSerializer.Serialize(propColours))</script>
+
+<div class="modal fade" id="auctionBidModal" tabindex="-1" aria-labelledby="auctionBidTitle"
+     aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false" data-currency="@RuleDictionary.Currency">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border border-2" id="auctionBidContent">
+            <div class="modal-header border-0" id="auctionBidHeader">
+                <h5 class="modal-title" id="auctionBidTitle"></h5>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2" id="auctionBidBody"></p>
+
+                <div class="d-flex justify-content-between small text-body-secondary mb-3">
+                    <span>Current bid: <span class="fw-semibold text-body" id="auctionBidCurrent"></span></span>
+                    <span>Your balance: <span class="fw-semibold text-body" id="auctionBidBalance"></span></span>
+                </div>
+
+                @* One raise button per AllowedIncrements, built by the handler per prompt
+                   (the increments are server-computed from the rounding rule). Unaffordable
+                   raises render disabled. *@
+                <div class="text-body-secondary small mb-1">Raise the bid by:</div>
+                <div class="d-flex flex-wrap gap-2" id="auctionBidIncrements"></div>
+
+                <div class="alert alert-warning d-none mt-3 mb-0" id="auctionBidError" role="alert"></div>
+            </div>
+            <div class="modal-footer">
+                @* Passing is final — the bidder drops out of this auction for good. *@
+                <button type="button" class="btn btn-outline-danger w-100" id="auctionBidPass">
+                    <i class="bi bi-x-circle me-1"></i> Pass (drop out)
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

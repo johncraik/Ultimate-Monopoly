@@ -1,10 +1,12 @@
 // Acquire-property prompt handler — renders _AcquirePropertyPrompt.cshtml from the
-// engine's AcquirePropertyPrompt and submits the take-it / decline choice. Covers
-// BUY (decline → auction) and RESERVE (decline → no-op) via the prompt's IsReserve
-// flag, and colours the card by the property's set (the index→slug map emitted by
-// the partial). Plugs into the game-play hub coordinator (../game-play-hub.js),
-// which owns the connection and routes PromptOpened / PromptClosed here. The element
-// ids / colour-map id below mirror _AcquirePropertyPrompt.cshtml.
+// engine's AcquirePropertyPrompt and submits the binary confirm / decline choice.
+// It's a generic confirmation for any property action: the prompt's Type
+// (AcquirePropertyType) drives the title + button wording (Buy → Buy/Auction,
+// Reserve → Reserve/Ignore, every other action → <action>/Cancel). Colours the card
+// by the property's set (the index→slug map emitted by the partial). Plugs into the
+// game-play hub coordinator (../game-play-hub.js), which owns the connection and
+// routes PromptOpened / PromptClosed here. The element ids / colour-map id below
+// mirror _AcquirePropertyPrompt.cshtml.
 (function () {
     'use strict';
 
@@ -31,6 +33,25 @@
     } catch (e) {
         console.error('Failed to parse acquire-property colours:', e);
     }
+
+    // AcquirePropertyType → wording. Keyed by the enum's numeric value (SignalR's
+    // default JSON protocol serialises enums by value, not name). Order mirrors
+    // MP.GameEngine ... PromptTypes.AcquirePropertyType — keep in sync.
+    // Only Buy/Reserve have a meaningful "decline" side-effect (auction / ignore);
+    // every other action is a confirm whose decline is a plain cancel.
+    const ACTIONS = {
+        0:  { title: 'Buy property',          accept: 'Buy',          decline: 'Auction' },
+        1:  { title: 'Reserve property',      accept: 'Reserve',      decline: 'Ignore' },
+        2:  { title: 'Un-reserve property',   accept: 'Un-reserve',   decline: 'Cancel' },
+        3:  { title: 'Mortgage property',     accept: 'Mortgage',     decline: 'Cancel' },
+        4:  { title: 'Un-mortgage property',  accept: 'Un-mortgage',  decline: 'Cancel' },
+        5:  { title: 'Build',                 accept: 'Build',        decline: 'Cancel' },
+        6:  { title: 'Build set',             accept: 'Build set',    decline: 'Cancel' },
+        7:  { title: 'Build all',             accept: 'Build all',    decline: 'Cancel' },
+        8:  { title: 'Sell',                  accept: 'Sell',         decline: 'Cancel' },
+        9:  { title: 'Sell set',              accept: 'Sell set',     decline: 'Cancel' },
+        10: { title: 'Sell all',              accept: 'Sell all',     decline: 'Cancel' }
+    };
 
     let current = null;   // { promptId, stamp }
     let ctx = null;       // hub context, captured when the prompt opens
@@ -66,13 +87,14 @@
         ctx = hubCtx;
         current = { promptId: prompt.promptId, stamp: stamp };
 
-        titleEl.textContent = prompt.title || (prompt.isReserve ? 'Reserve property' : 'Buy property');
+        const action = ACTIONS[Number(prompt.type)] || ACTIONS[0];
+        titleEl.textContent = prompt.title || action.title;
         bodyEl.textContent = prompt.body || '';
         errEl.classList.add('d-none');
 
-        // Wording differs by mode: buy → Buy / Auction; reserve → Reserve / Ignore.
-        acceptBtn.textContent = prompt.isReserve ? 'Reserve' : 'Buy';
-        declineBtn.textContent = prompt.isReserve ? 'Ignore' : 'Auction';
+        // Wording per action type (server sets the matching Type).
+        acceptBtn.textContent = action.accept;
+        declineBtn.textContent = action.decline;
 
         applyColour(prompt.boardIndex);
         modal.show();

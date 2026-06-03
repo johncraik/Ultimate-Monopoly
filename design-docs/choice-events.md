@@ -791,13 +791,17 @@ hub, not the engine. No `DiceRollPrompt` is involved.
 
 ### 15.4 `AcquirePropertyPrompt` — *implemented*
 
-Asks the lander whether they want to take a property they've landed on. The
-prompt is deliberately a binary yes/no — whether "yes" leads to a standard
-buy or a reservation under the reserve rule (`game-rules.md` Reserved
-Properties) is engine state. The engine that *creates* the prompt knows the
-mode and crafts the appropriate Title/Body; the engine that *handles* the
-response branches on game state to either `MarkPropertyOwned` or
-`MarkPropertyReserved`. Framework stays oblivious.
+A binary yes/no **confirmation** for a property action. Despite the legacy
+name it is no longer buy-specific: a `Type` (`AcquirePropertyType`) names which
+property action is being confirmed — `Buy`, `Reserve`, `UnReserve`, `Mortgage`,
+`UnMortgage`, `Build` / `BuildAllInSet` / `BuildAll`, `Sell` / `SellAllInSet` /
+`SellAll`. It serves both the landed-on offers (buy / reserve) and the
+player-initiated portfolio commands, which surface it as a confirm step.
+
+The prompt stays a yes/no; the engine that *creates* it knows what `Type` means
+and crafts the Title/Body, and the engine that *handles* the response acts on
+its own state (e.g. buy vs reserve, mortgage vs un-mortgage). `Type` is a
+frontend hint for wording/labels only — the validator ignores it.
 
 |  |  |
 |---|---|
@@ -812,21 +816,23 @@ response branches on game state to either `MarkPropertyOwned` or
 - `PlayerId` (inherited) — the lander.
 - `BoardIndex: ushort` — the property's board index. Set/colour resolves via
   `PropertySetHelper.ResolveSet(ushort)`.
-- `Cost: uint` — what the lander would pay for the offered action (full price
-  for a buy, half price for a reserve). The engine computes this; the
-  framework does not interpret it.
-- `IsReserve: bool` — `true` when this is a reservation offer, `false` for a
-  standard buy offer. A frontend hint only: it tells the client which wording
-  to render ("Reserve … for £X?" vs "Buy … for £X, or auction it?"). The engine
-  still branches on its own state, and the validator ignores it.
+- `Cost: uint` — what the player would pay for the action being confirmed (full
+  price for a buy, half for a reserve, the mortgage payout, the build cost, etc.).
+  The engine computes this; the framework does not interpret it.
+- `Type: AcquirePropertyType` — which property action is being confirmed: `Buy`,
+  `Reserve`, `UnReserve`, `Mortgage`, `UnMortgage`, `Build`, `BuildAllInSet`,
+  `BuildAll`, `Sell`, `SellAllInSet`, `SellAll`. A frontend hint only — it drives
+  the title and button wording (e.g. Buy → "Buy" / "Auction"; Reserve →
+  "Reserve" / "Ignore"; everything else → "<action>" / "Cancel"). The engine
+  branches on its own state, and the validator ignores it.
 - `Title`, `Body` (inherited) — from the `Prompt` base.
 
 **Response payload**
 
-- `Accept: bool` — `true` = take it (buy or reserve, per `IsReserve`); `false`
-  = decline. Declining a **buy** sends the property to auction; declining a
-  **reserve** is a no-op — the property stays bank-owned (reservable properties
-  are never auctioned).
+- `Accept: bool` — `true` = confirm the action (`Type`), `false` = decline.
+  Declining a **Buy** sends the property to auction; declining a **Reserve** is a
+  no-op (reservable properties are never auctioned); declining any other action
+  (a portfolio command) is simply a cancel — nothing happens.
 
 **Authorisation**
 
@@ -835,14 +841,16 @@ the lander's behalf via the tablet).
 
 **Notes**
 
-- Affordability is gated *before* this prompt opens. If the lander can't afford
-  the offered action, the engine emits an `AcknowledgePrompt` (for a buy,
-  "can't afford — auction begins"; for a reserve, "can't afford to reserve") and
-  skips this prompt entirely.
-- `IsReserve` lets the client pick reserve-vs-buy wording without inferring it
-  from `Title`/`Body`. The deeper branching — what "yes" actually does (buy at
-  full price → auction on decline, vs reserve at half price → no-op on decline)
+- Affordability is gated *before* this prompt opens. If the player can't afford
+  the action, the engine emits an `AcknowledgePrompt` (for a buy, "can't afford —
+  auction begins"; for a reserve/command, "can't afford") and skips this prompt
+  entirely.
+- `Type` lets the client pick the wording/labels without inferring them from
+  `Title`/`Body`. The deeper branching — what "yes" actually does for each action
   — still lives in the engine that created the prompt, not in the framework.
+- The response is unchanged (`Accept: bool`), so generalising the prompt to all
+  property commands needs no validator or response change — only the engine call
+  sites set the appropriate `Type`.
 
 ### 15.5 `TargetPlayerPrompt` — *implemented*
 

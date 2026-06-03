@@ -78,7 +78,7 @@ public class JailService
             PlayerMovementDirection.CounterDirectionOfTravel, ct);
 
         //Increase jail cost by 50% of original cost
-        var increase = Math.Round((player.JailCost * 0.5), MidpointRounding.AwayFromZero);
+        var increase = Math.Round((player.JailCost * RuleDictionary.JailCostMultiplier), MidpointRounding.AwayFromZero);
         player.JailCost += (uint)increase;
 
         var increaseDisplay = MoneyHelper.NormaliseAmountToPositive((long)increase, engine.Cache.RoundingRule, FinancialReason.JailFee);
