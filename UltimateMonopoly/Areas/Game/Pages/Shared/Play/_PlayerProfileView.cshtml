@@ -3,6 +3,7 @@
 @using MP.GameEngine.Enums.Properties
 @using MP.GameEngine.Helpers
 @using MP.GameEngine.Helpers.RuleSet
+@using MP.GameEngine.Models.Prompts.PromptTypes
 @using MP.GameEngine.Models.Snapshot
 @using UltimateMonopoly.Models.ViewModels.Games
 @using UltimateMonopoly.Services.Cache
@@ -41,6 +42,18 @@
     // Money, a loan's Amount/PaidBack) are shown raw.
     string Cost(long raw, FinancialReason reason) => $"{cur}{MoneyHelper.NormaliseAmountToPositive(raw, rule, reason)}";
 
+    // Ownership-state tint for the current-space tile (Block 2), mirroring the board
+    // view's .space-body tint (softened via --bs-bg-opacity in the CSS).
+    string? StateTint(PropertyState s) => s switch
+    {
+        PropertyState.NotOwned => "bg-success",
+        PropertyState.Owned => "bg-danger",
+        PropertyState.Mortgaged => "bg-warning",
+        PropertyState.Reserved => "bg-primary",
+        PropertyState.FreeParking => "bg-info",
+        _ => null
+    };
+
     // Capability gates — host-bypass aware, evaluated for the *viewer* (self or
     // the host). Mock/stub actions still wear their real guards: hidden where the
     // state forbids them, disabled where the doc wants a persistent button.
@@ -71,11 +84,56 @@
     var canTakeLoan = canPortfolio && outstandingLoans.Count < 3;
 
     var fpSets = player.FPHandedInSets.Distinct().ToList();
+
+    // Pending prompt for THIS player, if any — rendered inline below as a server-side
+    // overlay. It's part of the swapped state, so it appears/disappears atomically with
+    // each StateChanged frame (no client open/close race), and only ever shows for the
+    // player this partial renders — so on the host it surfaces only in that player's drawer.
+    var pending = cache.PendingPrompt;
+    var prompt = pending is not null && pending.Prompt.PlayerId == playerId ? pending.Prompt : null;
+    var promptType = prompt switch
+    {
+        DiceRollPrompt => "DiceRoll",
+        AcknowledgePrompt => "Acknowledge",
+        AcquirePropertyPrompt => "AcquireProperty",
+        AuctionBidPrompt => "AuctionBid",
+        _ => null
+    };
 }
 
 <div class="row justify-content-center">
     <div class="col-12">
         <div class="pp-view">
+
+            @* ─────────── Engine prompt (server-rendered overlay) ───────────
+               The pending prompt for this player renders here as part of the swapped
+               state — it appears/disappears atomically with each StateChanged frame
+               (no client open/close race). ingame-prompts.js reads data-prompt-* + the
+               controls and calls SubmitPrompt. Scoped to the drawer/profile, never the
+               whole page. *@
+            @if (prompt is not null && promptType is not null)
+            {
+                <div class="pp-prompt" data-prompt-id="@prompt.PromptId" data-prompt-type="@promptType" data-stamp="@cache.ConcurrencyStamp">
+                    <div class="pp-prompt-backdrop"></div>
+                    <div class="pp-prompt-dialog">
+                        @switch (prompt)
+                        {
+                            case DiceRollPrompt p:
+                                <partial name="Play/_DiceRollPrompt" model="p" />
+                                break;
+                            case AcknowledgePrompt p:
+                                <partial name="Play/_AcknowledgePrompt" model="p" />
+                                break;
+                            case AcquirePropertyPrompt p:
+                                <partial name="Play/_AcquirePropertyPrompt" model="p" />
+                                break;
+                            case AuctionBidPrompt p:
+                                <partial name="Play/_AuctionBidPrompt" model="p" />
+                                break;
+                        }
+                    </div>
+                </div>
+            }
 
             @* ───────────────── Header (shared across tabs) ───────────────── *@
             <div class="card mb-2">
@@ -176,13 +234,72 @@
                                 <dd class="col-5 text-end mb-2">@cur@player.TripleBonus</dd>
 
                                 <dt class="col-7 text-body-secondary fw-normal"><i class="bi bi-percent me-1"></i> Card %cap</dt>
-                                @* TODO(mock): %cap tier needs a building-state helper (John to provide). *@
-                                <dd class="col-5 text-end mb-0"><span class="badge text-bg-secondary">10%</span></dd>
+                                @* TODO(mock): %cap tier needs a building-state helper (John to provide) -- to be refactored into helper. *@
+                                <dd class="col-5 text-end mb-0">
+                                    @{
+                                        var hasDoubleHotel = owned.Any(p => p.RentLevel == RentLevel.DOUBLE_HOTEL);
+                                        var hasBuildings = owned.Any(p => p.RentLevel is > RentLevel.SET and < RentLevel.DOUBLE_HOTEL);
+                                        var cap = hasDoubleHotel ? 100 : hasBuildings ? 50 : 10;
+                                    }
+                                    <span class="badge text-bg-secondary">@cap%</span>
+                                </dd>
                             </dl>
                         </div>
                     </div>
 
-                    @* Block 2 — Free Parking hand-ins (accordion, count in header) *@
+                    @* Block 2 — current board space: a compact board-style tile for the
+                       player's position (colour banner if a property, icon for card/tax,
+                       corner/space name otherwise), with the board index in a box beneath. *@
+                    @{
+                        var nowSpace = board.GetBoardSpace(player.BoardIndex);
+                        var nowProp = game.GetPropertySpace(player.BoardIndex);
+                    }
+                    <div class="pp-now mb-3">
+                        <div class="pp-now-space">
+                            @if (nowSpace.PropertySet is { } nowSet)
+                            {
+                                <div class="pp-now-banner bg-prop-@(nowSet.ToDisplayName().ToSlug())"></div>
+                                <div class="pp-now-body @(nowProp is not null ? StateTint(nowProp.State) : null)">
+                                    <span class="p-2"><b>@(nowProp?.Name)</b></span>
+                                    @if (!string.IsNullOrWhiteSpace(nowProp?.OwnerPlayerId))
+                                    {
+                                        <br/>
+                                        <span class="p-2"><b>Owner: </b>@(await PlayerCache.GetPlayerName(nowProp.OwnerPlayerId))</span>
+                                    }
+                                </div>
+                            }
+                            else if (player.BoardIndex.IsChance())
+                            {
+                                <div class="pp-now-body pp-now-icon">
+                                    <i class="bi bi-question-lg"></i><br/>
+                                    <span class="p-2">@nowSpace.Name</span>
+                                </div>
+                            }
+                            else if (player.BoardIndex.IsComChest())
+                            {
+                                <div class="pp-now-body pp-now-icon">
+                                    <i class="bi bi-archive-fill"></i><br/>
+                                    <span class="p-2">@nowSpace.Name</span>
+                                    
+                                </div>
+                            }
+                            else if (player.BoardIndex.IsTax())
+                            {
+                                <div class="pp-now-body pp-now-icon">
+                                    <i class="bi bi-bank2"></i><br/>
+                                    <span class="p-2">@nowSpace.Name</span>
+                                </div>
+                            }
+                            else
+                            {
+                                @* Corners (GO / Just Visiting / Free Parking / Go To Jail / Jail). *@
+                                <div class="pp-now-body pp-now-corner">@nowSpace.Name</div>
+                            }
+                        </div>
+                        <div class="pp-now-index border text-center">@player.BoardIndex</div>
+                    </div>
+
+                    @* Block 3 — Free Parking hand-ins (accordion, count in header) *@
                     <div class="accordion mb-3" id="ppFpAccordion">
                         <div class="accordion-item">
                             <h2 class="accordion-header">

@@ -5,22 +5,23 @@
     display: flex;
     flex-direction: column;
     min-height: 0;
+    padding-bottom: 3.75rem;   /* clear the fixed bottom tab bar (out of flow) */
 }
 
-/* Breathing room so the sticky tab bar never sits flush against the last card. */
-.pp-content {
-    padding-bottom: 0.5rem;
-}
-
-/* ── Bottom tab bar — glassy + sticky, mirrors .navbar-glass but pinned to the
-   bottom of the viewport. Icon-only buttons, evenly distributed. ── */
+/* ── Bottom tab bar — glassy, FIXED to the bottom of the drawer (host) or the
+   viewport (phone): a transformed .player-drawer is the containing block for the
+   fixed bar, so on the host it pins to the drawer's bottom edge rather than the
+   page. Always at the bottom regardless of content height. Icon-only buttons,
+   evenly distributed. (The profile reserves bottom padding above so content clears
+   it — see .pp-view.) ── */
 .pp-tabbar {
-    position: sticky;
+    position: fixed;
+    left: 0;
+    right: 0;
     bottom: 0;
     z-index: 1030;
     display: flex;
     gap: 0.25rem;
-    margin-top: 0.5rem;
     padding: 0.4rem 0.5rem;
     background-color: rgba(var(--bs-body-bg-rgb), 0.72);
     backdrop-filter: blur(14px) saturate(180%);
@@ -77,4 +78,85 @@
     width: 0.85rem;
     height: 0.85rem;
     border-radius: 50%;
+}
+
+/* ── Engine prompt overlay ──
+   Server-rendered into the profile (see _PlayerProfileView's .pp-prompt) when a prompt
+   is pending for this player. Covers the profile "screen" with a scoped backdrop and a
+   centred card. Scoped to the host drawer — absolute, so the fixed .player-drawer is the
+   containing block: it dims only the drawer (the header sits above it at z-index 1032),
+   never the game view / board — and to the viewport on the phone. There is no dismiss:
+   every control answers the prompt, so it stays until resolved (see design-docs). */
+.pp-prompt {
+    position: absolute;
+    inset: 0;
+    z-index: 1031;            /* above the sticky tab bar (1030); below the drawer header (1032) */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+/* Phone (no drawer to scope to): pin to the viewport, above the tab bar. */
+.player-profile .pp-prompt {
+    position: fixed;
+    z-index: 1040;
+}
+
+.pp-prompt-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(var(--bs-dark-rgb), 0.6);
+}
+
+.pp-prompt-dialog {
+    position: relative;       /* above the backdrop */
+    width: 100%;
+    max-width: 420px;
+    max-height: 100%;
+    overflow-y: auto;
+}
+
+.pp-prompt-card {
+    border-radius: var(--bs-border-radius);
+    overflow: hidden;
+    background: var(--bs-body-bg);
+}
+
+.pp-prompt-head { padding: 0.6rem 0.9rem; font-weight: 600; }
+.pp-prompt-body { padding: 0.9rem; }
+.pp-prompt-foot { padding: 0.75rem 0.9rem; border-top: 1px solid var(--bs-border-color); }
+
+/* ── "Current space" tile (Profile tab, Block 2) — a full-width board-style banner for
+   the player's board position (mirrors the board view's space cell): a colour banner
+   for a property, an icon for card/tax, or the corner/space name otherwise — with the
+   board index in a bordered box of the same width beneath it. ── */
+.pp-now-space {
+    width: 100%;
+    aspect-ratio: 1 / 1.5;      /* height tracks 1.5 × width … */
+    max-height: 250px;          /* … capped at 250px (so it's a wide, short banner) */
+    display: flex;
+    flex-direction: column;
+    border-radius: var(--bs-border-radius);
+    overflow: hidden;
+    background: #f5f5f5;        /* board "white" space body */
+}
+.pp-now-banner { flex: 0 0 22%; }
+.pp-now-body {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 0.25rem;
+    color: #222;
+    --bs-bg-opacity: 0.45;      /* softens the bg-* state tint, as on the board */
+}
+.pp-now-icon { font-size: 1.5rem; color: #333; }
+.pp-now-corner { font-size: 0.7rem; font-weight: 600; line-height: 1.1; text-transform: uppercase; }
+.pp-now-index {
+    margin-top: 0.35rem;
+    border-radius: var(--bs-border-radius);
+    padding: 0.2rem;
+    font-weight: 700;
 }

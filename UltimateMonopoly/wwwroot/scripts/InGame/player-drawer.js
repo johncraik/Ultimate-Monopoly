@@ -1,16 +1,19 @@
 // Host Play page — the player-profile drawer (left pull-out).
 //
-// Two ways it opens:
-//   • Manual — the host taps a player's "View" button: the drawer slides in over
-//     its own backdrop (a browse, with prev/next stepping).
-//   • Prompt-driven — a player prompt fires: the drawer auto-opens on *that*
-//     player (no own backdrop; the prompt modal supplies it) so the host sees
-//     whose prompt it is, and auto-closes when the prompt resolves.
+// The drawer is a "phone": it loads the real /player-profile partial (Index
+// handler=State) for the selected player — the same view that player sees on their
+// own phone, fetched with the host as viewer so the host-bypass gates let the host
+// act on their behalf. Any pending prompt for that player renders *inside* the
+// partial (server-side; see _PlayerProfileView's .pp-prompt overlay).
 //
-// Either way the body is the real /player-profile partial (Index handler=State),
-// the same view the player sees on their phone — fetched with the host as viewer,
-// so the host-bypass gates let the host act on the player's behalf. The open
-// drawer also refreshes on each live StateChanged frame.
+// Opening:
+//   • Manual — the host taps a player's "View" button.
+//   • Prompt-driven — a player prompt fires → the drawer auto-opens on that player so
+//     the host sees it. It does NOT auto-close: the host closes it manually, and can
+//     close it / step to another player / use the host page while the prompt sits
+//     unanswered (it stays pending server-side).
+//
+// The open drawer refreshes on each live StateChanged frame.
 (function () {
     'use strict';
 
@@ -29,12 +32,11 @@
     let index = -1;
     let currentUserId = null;
     let isOpen = false;
-    let promptDriven = false;       // opened by a prompt — manual close/step suppressed until it resolves
     let inFlight = false;
     let pendingReload = false;
 
-    // Player roster (id + name) read from the live player-list cards, which carry
-    // the server-resolved display name. Re-read each time — the list re-renders.
+    // Player roster (id + name) read from the live player-list cards, which carry the
+    // server-resolved display name. Re-read each time — the list re-renders.
     function readPlayers() {
         return Array.from(document.querySelectorAll('[data-player-card]'))
             .map(el => ({ userId: el.dataset.userId, name: el.dataset.playerName || el.dataset.userId }))
@@ -81,10 +83,18 @@
         }
     }
 
-    function showDrawer(withBackdrop) {
+    // Open (or switch) the drawer on a player, with its own backdrop. Used for both a
+    // manual "View" and a prompt auto-open — the drawer behaves identically either way.
+    function open(userId) {
+        if (!userId) return;
+        players = readPlayers();
+        index = players.findIndex(p => p.userId === userId);
+        currentUserId = userId;
+        if (titleEl) titleEl.textContent = nameFor(userId);
+        loadContent(userId);
         drawer.classList.add('open');
         drawer.setAttribute('aria-hidden', 'false');
-        backdrop.classList.toggle('open', !!withBackdrop);
+        backdrop.classList.add('open');
         isOpen = true;
     }
 
@@ -93,33 +103,10 @@
         backdrop.classList.remove('open');
         drawer.setAttribute('aria-hidden', 'true');
         isOpen = false;
-        promptDriven = false;
         currentUserId = null;
     }
 
-    function openManual(userId) {
-        players = readPlayers();
-        index = players.findIndex(p => p.userId === userId);
-        promptDriven = false;
-        currentUserId = userId;
-        if (titleEl) titleEl.textContent = nameFor(userId);
-        loadContent(userId);
-        showDrawer(true);
-    }
-
-    function openForPrompt(userId) {
-        if (!userId) return;
-        players = readPlayers();
-        index = players.findIndex(p => p.userId === userId);
-        promptDriven = true;
-        currentUserId = userId;
-        if (titleEl) titleEl.textContent = nameFor(userId);
-        loadContent(userId);
-        showDrawer(false);   // the prompt modal supplies the backdrop
-    }
-
     function step(delta) {
-        if (promptDriven) return;   // don't browse away from an active prompt
         if (!players.length || index === -1) return;
         index = (index + delta + players.length) % players.length;
         currentUserId = players[index].userId;
@@ -130,22 +117,23 @@
     // "View" buttons live inside the live-swapped .play-page, so delegate.
     document.addEventListener('click', function (e) {
         const btn = e.target.closest('[data-view-player]');
-        if (btn) openManual(btn.dataset.userId);
+        if (btn) open(btn.dataset.userId);
     });
 
-    // Header controls are static (outside .play-page). Manual close is suppressed
-    // while a prompt is driving the drawer — it closes when the prompt resolves.
+    // Header controls are static (outside .play-page). Close / step are always
+    // allowed — a pending prompt no longer locks the drawer (it stays pending
+    // server-side, so closing or switching away is fine).
     drawer.querySelector('[data-drawer-prev]')?.addEventListener('click', () => step(-1));
     drawer.querySelector('[data-drawer-next]')?.addEventListener('click', () => step(1));
-    drawer.querySelector('[data-drawer-close]')?.addEventListener('click', () => { if (!promptDriven) close(); });
-    backdrop.addEventListener('click', () => { if (!promptDriven) close(); });
-    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !promptDriven) close(); });
+    drawer.querySelector('[data-drawer-close]')?.addEventListener('click', close);
+    backdrop.addEventListener('click', close);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
 
-    // Auto-open the drawer on the prompt's player; auto-close when it resolves.
-    // (Covers the reconnect/initial resync too — see game-play-hub.js.)
+    // Auto-open the drawer on the prompted player so the host sees the prompt (it
+    // renders inside the loaded profile). No auto-close — manual only. Covers the
+    // reconnect/initial resync too (see game-play-hub.js).
     GamePlayHub.observePrompts({
-        onOpen: function (prompt) { if (prompt && prompt.playerId) openForPrompt(prompt.playerId); },
-        onClose: function () { close(); }
+        onOpen: function (prompt) { if (prompt && prompt.playerId) open(prompt.playerId); }
     });
 
     // Keep the open drawer's profile current with the live state.

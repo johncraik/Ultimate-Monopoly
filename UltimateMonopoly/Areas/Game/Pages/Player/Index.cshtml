@@ -17,23 +17,18 @@
     <partial name="Play/_PlayerProfileView" model="Model.ProfileView" />
 </div>
 
-@* ---- Engine prompts (outside [data-player] so the live swap never disturbs them) ---- *@
-<partial name="Play/_DiceRollPrompt" />
-<partial name="Play/_AcknowledgePrompt" />
-<partial name="Play/_AcquirePropertyPrompt" />
-<partial name="Play/_AuctionBidPrompt" />
+@* Engine prompts now render inside _PlayerProfileView (server-side) as a scoped
+   .pp-prompt overlay — part of the swapped state, not separate page-level modals. *@
 
 @section Styles {
     <link rel="stylesheet" href="~/css/player-profile.css" asp-append-version="true" />
 }
 
 @section Scripts {
-    @* Coordinator first — prompt handlers + the state/command modules register against it, then it connects. *@
+    @* Coordinator first (owns the connection); the state/command/prompt modules register against it. *@
     <script src="~/scripts/InGame/game-play-hub.js" asp-append-version="true"></script>
     <script src="~/scripts/InGame/player-state.js" asp-append-version="true"></script>
     <script src="~/scripts/InGame/player-page.js" asp-append-version="true"></script>
-    <script src="~/scripts/InGame/Prompts/dice-roll-prompt.js" asp-append-version="true"></script>
-    <script src="~/scripts/InGame/Prompts/acknowledge-prompt.js" asp-append-version="true"></script>
-    <script src="~/scripts/InGame/Prompts/acquire-property-prompt.js" asp-append-version="true"></script>
-    <script src="~/scripts/InGame/Prompts/auction-bid-prompt.js" asp-append-version="true"></script>
+    @* Submits the server-rendered prompts (the .pp-prompt overlay inside the profile). *@
+    <script src="~/scripts/InGame/ingame-prompts.js" asp-append-version="true"></script>
 }

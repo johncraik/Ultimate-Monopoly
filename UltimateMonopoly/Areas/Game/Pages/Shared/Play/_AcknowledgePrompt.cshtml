@@ -1,27 +1,16 @@
+@model MP.GameEngine.Models.Prompts.PromptTypes.AcknowledgePrompt
 @*
-    ACKNOWLEDGE PROMPT  (player profile only — Game-UI.md "Where prompts surface")
-    A static-backdrop modal driven by the engine's AcknowledgePrompt: title, body,
-    and a single "Okay" button that submits an (empty) AcknowledgeResponse. Markup
-    only; all behaviour (show/hide on PromptOpened/PromptClosed, submit) lives in
-    /scripts/InGame/Prompts/acknowledge-prompt.js. The element ids below are that
-    script's contract — keep them in sync.
-
-    Styled as a secondary card: secondary-bordered content with a secondary header.
+    ACKNOWLEDGE PROMPT — server-rendered fragment, shown inside _PlayerProfileView's
+    .pp-prompt overlay when this prompt is pending for the player. Single "Okay" that
+    submits an empty AcknowledgeResponse via ingame-prompts.js (delegated off
+    [data-prompt-submit]). Secondary card styling.
 *@
-<div class="modal fade" id="acknowledgeModal" tabindex="-1" aria-labelledby="acknowledgeTitle"
-     aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border border-secondary border-2">
-            <div class="modal-header text-bg-secondary border-0">
-                <h5 class="modal-title" id="acknowledgeTitle"></h5>
-            </div>
-            <div class="modal-body">
-                <p class="mb-0" id="acknowledgeBody"></p>
-                <div class="alert alert-warning d-none mt-3 mb-0" id="acknowledgeError" role="alert"></div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary w-100" id="acknowledgeSubmit">Okay</button>
-            </div>
-        </div>
+<div class="pp-prompt-card border border-secondary border-2">
+    <div class="pp-prompt-head text-bg-secondary">@Model.Title</div>
+    <div class="pp-prompt-body">
+        <p class="mb-0">@Model.Body</p>
+    </div>
+    <div class="pp-prompt-foot">
+        <button type="button" class="btn btn-secondary w-100" data-prompt-submit>Okay</button>
     </div>
 </div>

@@ -1,66 +1,40 @@
+@model MP.GameEngine.Models.Prompts.PromptTypes.DiceRollPrompt
+@{
+    var count = Model.DiceCount is >= 1 and <= 3 ? Model.DiceCount : (ushort)3;
+}
 @*
-    DICE-ROLL PROMPT  (player profile only — Game-UI.md "Where prompts surface")
-    A static-backdrop modal driven by the engine's DiceRollPrompt. Markup only;
-    all behaviour (show/hide on PromptOpened/PromptClosed, submit) lives in
-    /scripts/InGame/Prompts/dice-roll-prompt.js. The element ids + data-* hooks
-    below are that script's contract — keep them in sync.
-
-    Styled as a primary card: primary-bordered content with a primary header.
+    DICE-ROLL PROMPT — server-rendered fragment. Renders DiceCount dice (1 → Die 1,
+    2 → Die 1 + Die 2, 3 → + Third die). ingame-prompts.js reads the checked radio in
+    each [data-die] group on [data-prompt-submit] and submits a DiceRollResponse
+    (data-die "1"/"2"/"3" → Die1/Die2/ThirdDie). Primary card styling.
 *@
-<div class="modal fade" id="diceRollModal" tabindex="-1" aria-labelledby="diceRollTitle"
-     aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border border-primary border-2">
-            <div class="modal-header text-bg-primary border-0">
-                <h5 class="modal-title" id="diceRollTitle">
-                    <i class="bi bi-dice-5 me-1"></i> Roll the dice
-                </h5>
-            </div>
-            <div class="modal-body">
-                <p class="text-body-secondary" id="diceRollBody"></p>
-
-                <div class="mb-3" data-die-wrap>
-                    <label class="form-label">Die 1</label>
-                    <div class="btn-group d-flex" role="group" aria-label="Die 1" data-die="1">
-                        @for (ushort i = 1; i <= 6; i++)
-                        {
-                            <input type="radio" class="btn-check" name="roll-die1" id="roll-d1-@i" value="@i" autocomplete="off" />
-                            <label class="btn btn-outline-primary" for="roll-d1-@i">@i</label>
-                        }
-                    </div>
+<div class="pp-prompt-card border border-primary border-2">
+    <div class="pp-prompt-head text-bg-primary">
+        <i class="bi bi-dice-5 me-1"></i> @(string.IsNullOrEmpty(Model.Title) ? "Roll the dice" : Model.Title)
+    </div>
+    <div class="pp-prompt-body">
+        @if (!string.IsNullOrEmpty(Model.Body))
+        {
+            <p class="text-body-secondary">@Model.Body</p>
+        }
+        @for (ushort d = 1; d <= count; d++)
+        {
+            <div class="mb-3">
+                <label class="form-label">@(d == 3 ? "Third die" : $"Die {d}")</label>
+                <div class="btn-group d-flex" role="group" data-die="@d">
+                    @for (ushort i = 1; i <= 6; i++)
+                    {
+                        <input type="radio" class="btn-check" name="pp-die-@d" id="pp-die-@d-@i" value="@i" autocomplete="off" />
+                        <label class="btn btn-outline-primary" for="pp-die-@d-@i">@i</label>
+                    }
                 </div>
-
-                @* Die 2 + Third Die default to hidden; the script reveals them per
-                   the prompt's DiceCount (1 → Die 1 only, 2 → Die 1 + Die 2, 3 → all). *@
-                <div class="mb-3 d-none" data-die-wrap>
-                    <label class="form-label">Die 2</label>
-                    <div class="btn-group d-flex" role="group" aria-label="Die 2" data-die="2">
-                        @for (ushort i = 1; i <= 6; i++)
-                        {
-                            <input type="radio" class="btn-check" name="roll-die2" id="roll-d2-@i" value="@i" autocomplete="off" />
-                            <label class="btn btn-outline-primary" for="roll-d2-@i">@i</label>
-                        }
-                    </div>
-                </div>
-
-                <div class="mb-3 d-none" data-die-wrap>
-                    <label class="form-label">Third Die</label>
-                    <div class="btn-group d-flex" role="group" aria-label="Third Die" data-die="3">
-                        @for (ushort i = 1; i <= 6; i++)
-                        {
-                            <input type="radio" class="btn-check" name="roll-die3" id="roll-d3-@i" value="@i" autocomplete="off" />
-                            <label class="btn btn-outline-primary" for="roll-d3-@i">@i</label>
-                        }
-                    </div>
-                </div>
-
-                <div class="alert alert-warning d-none mb-0" id="diceRollError" role="alert"></div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-primary w-100" id="diceRollSubmit">
-                    <i class="bi bi-dice-5 me-1"></i> Roll
-                </button>
-            </div>
-        </div>
+        }
+        <div class="alert alert-warning d-none mb-0" data-prompt-error role="alert"></div>
+    </div>
+    <div class="pp-prompt-foot">
+        <button type="button" class="btn btn-primary w-100" data-prompt-submit>
+            <i class="bi bi-dice-5 me-1"></i> Roll
+        </button>
     </div>
 </div>

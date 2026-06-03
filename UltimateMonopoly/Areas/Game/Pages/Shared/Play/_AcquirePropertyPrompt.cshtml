@@ -1,49 +1,44 @@
-@using System.Text.Json
 @using JC.Core.Extensions
 @using MP.GameEngine.Helpers
+@using MP.GameEngine.Models.Prompts.PromptTypes
+@model AcquirePropertyPrompt
 @{
-    // Board index → property-set slug (e.g. 6 → "blue", 37 → "dark-blue",
-    // 5 → "station"), built server-side via PropertySetHelper and the same
-    // ToDisplayName().ToSlug() mapping the board uses. The handler
-    // (acquire-property-prompt.js) reads this to colour the card by the set of
-    // the property carried on the prompt (BoardIndex). Computed here, not in JS,
-    // so the index→set rules stay in one place (the engine).
-    var propColours = IndexHelper.AllPropertyIndexes
-        .Where(i => PropertySetHelper.ResolveSet(i) is not null)
-        .ToDictionary(i => i, i => PropertySetHelper.ResolveSet(i)!.Value.ToDisplayName().ToSlug());
+    var set = PropertySetHelper.ResolveSet(Model.BoardIndex);
+    var slug = set?.ToDisplayName().ToSlug();
+    var headClass = slug is not null ? $"text-bg-prop-{slug}" : "text-bg-primary";
+    var borderClass = slug is not null ? $"border-prop-{slug}" : "border-primary";
+
+    // Accept / decline wording per action type (computed server-side now — the
+    // old client-side map is gone with the modal handler).
+    var (accept, decline) = Model.Type switch
+    {
+        AcquirePropertyType.Buy => ("Buy", "Auction"),
+        AcquirePropertyType.Reserve => ("Reserve", "Ignore"),
+        AcquirePropertyType.UnReserve => ("Un-reserve", "Cancel"),
+        AcquirePropertyType.Mortgage => ("Mortgage", "Cancel"),
+        AcquirePropertyType.UnMortgage => ("Unmortgage", "Cancel"),
+        AcquirePropertyType.Build => ("Build", "Cancel"),
+        AcquirePropertyType.BuildAllInSet => ("Build set", "Cancel"),
+        AcquirePropertyType.BuildAll => ("Build all", "Cancel"),
+        AcquirePropertyType.Sell => ("Sell", "Cancel"),
+        AcquirePropertyType.SellAllInSet => ("Sell set", "Cancel"),
+        AcquirePropertyType.SellAll => ("Sell all", "Cancel"),
+        _ => ("Confirm", "Cancel")
+    };
 }
 @*
-    ACQUIRE-PROPERTY PROMPT  (player profile only — Game-UI.md "Where prompts surface")
-    A static-backdrop modal driven by the engine's AcquirePropertyPrompt — a binary
-    confirm / decline for any property action. The prompt's Type (AcquirePropertyType:
-    Buy, Reserve, UnReserve, Mortgage, UnMortgage, Build/…All, Sell/…All) drives the
-    title and button wording (e.g. Buy → Buy/Auction, Reserve → Reserve/Ignore, the
-    rest → <action>/Cancel). Markup only; all behaviour (show/hide on PromptOpened/
-    PromptClosed, colour-by-set, submit) lives in /scripts/InGame/Prompts/acquire-property-prompt.js.
-    The element ids + the colour-map script id below are that script's contract — keep
-    them in sync.
-
-    The card is coloured by the property's set: the handler applies a
-    .text-bg-prop-{slug} header and a .border-prop-{slug} border per prompt, from the
-    index→slug map below.
+    ACQUIRE-PROPERTY PROMPT — server-rendered fragment. Binary confirm/decline for any
+    property action (Type drives the wording). Coloured by the property's set.
+    ingame-prompts.js submits AcquirePropertyResponse { accept }: [data-prompt-submit]
+    = accept (true), [data-prompt-decline] = decline (false).
 *@
-<script type="application/json" id="acquirePropertyColours">@Html.Raw(JsonSerializer.Serialize(propColours))</script>
-
-<div class="modal fade" id="acquirePropertyModal" tabindex="-1" aria-labelledby="acquirePropertyTitle"
-     aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border border-2" id="acquirePropertyContent">
-            <div class="modal-header border-0" id="acquirePropertyHeader">
-                <h5 class="modal-title" id="acquirePropertyTitle"></h5>
-            </div>
-            <div class="modal-body">
-                <p class="mb-0" id="acquirePropertyBody"></p>
-                <div class="alert alert-warning d-none mt-3 mb-0" id="acquirePropertyError" role="alert"></div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" id="acquirePropertyDecline"></button>
-                <button type="button" class="btn btn-primary" id="acquirePropertyAccept"></button>
-            </div>
-        </div>
+<div class="pp-prompt-card border border-2 @borderClass">
+    <div class="pp-prompt-head @headClass">@Model.Title</div>
+    <div class="pp-prompt-body">
+        <p class="mb-0">@Model.Body</p>
+    </div>
+    <div class="pp-prompt-foot d-flex gap-2">
+        <button type="button" class="btn btn-outline-secondary flex-fill" data-prompt-decline>@decline</button>
+        <button type="button" class="btn btn-primary flex-fill" data-prompt-submit>@accept</button>
     </div>
 </div>

@@ -48,15 +48,9 @@
     </div>
 </aside>
 
-@* ───────── Engine prompts ─────────
-   Player-facing prompts surface here on the tablet (the host controller renders
-   every prompt and answers on a player's behalf via host-bypass) inside the
-   auto-opened drawer for that player. The handler modules self-filter: a phone
-   shows only its own, the tablet (no userId) shows all. *@
-<partial name="Play/_DiceRollPrompt" />
-<partial name="Play/_AcknowledgePrompt" />
-<partial name="Play/_AcquirePropertyPrompt" />
-<partial name="Play/_AuctionBidPrompt" />
+@* Player-facing prompts now render inside the player-profile partial (server-side),
+   so they surface only within the host's player-profile drawer — see the .pp-prompt
+   overlay in _PlayerProfileView. No page-level prompt modals here. *@
 
 @section Styles {
     <link rel="stylesheet" href="~/css/play.css" asp-append-version="true" />
@@ -69,9 +63,6 @@
     <script src="~/scripts/InGame/play-state.js" asp-append-version="true"></script>
     <script src="~/scripts/InGame/play-page.js" asp-append-version="true"></script>
     <script src="~/scripts/InGame/player-drawer.js" asp-append-version="true"></script>
-    @* Prompt handlers — render the prompt modals over the auto-opened drawer. *@
-    <script src="~/scripts/InGame/Prompts/dice-roll-prompt.js" asp-append-version="true"></script>
-    <script src="~/scripts/InGame/Prompts/acknowledge-prompt.js" asp-append-version="true"></script>
-    <script src="~/scripts/InGame/Prompts/acquire-property-prompt.js" asp-append-version="true"></script>
-    <script src="~/scripts/InGame/Prompts/auction-bid-prompt.js" asp-append-version="true"></script>
+    @* Submits the server-rendered prompts (the .pp-prompt overlay inside the drawer's profile). *@
+    <script src="~/scripts/InGame/ingame-prompts.js" asp-append-version="true"></script>
 }

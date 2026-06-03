@@ -46,17 +46,18 @@
 }
 
 /* ── Player profile drawer ──
-   z-index sits in the band between Bootstrap's modal backdrop (1050) and the
-   modal itself (1055): when a player prompt fires, the drawer auto-opens on that
-   player and the prompt modal renders *over* it — the page dims behind the modal
-   backdrop, the drawer stays bright (it's above 1050) showing whose prompt it is,
-   and the prompt modal (1055) sits on top. See player-drawer.js / Game-UI.md. */
+   The host's "phone": auto-opens on a prompted player (and on manual View), over its
+   own page backdrop. A pending prompt now renders *inside* the drawer's profile (see
+   .pp-prompt in player-profile.css), not as a separate page modal — so the drawer just
+   sits above its backdrop (1052 > the 1040 backdrop; still below a fatal GameFaulted
+   modal at 1055). Width is ~1.6× a phone so the profile isn't cramped on the tablet.
+   See player-drawer.js / Game-UI.md. */
 .player-drawer {
     position: fixed;
     top: 0;
     left: 0;
     height: 100%;
-    width: 380px;
+    width: 608px;
     max-width: 85vw;
     background: var(--bs-body-bg);
     border-right: 1px solid var(--bs-border-color);
@@ -72,8 +73,14 @@
 }
 .player-drawer-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
 
-/* Only used for a *manual* drawer open (host taps "View"). A prompt-driven open
-   relies on the prompt modal's own backdrop instead, so this one stays hidden. */
+/* The header stays above the in-drawer prompt overlay (.pp-prompt is z-index 1031
+   within the drawer's stacking context), so close / prev / next remain usable while a
+   prompt is shown — the host can close the drawer or switch players without answering. */
+.player-drawer-header { position: relative; z-index: 1032; }
+
+/* The drawer's page backdrop — dims the host page whenever the drawer is open (manual
+   or prompt-driven); a click on it closes the drawer, so the host can dismiss the drawer
+   to reach the board, the prompt staying pending. */
 .player-drawer-backdrop {
     position: fixed;
     inset: 0;
