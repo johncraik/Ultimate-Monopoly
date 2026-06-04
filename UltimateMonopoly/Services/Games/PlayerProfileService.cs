@@ -5,6 +5,7 @@ using JC.Core.Services.DataRepositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using MP.GameEngine.Enums.Games;
+using MP.GameEngine.Helpers;
 using MP.GameEngine.Services.SubSystems;
 using UltimateMonopoly.Models.DataModels.Games;
 using UltimateMonopoly.Services.GameEngine;
@@ -69,15 +70,47 @@ public class PlayerProfileService
 
     public void EnqueueMortgage(string gameId, string submittingUserId, ushort boardIndex)
         => EnqueuePortfolioCommand(gameId, submittingUserId,
-            (svc, engine, ct) => svc.TryMortgageProperty(engine, boardIndex, ct));
+            (svc, engine, ct) => svc.MortgageProperty(engine, boardIndex, ct));
 
     public void EnqueueUnmortgage(string gameId, string submittingUserId, ushort boardIndex)
         => EnqueuePortfolioCommand(gameId, submittingUserId,
-            (svc, engine, ct) => svc.TryUnmortgageProperty(engine, boardIndex, ct));
+            (svc, engine, ct) => svc.UnmortgageProperty(engine, boardIndex, ct));
 
     public void EnqueueUnReserve(string gameId, string submittingUserId, ushort boardIndex)
         => EnqueuePortfolioCommand(gameId, submittingUserId,
-            (svc, engine, ct) => svc.TryUnReserveProperty(engine, boardIndex, ct));
+            (svc, engine, ct) => svc.UnReserveProperty(engine, boardIndex, ct));
+
+    public void EnqueueBuild(string gameId, string submittingUserId, ushort boardIndex)
+        => EnqueuePortfolioCommand(gameId, submittingUserId,
+            (svc, engine, ct) => svc.BuildOnProperty(engine, boardIndex, ct));
+
+    public void EnqueueBuildSet(string gameId, string submittingUserId, ushort boardIndex)
+        => EnqueuePortfolioCommand(gameId, submittingUserId, (svc, engine, ct) =>
+        {
+            // The button carries any index in the set; resolve it to the set. A
+            // non-property index (shouldn't happen) is a no-op.
+            var set = PropertySetHelper.ResolveSet(boardIndex);
+            return set is null ? Task.CompletedTask : svc.BuildOnProperties(engine, set.Value, ct);
+        });
+
+    public void EnqueueBuildAll(string gameId, string submittingUserId)
+        => EnqueuePortfolioCommand(gameId, submittingUserId,
+            (svc, engine, ct) => svc.BuildOnAllProperties(engine, ct));
+
+    public void EnqueueSell(string gameId, string submittingUserId, ushort boardIndex)
+        => EnqueuePortfolioCommand(gameId, submittingUserId,
+            (svc, engine, ct) => svc.SellOnProperty(engine, boardIndex, ct));
+
+    public void EnqueueSellSet(string gameId, string submittingUserId, ushort boardIndex)
+        => EnqueuePortfolioCommand(gameId, submittingUserId, (svc, engine, ct) =>
+        {
+            var set = PropertySetHelper.ResolveSet(boardIndex);
+            return set is null ? Task.CompletedTask : svc.SellOnProperties(engine, set.Value, ct);
+        });
+
+    public void EnqueueSellAll(string gameId, string submittingUserId)
+        => EnqueuePortfolioCommand(gameId, submittingUserId,
+            (svc, engine, ct) => svc.SellOnAllProperties(engine, ct));
 
     private void EnqueuePortfolioCommand(string gameId, string submittingUserId,
         Func<PropertyService, EngineRuntime, CancellationToken, Task> command)

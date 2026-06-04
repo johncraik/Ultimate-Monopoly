@@ -29,20 +29,38 @@
 
     // Property portfolio commands — the button carries data-cmd + data-board-index.
     // Invokes the matching GamePlayHub method (gated server-side), which opens the
-    // AcquirePropertyPrompt confirmation over this same connection. Build/sell stay
-    // [data-noop] until their engine commands exist; only the whitelisted commands
-    // below are dispatched.
-    const PORTFOLIO_COMMANDS = {
+    // AcquirePropertyPrompt confirmation over this same connection. Only the
+    // whitelisted commands below are dispatched.
+    const PORTFOLIO_COMMANDS = {           // carry data-board-index
         mortgage: 'MortgageProperty',
         unmortgage: 'UnmortgageProperty',
-        unreserve: 'UnReserveProperty'
+        unreserve: 'UnReserveProperty',
+        build: 'BuildProperty',
+        buildset: 'BuildSet',              // any index in the set; resolved server-side
+        sell: 'SellProperty',
+        sellset: 'SellSet'                 // any index in the set; resolved server-side
+    };
+    const PORTFOLIO_COMMANDS_NO_INDEX = {  // no board index
+        buildall: 'BuildAll',
+        sellall: 'SellAll'
     };
 
     document.addEventListener('click', function (e) {
         const btn = e.target.closest('[data-cmd]');
         if (!btn || btn.disabled || !window.GamePlayHub) return;
 
-        const method = PORTFOLIO_COMMANDS[btn.dataset.cmd];
+        const cmd = btn.dataset.cmd;
+        const noIndexMethod = PORTFOLIO_COMMANDS_NO_INDEX[cmd];
+        if (noIndexMethod) {
+            btn.disabled = true;
+            GamePlayHub.invoke(noIndexMethod).catch(err => {
+                console.error(noIndexMethod + ' failed:', err);
+                btn.disabled = false;   // re-enable on transient failure
+            });
+            return;
+        }
+
+        const method = PORTFOLIO_COMMANDS[cmd];
         const boardIndex = Number(btn.dataset.boardIndex);
         if (!method || !Number.isInteger(boardIndex)) return;
 

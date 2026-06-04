@@ -338,15 +338,11 @@ public class GameModel
         if(!ReserveRuleActive)
             return;
 
+        // Reserved excluded (a reservation isn't a completed set); stations and
+        // utilities never trigger it (excluded by GetOwnedSets' onlyBuildable).
+        // Mortgaged still counts — the player has obtained the set either way.
         var owned = GetOwnedProperties(playerId, includeReserved: false);
-        var hasColourSet = owned
-            .GroupBy(p => PropertySetHelper.ResolveSet(p.BoardIndex))
-            .Any(g => g.Key is { } set
-                      and not PropertySet.Station
-                      and not PropertySet.Utility
-                      && g.Count() == PropertySetHelper.GetIndexes(set).Count);
-
-        if(hasColourSet)
+        if(PropertySetHelper.GetOwnedSets(playerId, owned).Count > 0)
             ReserveRuleActive = false;
     }
 
@@ -468,28 +464,12 @@ public class GameModel
 
     public bool CanIncreaseRentLevelForAll(string playerId)
     {
-        var canIncreaseAll = true;
-        var ownedProperties = GetOwnedProperties(playerId, includeMortgaged: false, includeReserved: false);
-        foreach (var prop in ownedProperties)
-        {
-            var resolvedSet = PropertySetHelper.ResolveSet(prop.BoardIndex);
-            if(resolvedSet is null or PropertySet.Station or PropertySet.Utility)
-                //Not a buildable set
-                continue;
-            
-            var set = (PropertySet)resolvedSet;
-            var inSet = ownedProperties
-                .Where(p => PropertySetHelper.ResolveSet(p.BoardIndex) == set)
-                .ToList();
-            if(inSet.Count != PropertySetHelper.GetIndexes(set).Count)
-                //Not all properties in the set
-                continue;
-            
-            canIncreaseAll = CanIncreaseRentLevelForAllInSet(playerId, set);
-            if(!canIncreaseAll) break;
-        }
-        
-        return canIncreaseAll;
+        //Every complete buildable set the player holds must itself be increaseable
+        //(mortgaged/reserved excluded by the filter; stations/utilities by
+        //GetOwnedSets). No complete sets → vacuously true.
+        var owned = GetOwnedProperties(playerId, includeMortgaged: false, includeReserved: false);
+        return PropertySetHelper.GetOwnedSets(playerId, owned)
+            .All(set => CanIncreaseRentLevelForAllInSet(playerId, set));
     }
     
     
@@ -546,28 +526,12 @@ public class GameModel
 
     public bool CanDecreaseRentLevelForAll(string playerId)
     {
-        var canDecreaseAll = true;
-        var ownedProperties = GetOwnedProperties(playerId, includeMortgaged: false, includeReserved: false);
-        foreach (var prop in ownedProperties)
-        {
-            var resolvedSet = PropertySetHelper.ResolveSet(prop.BoardIndex);
-            if(resolvedSet is null or PropertySet.Station or PropertySet.Utility)
-                //Not a buildable set
-                continue;
-            
-            var set = (PropertySet)resolvedSet;
-            var inSet = ownedProperties
-                .Where(p => PropertySetHelper.ResolveSet(p.BoardIndex) == set)
-                .ToList();
-            if(inSet.Count != PropertySetHelper.GetIndexes(set).Count)
-                //Not all properties in the set
-                continue;
-            
-            canDecreaseAll = CanDecreaseRentLevelForAllInSet(playerId, set);
-            if(!canDecreaseAll) break;
-        }
-        
-        return canDecreaseAll;
+        //Every complete buildable set the player holds must itself be sellable-down
+        //(mortgaged/reserved excluded by the filter; stations/utilities by
+        //GetOwnedSets). No complete sets → vacuously true.
+        var owned = GetOwnedProperties(playerId, includeMortgaged: false, includeReserved: false);
+        return PropertySetHelper.GetOwnedSets(playerId, owned)
+            .All(set => CanDecreaseRentLevelForAllInSet(playerId, set));
     }
 
 

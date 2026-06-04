@@ -74,6 +74,12 @@
     // Real bulk build/sell guards for the "on all" buttons (still AND-ed with the portfolio gate).
     var canBuildAll = canPortfolio && game.CanIncreaseRentLevelForAll(playerId);
     var canSellAll = canPortfolio && game.CanDecreaseRentLevelForAll(playerId);
+    // Cost to build one level on every complete buildable set held — aggregate the
+    // per-set build cost over the owned sets (the figure BuildOnAllProperties confirms).
+    // 0 when no complete set is held.
+    var buildAllSets = PropertySetHelper.GetOwnedSets(playerId,
+        game.GetOwnedProperties(playerId, includeMortgaged: false, includeReserved: false));
+    var buildAllCostRaw = buildAllSets.Sum(s => (long)PropertySetHelper.GetBuildCost(s, board));
 
     var loans = player.Loans;
     var outstandingLoans = loans.Where(l => l.IsOutstanding).ToList();
@@ -339,7 +345,7 @@
                 @* ===================== Properties ===================== *@
                 <div class="tab-pane fade" id="pp-properties" role="tabpanel">
 
-                    @* Block 1 — bank/building summary (mortgage fee is real; the rest is mock) *@
+                    @* Block 1 — bank/building summary (all figures real). *@
                     <div class="card mb-3">
                         <div class="card-body">
                             <dl class="row mb-0 small">
@@ -356,16 +362,16 @@
                                 <dd class="col-5 text-end mb-2">@hotelsBuilt</dd>
                                 <dt class="col-7 text-body-secondary fw-normal">Hotels left</dt>
                                 <dd class="col-5 text-end mb-2">@hotelsLeft</dd>
-                                @* TODO(mock): total build cost needs a cost helper (not built yet). *@
                                 <dt class="col-7 text-body-secondary fw-normal">Cost to build all</dt>
-                                <dd class="col-5 text-end mb-0"><span class="text-body-tertiary">— (mock)</span></dd>
+                                @* >0 guard: Cost() bumps a rounded-to-zero figure up to one grid unit, so show £0 directly when no set is held rather than a misleading minimum. *@
+                                <dd class="col-5 text-end mb-0">@(buildAllCostRaw > 0 ? Cost(buildAllCostRaw, FinancialReason.Build) : $"{cur}0")</dd>
                             </dl>
-                            @* TODO(no-op): build/sell-on-all commands not built. Guards are real (CanIncrease/DecreaseRentLevelForAll + portfolio gate). *@
+                            @* Build/sell-on-all commands (data-cmd → GamePlayHub.BuildAll/SellAll); guarded by CanIncrease/DecreaseRentLevelForAll + the portfolio gate. *@
                             <div class="d-flex gap-2 mt-2">
-                                <button type="button" class="btn btn-success btn-sm flex-fill" data-noop disabled="@(!canBuildAll)">
+                                <button type="button" class="btn btn-success btn-sm flex-fill" data-cmd="buildall" disabled="@(!canBuildAll)">
                                     <i class="bi bi-house-add me-1"></i> Build on all
                                 </button>
-                                <button type="button" class="btn btn-warning btn-sm flex-fill" data-noop disabled="@(!canSellAll)">
+                                <button type="button" class="btn btn-warning btn-sm flex-fill" data-cmd="sellall" disabled="@(!canSellAll)">
                                     <i class="bi bi-house-dash me-1"></i> Sell on all
                                 </button>
                             </div>
@@ -425,10 +431,10 @@
                                                     <span class="text-body-secondary">
                                                         Build @Cost(bc, FinancialReason.Build) · Double hotel @Cost(bc * 5, FinancialReason.Build)
                                                     </span>
-                                                    @* TODO(no-op): build/sell-set commands not built. Guards are real (CanIncrease/DecreaseRentLevelForAllInSet + portfolio gate). *@
+                                                    @* Build/sell-set commands (data-cmd → GamePlayHub.BuildSet/SellSet, carrying a set index); guarded by CanIncrease/DecreaseRentLevelForAllInSet + the portfolio gate. *@
                                                     <div class="d-flex gap-1 flex-shrink-0">
-                                                        <button type="button" class="btn btn-success btn-sm" data-noop disabled="@(!canBuildSet)">Build set</button>
-                                                        <button type="button" class="btn btn-warning btn-sm" data-noop disabled="@(!canSellSet)">Sell set</button>
+                                                        <button type="button" class="btn btn-success btn-sm" data-cmd="buildset" data-board-index="@setIndexes[0]" disabled="@(!canBuildSet)">Build set</button>
+                                                        <button type="button" class="btn btn-warning btn-sm" data-cmd="sellset" data-board-index="@setIndexes[0]" disabled="@(!canSellSet)">Sell set</button>
                                                     </div>
                                                 </div>
                                             }
@@ -475,11 +481,11 @@
                                                                 }
                                                             </div>
                                                             <div class="d-flex flex-wrap gap-1">
-                                                                @* No-op stubs (no command built); enabled only when the real build/sell + portfolio gates allow. *@
+                                                                @* Per-property build/sell (data-cmd → GamePlayHub.BuildProperty/SellProperty); enabled only when the real build/sell + portfolio gates allow. *@
                                                                 @if (buildable && ownsAll)
                                                                 {
-                                                                    <button type="button" class="btn btn-success btn-sm" data-noop disabled="@(!(canPortfolio && game.CanIncreaseRentLevel(playerId, prop.BoardIndex)))">Build</button>
-                                                                    <button type="button" class="btn btn-warning btn-sm" data-noop disabled="@(!(canPortfolio && game.CanDecreaseRentLevel(playerId, prop.BoardIndex)))">Sell</button>
+                                                                    <button type="button" class="btn btn-success btn-sm" data-cmd="build" data-board-index="@prop.BoardIndex" disabled="@(!(canPortfolio && game.CanIncreaseRentLevel(playerId, prop.BoardIndex)))">Build</button>
+                                                                    <button type="button" class="btn btn-warning btn-sm" data-cmd="sell" data-board-index="@prop.BoardIndex" disabled="@(!(canPortfolio && game.CanDecreaseRentLevel(playerId, prop.BoardIndex)))">Sell</button>
                                                                 }
                                                                 @* Live commands (engine built) — carry data-cmd + board index; the
                                                                    page JS invokes the matching GamePlayHub method, which opens an

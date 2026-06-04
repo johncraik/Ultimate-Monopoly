@@ -141,7 +141,31 @@ public class GamePlayHub : GameBaseHub
     public Task<bool> UnReserveProperty(ushort boardIndex)
         => RunPortfolioCommand(boardIndex, _playerProfiles.EnqueueUnReserve);
 
-    private async Task<bool> RunPortfolioCommand(ushort boardIndex, Action<string, string, ushort> enqueue)
+    // Build commands. Single + set carry a board index (the set is resolved from
+    // it); build-all takes none. Each opens an AcquirePropertyPrompt confirmation.
+    public Task<bool> BuildProperty(ushort boardIndex)
+        => RunPortfolioCommand(boardIndex, _playerProfiles.EnqueueBuild);
+
+    public Task<bool> BuildSet(ushort boardIndex)
+        => RunPortfolioCommand(boardIndex, _playerProfiles.EnqueueBuildSet);
+
+    public Task<bool> BuildAll()
+        => RunPortfolioCommand(_playerProfiles.EnqueueBuildAll);
+
+    // Sell commands — same shape as build (single + set carry an index, sell-all takes none).
+    public Task<bool> SellProperty(ushort boardIndex)
+        => RunPortfolioCommand(boardIndex, _playerProfiles.EnqueueSell);
+
+    public Task<bool> SellSet(ushort boardIndex)
+        => RunPortfolioCommand(boardIndex, _playerProfiles.EnqueueSellSet);
+
+    public Task<bool> SellAll()
+        => RunPortfolioCommand(_playerProfiles.EnqueueSellAll);
+
+    private Task<bool> RunPortfolioCommand(ushort boardIndex, Action<string, string, ushort> enqueue)
+        => RunPortfolioCommand((gameId, userId) => enqueue(gameId, userId, boardIndex));
+
+    private async Task<bool> RunPortfolioCommand(Action<string, string> enqueue)
     {
         var gameId = GetGameId();
         if (string.IsNullOrEmpty(gameId) || string.IsNullOrEmpty(Context.UserIdentifier))
@@ -155,7 +179,7 @@ public class GamePlayHub : GameBaseHub
         if (!engine.TurnStateProvider.CanPortfolioCommand(current.PlayerId, Context.UserIdentifier))
             return false;
 
-        enqueue(gameId, Context.UserIdentifier, boardIndex);
+        enqueue(gameId, Context.UserIdentifier);
         return true;
     }
 }

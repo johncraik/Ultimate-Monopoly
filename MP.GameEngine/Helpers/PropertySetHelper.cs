@@ -1,5 +1,6 @@
 
 using MP.GameEngine.Enums.Properties;
+using MP.GameEngine.Models.Boards;
 using MP.GameEngine.Models.Snapshot;
 
 namespace MP.GameEngine.Helpers;
@@ -82,6 +83,25 @@ public static class PropertySetHelper
             _ => throw new ArgumentOutOfRangeException(nameof(set), set, null)
         };
 
+    /// <summary>
+    /// Returns the sets the player holds <i>completely</i> from the supplied
+    /// property list. The caller controls which properties count by pre-filtering
+    /// on state before calling (owned-only, owned-or-mortgaged, reserved-only,
+    /// etc.) — this helper does not inspect <see cref="PropertyState"/>. Stations
+    /// and utilities are excluded unless <paramref name="onlyBuildable"/> is false.
+    /// </summary>
+    public static List<PropertySet> GetOwnedSets(string playerId,
+        List<PropertyModel> properties,
+        bool onlyBuildable = true)
+        => properties
+            .Where(p => p.OwnerPlayerId == playerId)
+            .GroupBy(p => ResolveSet(p.BoardIndex))
+            .Where(g => g.Key is { } set
+                        && (!onlyBuildable || set is not (PropertySet.Station or PropertySet.Utility)))
+            .Where(g => g.Count() == GetIndexes((PropertySet)g.Key!).Count)
+            .Select(g => (PropertySet)g.Key!)
+            .ToList();
+
     public static bool MustReserve(PropertySet set, List<PropertyModel> ownedPropertiesInSet)
     {
         var propIndexes = ownedPropertiesInSet.Select(p => p.BoardIndex).ToList();
@@ -91,4 +111,64 @@ public static class PropertySetHelper
     public static bool MustReserve(PropertySet set, List<ushort> ownedPropertiesInSet)
         => set is not (PropertySet.Station or PropertySet.Utility)
            && GetIndexes(set).Count - 1 == ownedPropertiesInSet.Count;
+
+
+    public static uint GetBuildCost(ushort boardIndex, Board board)
+    {
+        var space = board.GetBoardSpace(boardIndex);
+        if(!space.IsBuildable || space.BuildCost == null)
+            return 0;
+
+        return (uint)space.BuildCost;
+    }
+
+    public static uint GetBuildCost(PropertySet set, Board board)
+    {
+        var indexes = GetIndexes(set);
+        return indexes.Aggregate<ushort, uint>(0, (current, i) => current + GetBuildCost(i, board));
+    }
+
+    public static uint GetDoubleHotelCost(ushort boardIndex, Board board)
+    {
+        var buildCost = GetBuildCost(boardIndex, board);
+        
+        //Double hotel cost is the total cost of a hotel
+        //Build cost = £100: you pay £100 FIVE times to reach hotel level
+        //Therefore, double hotel cost = build cost * 5
+        return buildCost * 5;
+    }
+    
+    public static uint GetDoubleHotelCost(PropertySet set, Board board)
+    {
+        var indexes = GetIndexes(set);
+        return GetDoubleHotelCost(indexes[0], board);
+    }
+
+    
+    private static uint Half(uint value)
+        => (uint)Math.Round((value / 2d), MidpointRounding.AwayFromZero);
+    
+    public static uint GetSellValue(ushort boardIndex, Board board)
+    {
+        var cost = GetBuildCost(boardIndex, board);
+        return Half(cost);
+    }
+    
+    public static uint GetSellValue(PropertySet set, Board board)
+    {
+        var indexes = GetIndexes(set);
+        return indexes.Aggregate<ushort, uint>(0, (current, i) => current + GetSellValue(i, board));
+    }
+
+    public static uint GetDoubleHotelSellValue(ushort boardIndex, Board board)
+    {
+        var cost = GetDoubleHotelCost(boardIndex, board);
+        return Half(cost);
+    }
+    
+    public static uint GetDoubleHotelSellValue(PropertySet set, Board board)
+    {
+        var indexes = GetIndexes(set);
+        return GetDoubleHotelSellValue(indexes[0], board);
+    }
 }
