@@ -90,8 +90,9 @@ public class PlayerTurnOrchestrator
                     //Will move player OUT of jail if in jail
                     await _jailService.CheckAndLeaveJail(engine, player, ct);
                     
-                    //Get the double effect record, and notify player
+                    //Get the double effect record, cite rule, and notify player
                     var effect = DoubleEffects.For(dice.Die1);
+                    engine.CiteRule(effect.RuleCode);
                     _ = await engine.PromptProvider.Acknowledge(player.PlayerId, effect.Title, effect.Body, ct: ct);
                     
                     //Apply snake eyes bonus (if applicable)
@@ -132,6 +133,9 @@ public class PlayerTurnOrchestrator
                 {
                     //Too many doubles in a row, so send player to jail:
                     _ = await engine.PromptProvider.Acknowledge(player.PlayerId, "Going to Jail!", "You have rolled too many doubles in a row.", ct: ct);
+                    
+                    //Cite rule and send to jail:
+                    engine.CiteRule(RuleCode.Double_ThreeInRowToJail);
                     await _jailService.SendPlayerToJail(engine, player, ct);
                 }
                 
@@ -141,11 +145,15 @@ public class PlayerTurnOrchestrator
                 if (player.TriplesInRow < RuleDictionary.TriplesBeforeJail)
                 {
                     //TODO: Take a triple card!!!
+
+                    //Credit the triple bonus, and increase it:
+                    await _playerService.ResolveTripleBonus(engine, player, ct);
                     
                     //Will move player OUT of jail if in jail
                     await _jailService.CheckAndLeaveJail(engine, player, ct);
                     
-                    _ = await engine.PromptProvider.Acknowledge(player.PlayerId, "Triple!", "You rolled a triple, you will move the combined total of all three dice.", ct: ct);
+                    _ = await engine.PromptProvider.Acknowledge(player.PlayerId, "Triple!", 
+                        "You rolled a triple, you will move the combined total of all three dice.", ct: ct);
                     
                     movement = (ushort)((dice.Die1 + dice.Die2 + dice.ThirdDie) ?? throw new InvalidOperationException("Dice roll result cannot be null"));
                     await _movementService.MovePlayer(engine, player, movement, ct);
@@ -155,6 +163,9 @@ public class PlayerTurnOrchestrator
                 {
                     //Too many triples in a row, so send player to jail:
                     _ = await engine.PromptProvider.Acknowledge(player.PlayerId, "Going to Jail!", "You have rolled too many triples in a row.", ct: ct);
+                    
+                    //Cite rule and send to jail:
+                    engine.CiteRule(RuleCode.Triple_ThreeInRowToJail);
                     await _jailService.SendPlayerToJail(engine, player, ct);
                 }
 
@@ -168,10 +179,19 @@ public class PlayerTurnOrchestrator
             player.InitialRoll = false;
         
         if(transitionToThirdDie)
+        {
             engine.TurnStateProvider.TransitionToThirdDie();
+            engine.CiteRule(RuleCode.Roll_ThirdDieMovesOthers);
+        }
         else
+        {
+            //Cite triple rules:
+            engine.CiteRule(RuleCode.Triple_MovesCombinedNoOthers);
+            engine.CiteRule(RuleCode.Triple_NoDirectionChange);
+            
             //Triple doesnt grant third die movement
             engine.TurnStateProvider.TransitionToEndOfTurn();
+        }
     }
 
     

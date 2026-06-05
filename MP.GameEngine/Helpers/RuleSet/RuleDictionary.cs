@@ -29,6 +29,11 @@ public static class RuleDictionary
     public const ushort GoPassCounterClockwiseBonus = 100;
     public const ushort LandOnGoBonus = 200;
     
+    //Free Parking
+    public const ushort FPPayMultiplier = 100;
+    public const ushort NormalFPCap = 1000;
+    public const ushort DHotelFPCap = 2000;
+    
     //Station Rules
     public const ushort SingleStationCost = 200;
     public const ushort SecondStationCost = SingleStationCost + 50; //2 stations grants rent of 50, so increase by 50

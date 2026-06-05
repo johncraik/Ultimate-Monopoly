@@ -4,6 +4,13 @@
 .play-page .play-pane { min-height: 0; }
 .play-page .play-pane .card-body { min-height: 0; }
 
+/* Sidebar panes split the column 40/60 (players / rules) by flex ratio. flex-basis 0
+   (not the default auto) is deliberate: each pane sizes to its share of the column
+   height, not to its content — so a long rules list scrolls inside its pane instead of
+   stretching the sidebar taller than the board. Pairs with the card-body overflow-auto. */
+.play-page .play-pane--players { flex: 2 1 0; }
+.play-page .play-pane--rules   { flex: 3 1 0; }
+
 /* Player list cards. Every card sits on the secondary surface; the host card
    uses the regular (darker) body background to stand apart. Right padding keeps
    content clear of the colour chevron. */

@@ -8,6 +8,7 @@
 @using UltimateMonopoly.Services.Cache
 @model MP.GameEngine.Services.Framework.GameEngine
 @inject PlayerCacheService PlayerCache
+@inject UltimateMonopoly.Services.RuleCatalog RuleCatalog
 @{
     // The live play body. Rendered on first load (from Play.cshtml) and re-rendered
     // on every SignalR StateChanged frame (PlayModel.OnGetStateAsync → swapped in by
@@ -29,18 +30,19 @@
     var availableCount = game.Properties.Count(p => string.IsNullOrEmpty(p.OwnerPlayerId));
     var fpProperties = game.Properties.Where(p => p.State == PropertyState.FreeParking).ToList();
 
-    // Current player's portfolio summary (all read straight off the cache).
-    var ownedCount = game.GetOwnedProperties(current.PlayerId).Count;
-    var mortgagedCount = game.GetOwnedProperties(current.PlayerId).Count(p => p.State == PropertyState.Mortgaged);
     var c = RuleDictionary.Currency;
+
+    // Rules cited this turn, resolved to player-facing text via the catalogue.
+    // Newest first (reverse of the cited order); Distinct guards against repeats.
+    var rules = await RuleCatalog.GetRules(cache.RuleCodes.Reverse().Distinct().ToList());
 }
 
 @* ───────────────────────── Sidebar (col-3) ───────────────────────── *@
 <div class="col-3">
     <div class="h-100 d-flex flex-column gap-3">
 
-        @* Top: player list *@
-        <div class="card flex-fill play-pane">
+        @* Top: player list (40% of the sidebar) *@
+        <div class="card play-pane play-pane--players">
             <div class="card-header fw-semibold d-flex justify-content-between align-items-center">
                 <span>Players</span>
                 <span class="badge text-bg-secondary">@players.Count</span>
@@ -80,42 +82,39 @@
             </div>
         </div>
 
-        @* Bottom: current player quick info *@
-        <div class="card flex-fill play-pane">
-            <div class="card-header fw-semibold">Current Player</div>
-            <div class="card-body overflow-auto">
-                <div class="d-flex align-items-baseline justify-content-between mb-2">
-                    <span class="fw-semibold">@(await PlayerCache.GetPlayerName(current.PlayerId))</span>
-                    <span class="fs-5 fw-bold">@c@current.Money</span>
-                </div>
-
-                @* Alerts *@
-                <div class="d-flex flex-wrap gap-1 mb-3">
-                    @if (current.IsInJail)
-                    {
-                        <span class="badge text-bg-warning">In jail</span>
-                    }
-                    @if (mortgagedCount > 0)
-                    {
-                        <span class="badge text-bg-warning">@mortgagedCount mortgaged</span>
-                    }
-                    @if (current.Loans.Count > 0)
-                    {
-                        <span class="badge text-bg-warning">@current.Loans.Count loan(s)</span>
-                    }
-                </div>
-
-                <dl class="row mb-0 small">
-                    <dt class="col-7 text-body-secondary fw-normal">Properties</dt>
-                    <dd class="col-5 text-end mb-1">@ownedCount</dd>
-
-                    <dt class="col-7 text-body-secondary fw-normal">Triple bonus</dt>
-                    <dd class="col-5 text-end mb-1">@c@current.TripleBonus</dd>
-
-                    <dt class="col-7 text-body-secondary fw-normal">Jail cost</dt>
-                    <dd class="col-5 text-end mb-1">@c@current.JailCost</dd>
-                </dl>
-                @* TODO: sets owned (needs PlayerOwnsCompleteSet / GetPropertiesInSet — not built). *@
+        @* Bottom: rules executed this turn — newest first. Each links to the rule
+           on the (separate) rules page, opening in a new tab. Takes the larger (60%)
+           share of the sidebar; the body scrolls internally (flex-basis 0 + overflow)
+           so its bottom stays in line with the board/game area. *@
+        <div class="card play-pane play-pane--rules">
+            <div class="card-header fw-semibold d-flex justify-content-between align-items-center">
+                <span>Rules</span>
+                @if (rules.Count > 0)
+                {
+                    <span class="badge text-bg-secondary">@rules.Count</span>
+                }
+            </div>
+            <div class="card-body overflow-auto p-0">
+                @if (rules.Count == 0)
+                {
+                    <div class="text-center text-body-secondary small p-4">
+                        <i class="bi bi-journal-text d-block fs-3 mb-2 opacity-50"></i>
+                        No custom rules have been executed yet.
+                    </div>
+                }
+                else
+                {
+                    <div class="list-group list-group-flush">
+                        @foreach (var rule in rules)
+                        {
+                            <a class="list-group-item list-group-item-action"
+                               href="/Rules#@rule.RuleIdLink" target="_blank" rel="noopener">
+                                <div class="fw-semibold small">@rule.Title</div>
+                                <div class="small text-body-secondary">@rule.RuleDescription</div>
+                            </a>
+                        }
+                    </div>
+                }
             </div>
         </div>
 

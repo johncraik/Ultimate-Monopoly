@@ -302,20 +302,22 @@ properties.
    and resolves it. If the card states otherwise, it supersedes the rules below
    for this space.
 
-2. **Resolution depends on the player's properties.** Exactly one of the
-   following cases applies:
+2. **Resolution.** Exactly one of the following cases applies:
 
-   - **No properties at all** — the player pays into Free Parking the
-     difference between the two main dice, times 100 (e.g. a roll of 3 and 5 →
-     (5 − 3) × 100 = £200). A double or triple pays nothing, since the two main
-     dice are equal and the difference is 0.
-   - **Has an eligible property to hand in** — the player hands one eligible
-     property of their choice into Free Parking, then takes up to £1000 from the
-     pot — up to £2000 if they own a double hotel — and takes any properties
-     currently in Free Parking.
-   - **Has properties, but none eligible** — the player purges one of their
-     properties (see Purging), and still takes the money and any properties in
-     Free Parking.
+   - **Empty pot, or no properties at all** — the player pays into Free Parking
+     the difference between the two main dice, times 100 (e.g. a roll of 3 and 5
+     → (5 − 3) × 100 = £200). A double or triple pays nothing, since the two main
+     dice are equal and the difference is 0. This is the outcome whenever there
+     is no money in the pot *or* the player owns no properties: with an empty pot
+     there is nothing to take, and with no properties there is nothing to hand in
+     — either way the player simply pays.
+   - **Pot has money, and an eligible property to hand in** — the player hands
+     one eligible property of their choice into Free Parking, then takes up to
+     £1000 from the pot — up to £2000 if they own a double hotel — and takes any
+     properties currently in Free Parking.
+   - **Pot has money and properties owned, but none eligible** — the player
+     purges one of their properties (see Purging), and still takes the money and
+     any properties in Free Parking.
 
    A property is *eligible to hand in* only if it is **not** part of a complete
    set the player has built on (a set with houses or hotels on it) **and** the

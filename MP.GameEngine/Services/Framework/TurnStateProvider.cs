@@ -202,6 +202,7 @@ public class TurnStateProvider(GameCacheModel cache, ISnapshotService snapshotSe
         UpdateMetadata(player.PlayerId);
 
         cache.ClearEvents();
+        cache.ClearRuleCodes();
         cache.SetTurnState(TurnState.StartOfTurn);
         
         await snapshotService.CreateSnapshotAsync(cache.Game);
@@ -226,6 +227,7 @@ public class TurnStateProvider(GameCacheModel cache, ISnapshotService snapshotSe
         AdvancePlayer();
 
         cache.ClearEvents();
+        cache.ClearRuleCodes();
         cache.SetTurnState(TurnState.StartOfTurn);
         
         await snapshotService.CreateSnapshotAsync(cache.Game);

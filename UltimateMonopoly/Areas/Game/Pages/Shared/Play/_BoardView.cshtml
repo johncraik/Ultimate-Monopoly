@@ -86,6 +86,29 @@
                     <div class="space-banner @propClass"></div>
                     <div class="space-body @stateClass"></div>
                 }
+                else if (isCorner && space.Index == IndexHelper.JustVisitingSpace)
+                {
+                    // Bottom-left corner. "Just Visiting" runs along the outer edges; the
+                    // diagonal "In Jail" triangle sits in the inner corner (top-right, facing
+                    // the centre — beside Pentonville Road and Pall Mall). Jailed players
+                    // (BoardIndex == JailSpace, 100) render inside the triangle.
+                    playersByIndex.TryGetValue(IndexHelper.JailSpace, out var jailPlayers);
+                    <div class="jail-tri" aria-hidden="true"></div>
+                    <div class="space-label jv-visiting-label">@space.Name</div>
+                    <div class="jail-zone">
+                        <span class="jail-zone__label">Jail</span>
+                        @if (jailPlayers is { Count: > 0 })
+                        {
+                            <div class="jail-zone__counters">
+                                <partial name="Play/_PlayerCounter" model="(jailPlayers[0].Profile, jailPlayers[0].Model.Direction)" />
+                            </div>
+                            if (jailPlayers.Count > 1)
+                            {
+                                <span class="jail-zone__extra">@jailPlayers.Count</span>
+                            }
+                        }
+                    </div>
+                }
                 else if (isCorner)
                 {
                     <div class="space-label">@space.Name</div>
@@ -325,6 +348,71 @@
         font-size: 0.72rem;
         text-transform: uppercase;
         letter-spacing: 0.02em;
+    }
+
+    /* ── Just Visiting / In Jail (bottom-left corner) ──
+       "Just Visiting" pins to the outer (bottom-left) part of the cell; the diagonal
+       "In Jail" zone is a triangle in the inner corner (top-right, facing the centre,
+       beside Pentonville Road / Pall Mall). Jailed players (BoardIndex == JailSpace)
+       render inside the triangle. */
+    .jail-tri {
+        position: absolute;
+        inset: 0;
+        clip-path: polygon(0 0, 100% 0, 100% 100%);   /* inner top-right triangle */
+        background: var(--bs-warning, #ffc107);
+        opacity: 0.85;
+        z-index: 1;
+    }
+    .board-space.is-corner .space-label.jv-visiting-label {
+        position: absolute;
+        left: 0;
+        bottom: 0;
+        width: 72%;
+        flex: none;
+        padding: 0.15rem;
+        font-size: 0.56rem;
+        line-height: 1.05;
+        z-index: 2;
+    }
+    .jail-zone {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 60%;
+        height: 60%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.1rem;
+        z-index: 3;
+        pointer-events: none;
+    }
+    .jail-zone__label {
+        font-size: 0.5rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+        line-height: 1;
+        color: #5a3a00;
+    }
+    .jail-zone__counters { line-height: 0; }
+    .jail-zone__extra {
+        position: absolute;
+        top: -0.1rem;
+        right: -0.1rem;
+        min-width: 0.95rem;
+        height: 0.95rem;
+        padding: 0 0.18rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.55rem;
+        font-weight: 700;
+        line-height: 1;
+        border-radius: 1rem;
+        background: rgba(17, 17, 17, .85);
+        color: #fff;
     }
     .board-centre {
         background: #e9e4d6;

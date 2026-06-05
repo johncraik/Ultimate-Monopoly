@@ -171,6 +171,18 @@ public class GameModel
         var players = GetPlayers(excludePovPlayer: false);
         return players.FirstOrDefault(p => p.IsDiceNumber(roll))?.PlayerId;
     }
+    
+    
+    public ushort PlayerPercentCap()
+        => PlayerPercentCap(Metadata.CurrentPlayerId);
+
+    public ushort PlayerPercentCap(string playerId)
+    {
+        var owned = GetOwnedProperties(playerId);
+        var hasDoubleHotel = owned.Any(p => p.RentLevel == RentLevel.DOUBLE_HOTEL);
+        var hasBuildings = owned.Any(p => p.RentLevel is > RentLevel.SET and < RentLevel.DOUBLE_HOTEL);
+        return (ushort)(hasDoubleHotel ? 100 : hasBuildings ? 50 : 10);
+    }
 
     #endregion
 
@@ -254,6 +266,38 @@ public class GameModel
                 .ToList();
         
         return properties;
+    }
+
+    
+    public List<PropertyModel> TradableProperties(PropertySet? set = null)
+        => TradableProperties(Metadata.CurrentPlayerId, set);
+    
+    public List<PropertyModel> TradableProperties(string playerId, PropertySet? set = null)
+    {
+        //Tradable properties are ones that can be traded/mortgaged/handed into free parking
+        var properties = GetOwnedProperties(playerId, set, false, false);
+        
+        var validProps = new List<PropertyModel>();
+        foreach (var p in properties)
+        {
+            var pSet = PropertySetHelper.ResolveSet(p.BoardIndex);
+            if (pSet == null)
+                continue;
+            
+            if(pSet == PropertySet.Utility 
+               || pSet == PropertySet.Station 
+               || p.RentLevel == RentLevel.SINGLE)
+            {
+                validProps.Add(p);
+                continue;
+            }
+            
+            var canMortgage = CanMortgageProperty(playerId, p.BoardIndex);
+            if (canMortgage)
+                validProps.Add(p);
+        }
+
+        return validProps;
     }
 
 

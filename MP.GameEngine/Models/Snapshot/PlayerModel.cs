@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using MP.GameEngine.Enums;
 using MP.GameEngine.Enums.Players;
 using MP.GameEngine.Enums.Properties;
 using MP.GameEngine.Helpers;
@@ -98,13 +99,20 @@ public class PlayerModel
 
     public void FlipDirection(Services.Framework.GameEngine engine)
     {
-        if (!HasPassedInitialGo) return;
+        if (!HasPassedInitialGo)
+        {
+            //Cite rule and return:
+            engine.CiteRule(RuleCode.Move_DirectionLockedUntilGo);
+            return;
+        }
         
         var initialDirection = Direction;
         Direction = Direction == PlayerDirection.Forward
             ? PlayerDirection.Backward
             : PlayerDirection.Forward;
             
+        //Cite rule and emit receipt:
+        engine.CiteRule(RuleCode.Double_DirectionChange);
         engine.EventEmitter.Emit(new PlayerDirectionChangedReceipt
         {
             PlayerId = PlayerId,

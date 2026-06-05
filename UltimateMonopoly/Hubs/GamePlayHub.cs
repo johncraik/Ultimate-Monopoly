@@ -124,6 +124,29 @@ public class GamePlayHub : GameBaseHub
         return true;
     }
 
+    /// <summary>
+    /// Leaves jail by paying the fee — the current player's turn-start jail-exit command
+    /// (gated by <c>CanLeaveJail</c>, host-bypass aware). Optimistic pre-check, then enqueues
+    /// on the single-writer executor; the engine pays the fee, moves the player to Just
+    /// Visiting, and opens its acknowledge. Returns false when not allowed or unavailable.
+    /// </summary>
+    public async Task<bool> LeaveJailPay()
+    {
+        var gameId = GetGameId();
+        if (string.IsNullOrEmpty(gameId) || string.IsNullOrEmpty(Context.UserIdentifier))
+            return false;
+
+        var engine = await _engineFactory.GetAsync(gameId);
+        var current = engine.Cache.Game.CurrentPlayer();
+        if (current is null) return false;
+
+        if (!engine.TurnStateProvider.CanLeaveJail(current.PlayerId, Context.UserIdentifier))
+            return false;
+
+        _playerProfiles.EnqueueLeaveJailPay(gameId, Context.UserIdentifier);
+        return true;
+    }
+
 
     // ─── Portfolio commands ──────────────────────────────────────────────
     // Player-initiated property actions on the named property (boardIndex). Each

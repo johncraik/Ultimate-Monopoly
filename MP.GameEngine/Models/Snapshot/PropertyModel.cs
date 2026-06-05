@@ -19,7 +19,8 @@ public class PropertyModel
     public bool HasBeenBuiltOnThisTurn { get; set; }
     
     public bool ChargeRent(string playerId) 
-        => OwnerPlayerId != null && OwnerPlayerId != playerId && State == PropertyState.Owned;
+        => (OwnerPlayerId != null && OwnerPlayerId != playerId && State == PropertyState.Owned) 
+           || (OwnerPlayerId == null && State == PropertyState.FreeParking);
     
     public PropertyModel()
     {

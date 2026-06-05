@@ -1,4 +1,5 @@
 using MP.GameEngine.Enums;
+using MP.GameEngine.Enums.Players;
 using MP.GameEngine.Helpers;
 using MP.GameEngine.Helpers.RuleSet;
 using MP.GameEngine.Models.Boards;
@@ -25,22 +26,22 @@ public class LoanService
         var canTakeLoan = player.CanTakeLoan();
         if (!canTakeLoan)
         {
+            engine.CiteRule(RuleCode.Loan_MaxThree);
             _ = await engine.PromptProvider.Acknowledge(player.PlayerId, "Cannot Take Loan", 
                 $"You already have a maximum of {RuleDictionary.MaxLoans} loans.", ct: ct);
             return false;
         }
         
         //Compute the amount to take out:
-        //This is the amount the player can afford to pay in the shortfall, while keeping the allowed amount
-        var canPayAmount = player.Money > RuleDictionary.BalanceToKeep 
-            ? player.Money - RuleDictionary.BalanceToKeep 
-            : 0;
-        var loanValue = shortfallAmount - canPayAmount; //Amount they take in a loan
-
+        var loanValue = shortfallAmount + RuleDictionary.BalanceToKeep;
         loanValue = MoneyHelper.NormaliseAmountToPositive(loanValue, engine.Cache.RoundingRule, FinancialReason.LoanTake);
+        
         var loan = new LoanModel(loanValue);
         player.Loans.Add(loan);
         
+        //Cite main loan rules when taking one out:
+        engine.CiteRule(RuleCode.Loan_CoversShortfall);
+        engine.CiteRule(RuleCode.Loan_KeepUpTo200);
         _ = await engine.PromptProvider.Acknowledge(player.PlayerId, "Loan Taken", 
             $"You have taken out a loan of {RuleDictionary.Currency}{loanValue} for the shortfall of {RuleDictionary.Currency}{shortfallAmount}.", ct: ct);
         
@@ -61,6 +62,7 @@ public class LoanService
         
         //Forced payment does not transfer overpay to next loan
         firstLoan.PaidBack += amount;
+        engine.CiteRule(RuleCode.Loan_RepaidOldestOverpaymentLost);
         await _transactionService.RepayLoan(engine, player, amount, ct);
     }
 

@@ -37,6 +37,7 @@ public class JailService
 
         //Reset jail counter to 0
         player.JailTurnCounter = 0;
+        engine.CiteRule(RuleCode.Jail_LeaveByDouble);
         
         //Direction of travel is no-op (moving from jail -> just visiting);
         //Passing counter-direction to avoid accidental GO bonus
@@ -47,6 +48,8 @@ public class JailService
     
     public async Task ForcePlayerToLeaveJail(Framework.GameEngine engine, PlayerModel player, CancellationToken ct)
     {
+        engine.CiteRule(RuleCode.Jail_ThreeTurnLimit);
+        
         //Round the cost for front-end prompt:
         var jailCost = MoneyHelper.NormaliseAmount(player.JailCost, engine.Cache.RoundingRule, FinancialReason.JailFee);
         
@@ -60,15 +63,9 @@ public class JailService
         }, ct);
 
         if (response.Action == LeaveJailAction.PayFee)
-        {
             await LeaveJailByPaying(engine, player, ct);
-        }
         else
-        {
-            //TODO - needs to remove the card from player's card deck, and add back into games' card list decks
-            await _movementService.AdvancePlayer(engine, player, IndexHelper.JustVisitingSpace, 
-                PlayerMovementDirection.CounterDirectionOfTravel, ct);
-        }
+            await LeaveJailByCard(engine, player, ct);
     }
 
     public async Task LeaveJailByPaying(Framework.GameEngine engine, PlayerModel player, CancellationToken ct)
@@ -84,8 +81,27 @@ public class JailService
         var increaseDisplay = MoneyHelper.NormaliseAmountToPositive((long)increase, engine.Cache.RoundingRule, FinancialReason.JailFee);
         var costDisplay = MoneyHelper.NormaliseAmount(player.JailCost, engine.Cache.RoundingRule, FinancialReason.JailFee);
         
+        engine.CiteRule(RuleCode.Jail_FeeEscalates);
         _ = await engine.PromptProvider.Acknowledge(player.PlayerId, "Jail Fee Increased", 
             $"Your cost to leave jail has increased by {RuleDictionary.Currency}{increaseDisplay}, " +
             $"and is now {RuleDictionary.Currency}{costDisplay}", ct: ct);
+    }
+
+    public async Task LeaveJailByCard(Framework.GameEngine engine, PlayerModel player, CancellationToken ct)
+    {
+        //TODO: Handle the card logic
+        
+        await _movementService.AdvancePlayer(engine, player, IndexHelper.JustVisitingSpace, 
+            PlayerMovementDirection.CounterDirectionOfTravel, ct);
+    }
+
+
+    public async Task GoToJail(Framework.GameEngine engine, PlayerModel player, CancellationToken ct)
+    {
+        //TODO: Take a Go To Jail Card:
+        //This card may not send player to jail, but fallback logic/default logic is to go to jail
+        
+        engine.CiteRule(RuleCode.GoToJail_SendToJail);
+        await SendPlayerToJail(engine, player, ct);
     }
 }

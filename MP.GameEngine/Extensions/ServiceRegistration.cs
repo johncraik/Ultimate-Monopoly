@@ -13,21 +13,23 @@ public static class ServiceRegistration
         //NOTE: Framework services are not DI, they are modelled on the GameEngine class
         
         //SubSystem Services
-        services.TryAddScoped<BoardService>();
+        services.TryAddScoped<PlayerService>();
         services.TryAddScoped<DiceService>();
         services.TryAddScoped<MovementService>();
-        services.TryAddScoped<PlayerService>();
+        services.TryAddScoped<BoardService>();
         services.TryAddScoped<PropertyService>();
-        services.TryAddScoped<GoService>();
-        services.TryAddScoped<JailService>();
-        services.TryAddScoped<FreeParkingService>();
         services.TryAddScoped<AuctionService>();
+        services.TryAddScoped<GoService>();
+        services.TryAddScoped<FreeParkingService>();
+        services.TryAddScoped<JailService>();
+        services.TryAddScoped<TaxService>();
         services.TryAddScoped<LoanService>();
         
         //Main Services and Orchestrators
         services.TryAddScoped<GameEngineSetupService>();
         services.TryAddScoped<PlayerTurnOrchestrator>();
         services.TryAddScoped<TransactionService>();
+        services.TryAddScoped<PropertyTransferService>();
         services.TryAddScoped<IShortfallService, ShortfallService>();
 
         return services;

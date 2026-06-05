@@ -105,6 +105,7 @@
         AuctionBidPrompt => "AuctionBid",
         ShortfallPrompt => "Shortfall",
         TargetPropertyPrompt => "TargetProperty",
+        LeaveJailPrompt => "LeaveJail",
         _ => null
     };
 }
@@ -143,6 +144,9 @@
                                 break;
                             case TargetPropertyPrompt p:
                                 <partial name="Play/_TargetPropertyPrompt" model="p" />
+                                break;
+                            case LeaveJailPrompt p:
+                                <partial name="Play/_LeaveJailPrompt" model="p" />
                                 break;
                         }
                     </div>
@@ -223,9 +227,10 @@
                     @if (player.IsInJail && canLeaveJail)
                     {
                         <div class="d-grid gap-2 mb-3">
-                            @* TODO(no-op): leave-jail (pay) command not built. Guarded by CanLeaveJail. *@
-                            <button type="button" class="btn btn-outline-warning" data-noop>
-                                <i class="bi bi-cash-coin me-1"></i> Leave jail — pay @cur@player.JailCost
+                            @* Leave jail by paying the fee (LeaveJailPay → JailService.LeaveJailByPaying).
+                               Guarded by CanLeaveJail; the figure is the grid-rounded charge. *@
+                            <button type="button" class="btn btn-outline-warning" data-leave-jail-pay>
+                                <i class="bi bi-cash-coin me-1"></i> Leave jail — pay @Cost(player.JailCost, FinancialReason.JailFee)
                             </button>
                             @* TODO(mock): always shown while jailed per Game-UI.md (no Get-Out-of-Jail card model yet). *@
                             <button type="button" class="btn btn-outline-secondary" data-noop>
@@ -250,12 +255,7 @@
                                 <dt class="col-7 text-body-secondary fw-normal"><i class="bi bi-percent me-1"></i> Card %cap</dt>
                                 @* TODO(mock): %cap tier needs a building-state helper (John to provide) -- to be refactored into helper. *@
                                 <dd class="col-5 text-end mb-0">
-                                    @{
-                                        var hasDoubleHotel = owned.Any(p => p.RentLevel == RentLevel.DOUBLE_HOTEL);
-                                        var hasBuildings = owned.Any(p => p.RentLevel is > RentLevel.SET and < RentLevel.DOUBLE_HOTEL);
-                                        var cap = hasDoubleHotel ? 100 : hasBuildings ? 50 : 10;
-                                    }
-                                    <span class="badge text-bg-secondary">@cap%</span>
+                                    <span class="badge text-bg-secondary">@(game.PlayerPercentCap(playerId))%</span>
                                 </dd>
                             </dl>
                         </div>

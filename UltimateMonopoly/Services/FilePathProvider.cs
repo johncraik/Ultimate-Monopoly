@@ -15,7 +15,8 @@ public class FilePathProvider
     {
         Card,
         Board,
-        ProfileImg
+        ProfileImg,
+        Rules
     }
 
     public string GetFilePath(FileCategory type)
@@ -25,6 +26,7 @@ public class FilePathProvider
             FileCategory.Card => "cards",
             FileCategory.Board => "boards",
             FileCategory.ProfileImg => "profile_imgs",
+            FileCategory.Rules => "rules",
             _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
         };
         

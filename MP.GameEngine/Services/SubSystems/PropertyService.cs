@@ -13,12 +13,15 @@ public class PropertyService
 {
     private readonly AuctionService _auctionService;
     private readonly TransactionService _transactionService;
+    private readonly PropertyTransferService _propertyTransferService;
 
     public PropertyService(AuctionService auctionService,
-        TransactionService transactionService)
+        TransactionService transactionService,
+        PropertyTransferService propertyTransferService)
     {
         _auctionService = auctionService;
         _transactionService = transactionService;
+        _propertyTransferService = propertyTransferService;
     }
 
     public List<PropertyModel> GetProperties(Board board)
@@ -57,8 +60,13 @@ public class PropertyService
         //PropSet cannot be null (or shouldn't, since it is a property and purchasable)
         var buyingLastInSet = PropertySetHelper.MustReserve((PropertySet)space.PropertySet!, ownedInSet);
         if (buyingLastInSet)
+        {
             //This will turn off the reservation rule if everyone else has a reservation
             engine.Cache.Game.CheckReservationRule(player.PlayerId);
+            if(!engine.Cache.Game.ReserveRuleActive)
+                //Cite rule that its turned off:
+                engine.CiteRule(RuleCode.Reserved_MechanicEnds);
+        }
         
         //Reserve route needs BOTH the rule active AND this being the player's
         //set-completing property — a non-completer is a normal buy/auction even
@@ -66,8 +74,14 @@ public class PropertyService
         //turned the rule off (everyone else already reserved), in which case this
         //set-completer falls through to an outright buy.
         if(buyingLastInSet && engine.Cache.Game.ReserveRuleActive)
+        {
+            //Cite reserved rules:
+            engine.CiteRule(RuleCode.Reserved_NoSetUntilAllCan);
+            engine.CiteRule(RuleCode.Reserved_ReserveFinalProperty);
+            
             //Reservation route (A)
             await ReserveProperty(engine, player, space, property, ct);
+        }
         else
             //Normal unowned route (B or C)
             await UnownedProperty(engine, player, space, property, ct);
@@ -106,10 +120,8 @@ public class PropertyService
 
         //Uses same transaction method for purchase (still purchasing the property, just at reservation price)
         await _transactionService.PurchaseProperty(engine, player, cost, space.Index, ct);
+        _propertyTransferService.Reserve(engine, player, property);
         
-        //We first OWN the property, then RESERVE it
-        property.OwnProperty(player.PlayerId);
-        property.ReserveProperty();
         NormaliseRentLevels(engine);
     }
 
@@ -135,6 +147,10 @@ public class PropertyService
                 3 => RuleDictionary.FourthStationCost,
                 _ => throw new InvalidOperationException("Invalid number of owned stations")
             };
+            
+            //Cite rules:
+            engine.CiteRule(RuleCode.Station_PriceScales);
+            engine.CiteRule(RuleCode.Station_MortgagedCountsForPrice);
         }
         
         return MoneyHelper.NormaliseAmount(cost, engine.Cache.RoundingRule, FinancialReason.Purchase);
@@ -177,8 +193,11 @@ public class PropertyService
         var owningPlayer = player;
         if (runAuction)
         {
+            //Cite rule:
+            engine.CiteRule(RuleCode.Auction_Trigger);
+            
             //Auction will be held, therefore run the auction
-            var outcome = await _auctionService.RunAuction(engine, property.BoardIndex, ct);
+            var outcome = await _auctionService.RunAuction(engine, player.PlayerId, property.BoardIndex, ct);
             if(!outcome.Success || outcome.Winner is null)
                 //Auction cancelled/failed, therefore a no-op
                 return;
@@ -186,12 +205,19 @@ public class PropertyService
             //Charge the winning player
             owningPlayer = outcome.Winner;
             await _transactionService.WinAuction(engine, owningPlayer, outcome.Price, property.BoardIndex, ct);
+            _propertyTransferService.WinAtAuction(engine, owningPlayer, property);
         }
         else
+        {
             //No auction, therefore a purchase
             await _transactionService.PurchaseProperty(engine, owningPlayer, cost, property.BoardIndex, ct);
+            _propertyTransferService.Buy(engine, owningPlayer, property);
+        }
         
-        property.OwnProperty(owningPlayer.PlayerId);
+        //Old:
+        // property.OwnProperty(owningPlayer.PlayerId);
+        
+        
         //An auction win can complete a set for the winner even while the reserve
         //rule is active (the lander declined a property that didn't complete *their*
         //set). A player breaking through to a full set ends the mechanic for everyone
@@ -205,29 +231,58 @@ public class PropertyService
     public async Task PayPropertyRent(Framework.GameEngine engine, PlayerModel player, 
         BoardSpace space, PropertyModel property, CancellationToken ct)
     {
+        var cost = PropertyRent(engine, player, space, property);
+        if (cost == 0) return;
+        
+        _ = await engine.PromptProvider.Acknowledge(player.PlayerId, $"Rent for {property.Name}",
+            $"You owe {RuleDictionary.Currency}{cost} in rent for landing on {property.Name}.", ct: ct);
+        
+        await _transactionService.PayRent(engine, player, cost, property.BoardIndex, ct);
+    }
+
+    public static uint PropertyRent(Framework.GameEngine engine, PlayerModel player, BoardSpace space, PropertyModel property)
+    {
         if(!space.IsRentable || !property.ChargeRent(player.PlayerId))
+        {
+            if(property.State == PropertyState.Reserved)
+                engine.CiteRule(RuleCode.Reserved_PropertyInert);
+            
             //Not rentable or the player owns this property, therefore a no-op
-            return;
+            return 0;
+        }
 
         var rent = space.GetRent(property.RentLevel);
         if(rent == null) throw new InvalidOperationException("Rent cannot be null for rentable space");
 
         if (space.PropertySet == PropertySet.Utility)
+        {
             rent = (ushort)(engine.Cache.Game.Metadata.CurrentPlayerId == player.PlayerId
                 //Is the player paying rent the turn roller (their turn)?
                 //If so, utility multiplier multiplied by (die1 + die2); otherwise by third die
                 ? (ushort)rent * (engine.Cache.TurnDiceRoll?.Die1 + engine.Cache.TurnDiceRoll?.Die2 ?? 0) //Should not be null, defensive
                 : (ushort)rent * (engine.Cache.TurnDiceRoll?.ThirdDie ?? 0)); //Should not be null, defensive
+            
+            //Cite utility rent rules:
+            engine.CiteRule(RuleCode.Utility_RentIsDiceTimesMultiplier);
+            engine.CiteRule(RuleCode.Utility_DiceDependsOnArrival);
+            engine.CiteRule(RuleCode.Utility_PairMultiplier);
+        }
+
+        if (property.State != PropertyState.FreeParking && property.OwnerPlayerId != null)
+        {
+            var owner = engine.Cache.Game.GetPlayer(property.OwnerPlayerId);
+            if (owner == null)
+                throw new InvalidOperationException("Owner player cannot be null");
+
+            if (owner.IsInJail)
+            {
+                engine.CiteRule(RuleCode.Default_NoRentWhileOwnerJailed);
+                return 0;
+            }
+        }
         
         var cost = MoneyHelper.NormaliseAmount((uint)rent, engine.Cache.RoundingRule, FinancialReason.Rent);
-        if(cost == 0)
-            //No rent, therefore a no-op
-            return;
-        
-        _ = await engine.PromptProvider.Acknowledge(player.PlayerId, $"Rent for {property.Name}",
-            $"You owe {RuleDictionary.Currency}{cost} in rent for landing on {property.Name}.", ct: ct);
-        
-        await _transactionService.PayRent(engine, player, (uint)rent, property.BoardIndex, ct);
+        return cost;
     }
 
 
@@ -263,11 +318,11 @@ public class PropertyService
                         4 => RentLevel.SET, 
                         _ => throw new InvalidOperationException($"Invalid owned count for station: {owned}") 
                     };                                                                                                                              
-            else if (!propModel.BuiltOn()) 
-                //Built on is ignored, rent level for built on properties is never normalised - only modified when buy/sell houses 
+            else if (!propModel.BuiltOn())
+                //Built on is ignored, rent level for built on properties is never normalised - only modified when buy/sell houses
                 //Works for both buildable properties and utilities (only 2 ulitilies)
-                propModel.RentLevel = owned == PropertySetHelper.GetIndexes(set).Count 
-                    ? RentLevel.SET 
+                propModel.RentLevel = owned == PropertySetHelper.GetIndexes(set).Count
+                    ? RentLevel.SET
                     : RentLevel.SINGLE;
         }
     }
@@ -380,6 +435,7 @@ public class PropertyService
         await _transactionService.ReceiveForMortgage(engine, player, mortgageValue, property.BoardIndex, ct);
         
         property.MortgageProperty();
+        engine.CiteRule(RuleCode.Mortgage_NoSetRentWhileMortgaged);
         NormaliseRentLevels(engine);
     }
 

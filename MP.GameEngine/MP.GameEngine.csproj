@@ -17,4 +17,7 @@
       <PackageReference Include="Microsoft.TestPlatform.TestHost" Version="17.12.0" />
     </ItemGroup>
 
+    <ItemGroup>
+        <InternalsVisibleTo Include="MP.GameEngine.Tests"/>
+    </ItemGroup>
 </Project>

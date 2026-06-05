@@ -125,6 +125,20 @@ public class PlayerProfileService
             await sp.GetRequiredService<LoanService>().RepayLoansCustom(engine, amount, ct);
         });
 
+    // Leave jail by paying the fee — current-player jail-exit command (CanLeaveJail,
+    // host-bypass aware). Resolves JailService (not PropertyService), so it has its own
+    // enqueue with the writer-thread gate re-check. LeaveJailByPaying pays the fee,
+    // moves the player to Just Visiting, and escalates the next jail cost.
+    public void EnqueueLeaveJailPay(string gameId, string submittingUserId)
+        => _executor.Enqueue(gameId, async (engine, sp, ct) =>
+        {
+            var current = engine.Cache.Game.CurrentPlayer();
+            if (current is null || !engine.TurnStateProvider.CanLeaveJail(current.PlayerId, submittingUserId))
+                return;
+
+            await sp.GetRequiredService<JailService>().LeaveJailByPaying(engine, current, ct);
+        });
+
     private void EnqueuePortfolioCommand(string gameId, string submittingUserId,
         Func<PropertyService, EngineRuntime, CancellationToken, Task> command)
     {

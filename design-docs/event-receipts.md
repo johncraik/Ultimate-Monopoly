@@ -89,7 +89,7 @@ here are dropped (see "Drop"); new ones are flagged "*Add*".
 | Receipt | Purpose | Stats use |
 |---|---|---|
 | `FinancialTransactionReceipt` | Records a money movement. Carries `Amount`, `Reason`, source/destination | Most money earnt, rent stats per property, fine totals, all money flow |
-| `PropertyTransactionReceipt` | Records a property ownership change. Carries direction (acquire / lose) and count | Acquisition rate, property turnover |
+| `PropertyTransferReceipt` | Records a property ownership change. Carries direction (acquire / lose), count, and a `PropertyTransferReason` | Acquisition rate, property turnover, attribution by reason |
 
 ### 3.3 Jail
 
@@ -181,7 +181,7 @@ public enum FinancialReason
    stats group by property without inferring rules.
 4. **One receipt per movement.** A buy is `FinancialTransaction(Amount=-£60,
    Reason=Purchase, SourcePropertyId=…)` *plus*
-   `PropertyTransaction(…)`. A two-leg flow (e.g. a deal with money +
+   `PropertyTransfer(…)`. A two-leg flow (e.g. a deal with money +
    property both ways) emits multiple receipts.
 
 ---
@@ -303,7 +303,7 @@ mutation:
    intention. If the mutation throws, no receipt — the cache is
    transactional via `_working`.
 2. **Multi-receipt actions in deterministic order.** A buy emits
-   `FinancialTransaction` first, then `PropertyTransaction` — the order
+   `FinancialTransaction` first, then `PropertyTransfer` — the order
    reads naturally as narrative ("paid £60, now owns Pall Mall"). Stick
    to a convention so replay UI is consistent.
 3. **One receipt per logical change, not per field touched.** Setting

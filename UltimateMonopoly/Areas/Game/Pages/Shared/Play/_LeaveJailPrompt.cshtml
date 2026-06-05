@@ -1,0 +1,37 @@
+@using MP.GameEngine.Helpers.RuleSet
+@using MP.GameEngine.Models.Prompts.PromptTypes
+@model LeaveJailPrompt
+@{
+    const string cur = RuleDictionary.Currency;
+}
+@*
+    LEAVE JAIL PROMPT — server-rendered fragment. The player is leaving jail and must settle
+    how: pay the fee, or play a Get Out of Jail Free card. Each option is a single
+    LeaveJailResponse { Action } — the button is [data-prompt-submit] carrying
+    data-leavejail-action (numeric LeaveJailAction): PayFee = 0, PlayCard = 1. ingame-prompts.js
+    reads the action off the clicked button. The card option only renders when the player holds
+    a card (HasCard) — the validator rejects PlayCard otherwise. Cost is the grid-rounded fee.
+*@
+<div class="pp-prompt-card border border-2 border-warning">
+    <div class="pp-prompt-head text-bg-warning">
+        @(string.IsNullOrEmpty(Model.Title) ? "Leave jail" : Model.Title)
+    </div>
+    <div class="pp-prompt-body">
+        @if (!string.IsNullOrEmpty(Model.Body))
+        {
+            <p class="mb-3">@Model.Body</p>
+        }
+        <div class="d-grid gap-2">
+            <button type="button" class="btn btn-warning" data-prompt-submit data-leavejail-action="0">
+                <i class="bi bi-cash-coin me-1"></i> Pay the fee — @cur@Model.Cost
+            </button>
+            @if (Model.HasCard)
+            {
+                <button type="button" class="btn btn-outline-secondary" data-prompt-submit data-leavejail-action="1">
+                    <i class="bi bi-ticket-perforated me-1"></i> Play a Get Out of Jail Free card
+                </button>
+            }
+        </div>
+        <div class="text-danger small d-none mt-2" data-prompt-error></div>
+    </div>
+</div>

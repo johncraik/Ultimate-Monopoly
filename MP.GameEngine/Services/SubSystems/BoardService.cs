@@ -10,30 +10,36 @@ public class BoardService
     private readonly JailService _jailService;
     private readonly FreeParkingService _fpService;
     private readonly PropertyService _propertyService;
+    private readonly TaxService _taxService;
 
     public BoardService(GoService goService, 
         JailService jailService,
         FreeParkingService fpService,
-        PropertyService propertyService)
+        PropertyService propertyService,
+        TaxService taxService)
     {
         _goService = goService;
         _jailService = jailService;
         _fpService = fpService;
         _propertyService = propertyService;
+        _taxService = taxService;
     }
-    
+
     public async Task ResolveBoardSpaceForPlayer(Framework.GameEngine engine, PlayerModel player, CancellationToken ct)
     {
         var space = engine.Cache.Board.GetBoardSpace(player.BoardIndex);
-        
+
         var propertySpace = engine.Cache.Game.GetPropertySpace(space.Index);
         if (propertySpace is not null)
         {
             switch (propertySpace.State)
             {
                 case PropertyState.NotOwned:
-                    if(player.HasPassedInitialGo)
+                    if (player.HasPassedInitialGo)
                         await _propertyService.ProcessUnownedProperty(engine, player, space, propertySpace, ct);
+                    else
+                        //Cite rule that u must pass go to buy:
+                        engine.CiteRule(RuleCode.Default_BuyRequiresPassingGo);
                     break;
                 case PropertyState.FreeParking:
                     //Only needs the board space info (rents), "single" rent always assumed for FP property
@@ -55,7 +61,7 @@ public class BoardService
             switch (space.SpaceType)
             {
                 case BoardSpaceType.Tax:
-                    //TODO Call tax service to get tax card, then pay tax/do what card says
+                    await _taxService.PayTax(engine, player, ct);
                     break;
                 case BoardSpaceType.Chance:
                     //TODO Call Card service to get card, and do what card says
@@ -64,16 +70,16 @@ public class BoardService
                     //TODO call card service to get card, and do what card says
                     break;
                 case BoardSpaceType.Go:
-                    //TODO call GO service to get GO card, and collect 200/do what card says
+                    await _goService.LandOnGo(engine, player, ct);
                     break;
                 case BoardSpaceType.JustVisiting:
-                    //TODO - Call just visiting service to get just visiting card, and do what card says
+                    await HandleJustVisiting(engine, player, ct);
                     break;
                 case BoardSpaceType.FreeParking:
-                    //TODO - Call free parking service to get free parking card, and do what card says and/or proceed as normal
+                    await _fpService.ProcessFreeParking(engine, player, ct);
                     break;
                 case BoardSpaceType.GoToJail:
-                    //TODO - call jail service to get jail card, and do what card says and/or go to jail
+                    await _jailService.GoToJail(engine, player, ct);
                     break;
                 case BoardSpaceType.Property:
                 case BoardSpaceType.Station:
@@ -86,5 +92,12 @@ public class BoardService
                     break;
             }
         }
+    }
+
+
+    private async Task HandleJustVisiting(Framework.GameEngine engine, PlayerModel player, CancellationToken ct)
+    {
+        //TODO get a just visiting card:
+        //Then do what the card says
     }
 }

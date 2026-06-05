@@ -1,3 +1,4 @@
+using MP.GameEngine.Enums;
 using MP.GameEngine.Helpers;
 using MP.GameEngine.Helpers.RuleSet;
 using MP.GameEngine.Models.Prompts.PromptTypes;
@@ -33,7 +34,7 @@ public class AuctionService
     /// when nobody can afford the floor, leaving the property bank-owned (very
     /// rare). See <c>auction-flow.md</c>.
     /// </summary>
-    public async Task<AuctionOutcome> RunAuction(Framework.GameEngine engine, ushort boardIndex, CancellationToken ct)
+    public async Task<AuctionOutcome> RunAuction(Framework.GameEngine engine, string playerId, ushort boardIndex, CancellationToken ct)
     {
         var board = engine.Cache.Board;
         var roundingRule = engine.Cache.RoundingRule;
@@ -42,18 +43,24 @@ public class AuctionService
         var increments = MoneyHelper.AuctionIncrements(roundingRule);
         var propertyName = board.GetBoardSpace(boardIndex).Name;
 
+        //Cite floor rule:
+        engine.CiteRule(RuleCode.Auction_MinimumBidHalfPrice);
+        
         // Eligible bidders: active players clockwise from (and including) the
         // lander, filtered to those who can afford the floor. A player below the
         // floor can never bid legally, so they take no part — which is also why
         // the eventual winner can always pay (see auction-flow.md §8).
-        var bidders = engine.Cache.Game.GetPlayers(excludePovPlayer: false)
+        var bidders = engine.Cache.Game.GetPlayers(playerId, excludePovPlayer: false)
             .Where(p => p.Money >= floor)
             .ToList();
 
         // Nobody (not even the lander) can afford the minimum — auction cancelled,
         // the landing is a no-op and the property stays with the bank.
         if (bidders.Count == 0)
+        {
+            engine.CiteRule(RuleCode.Auction_NobodyCanAfford);
             return new AuctionOutcome(false);
+        }
 
         var currentHighBid = floor;
         PlayerModel? highBidder = null;
@@ -103,6 +110,7 @@ public class AuctionService
 
         // One bidder remains — they win at the current bid (the floor if nobody
         // raised; the last player standing wins even without having bid).
+        engine.CiteRule(RuleCode.Auction_ForcedLastSurvivor);
         highBidder = bidders[0];
         _ = await engine.PromptProvider.Acknowledge(highBidder.PlayerId, "Auction Won",
             $"You won {propertyName} for {RuleDictionary.Currency}{currentHighBid}.", ct: ct);

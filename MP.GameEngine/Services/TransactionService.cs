@@ -44,17 +44,32 @@ public class TransactionService
         if (!space.IsRentable) return;
 
         var property = engine.Cache.Game.GetPropertySpace(propertyIndex);
-        if (property?.OwnerPlayerId is null) return;
-        if (property.State is not PropertyState.Owned) return;          // mortgaged/reserved → no rent
+        if(property == null) return;
 
-        var owner = engine.Cache.Game.GetPlayer(property.OwnerPlayerId);
-        if (owner is null) return;                                       // bankrupt owner; shouldn't own anything but defensive
-        if (owner.IsInJail) return;                                      // game-rules Default rule 2
+        if (property.State != PropertyState.FreeParking && property.State != PropertyState.Owned)
+            return; // mortgaged/reserved → no rent
+        
+        
+        if (property.OwnerPlayerId is null && property.State != PropertyState.FreeParking) 
+            return; // no owner and not in free parking    
+
+        PlayerModel? owner = null;
+        if(property.OwnerPlayerId is not null)
+            owner = engine.Cache.Game.GetPlayer(property.OwnerPlayerId);
+        
+        if (owner is null && property.State != PropertyState.FreeParking) 
+            return; // bankrupt owner; shouldn't own anything but defensive
+        if (property.State != PropertyState.FreeParking && (owner?.IsInJail ?? true))
+            return; // game-rules Default rule 2
 
         //Amount is passed in, computed/retrieved from call sight and not checked
         await Move(engine, player, -rent, FinancialReason.Rent,
-            counterparty: TransactionCounterparty.Player,
-            counterpartyPlayer: owner,
+            counterparty: property.State == PropertyState.FreeParking 
+                ? TransactionCounterparty.FreeParking 
+                : TransactionCounterparty.Player,
+            counterpartyPlayer: property.State == PropertyState.FreeParking 
+                ? null 
+                : owner,
             counterpartyPropertyIndex: propertyIndex,
             allowShortfall: true,
             ct: ct);
@@ -199,6 +214,11 @@ public class TransactionService
             counterparty: TransactionCounterparty.Bank,
             ct: ct);
 
+    public Task ReceiveTripleBonus(Framework.GameEngine engine, PlayerModel player, CancellationToken ct)
+        => Move(engine, player, player.TripleBonus, FinancialReason.TripleBonus,
+            counterparty: TransactionCounterparty.Bank,
+            ct: ct);
+    
     /// <summary>Free Parking pot → player (FP-landing payout, etc.).</summary>
     public Task TakeFromFreeParking(Framework.GameEngine engine, PlayerModel player, uint amount, CancellationToken ct)
         => Move(engine, player, amount, FinancialReason.FreeParkingTake,
@@ -349,14 +369,17 @@ public class TransactionService
             return;
         }
 
-        if (counterparty == TransactionCounterparty.FreeParking)
-        {
-            // amount > 0: player took from FP → pot decreases.
-            // amount < 0: player paid into FP → pot increases.
-            engine.Cache.Game.FreeParkingAmount =
-                (uint)(engine.Cache.Game.FreeParkingAmount - amount);
-        }
-        // Bank is untracked — no balance to mutate.
+        if (counterparty != TransactionCounterparty.FreeParking)
+            // Bank is untracked — no balance to mutate.
+            return;
+        
+        // amount > 0: player took from FP → pot decreases.
+        // amount < 0: player paid into FP → pot increases.
+        engine.Cache.Game.FreeParkingAmount =
+            (uint)(engine.Cache.Game.FreeParkingAmount - amount);
+            
+        //Cite rule:
+        engine.CiteRule(RuleCode.Default_FinesToFreeParking);
     }
 
     private void EmitReceipts(

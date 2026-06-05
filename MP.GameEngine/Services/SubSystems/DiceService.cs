@@ -1,3 +1,4 @@
+using MP.GameEngine.Enums;
 using MP.GameEngine.Models;
 using MP.GameEngine.Models.EventReceipts;
 using MP.GameEngine.Models.Prompts.PromptTypes;

@@ -1,5 +1,7 @@
 using System.Data;
+using MP.GameEngine.Enums;
 using MP.GameEngine.Enums.Players;
+using MP.GameEngine.Helpers;
 using MP.GameEngine.Helpers.RuleSet;
 using MP.GameEngine.Models;
 using MP.GameEngine.Models.DTOs;
@@ -57,12 +59,39 @@ public class PlayerService
         
         //Bank transaction:
         await _transactionService.ReceiveDiceBonus(engine, player, ct);
-        if(!theyRolled) return;
+        if(!theyRolled)
+        {
+            //Cite dice number rule (for others rolling)
+            engine.CiteRule(RuleCode.Roll_DiceNumberByOther);
+            return;
+        }
         
         var otherPlayers = engine.Cache.Game.GetPlayers(playerId);
         foreach (var p in otherPlayers)
         {
             await _transactionService.PayDiceBonus(engine, p, player, ct);
         }
+        
+        //Cite dice number rule (for player rolling)
+        engine.CiteRule(RuleCode.Roll_DiceNumberBySelf);
+    }
+
+
+    public async Task ResolveTripleBonus(Framework.GameEngine engine, PlayerModel player, CancellationToken ct)
+    {
+        var bonus = player.TripleBonus;
+        bonus = MoneyHelper.NormaliseAmountToPositive(bonus, engine.Cache.RoundingRule, FinancialReason.TripleBonus);
+
+        var newBonus = bonus + RuleDictionary.TripleBonusIncrease;
+        newBonus = MoneyHelper.NormaliseAmountToPositive(newBonus, engine.Cache.RoundingRule, FinancialReason.TripleBonus);
+        
+        //Cite triple bonus rule
+        engine.CiteRule(RuleCode.Triple_Bonus);
+        
+        _ = await engine.PromptProvider.Acknowledge(player.PlayerId, "TRIPLE BONUS!",
+            $"You will receive {RuleDictionary.Currency}{bonus} for rolling a triple! Your next bonus will be {RuleDictionary.Currency}{newBonus}.", ct: ct);
+        
+        await _transactionService.ReceiveTripleBonus(engine, player, ct);
+        player.TripleBonus = newBonus;
     }
 }

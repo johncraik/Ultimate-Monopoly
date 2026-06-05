@@ -70,6 +70,9 @@ public static class ServiceRegistration
         services.TryAddSingleton<IEngineNotifier, SignalrEngineNotifier>();
         services.TryAddSingleton<IGameExecutor, GameExecutor>();
         services.AddGameEngine();
+        
+        // Rules
+        services.TryAddSingleton<RuleCatalog>();
 
         return services;
     }

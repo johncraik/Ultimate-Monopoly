@@ -54,6 +54,10 @@
                 // ProposeDeal 3, DeclareBankruptcy 4) — each button carries its own value.
                 return { response: { '$type': 'Shortfall', promptId: promptId, action: Number(btn.dataset.shortfallAction) } };
 
+            case 'LeaveJail':
+                // LeaveJailAction is numeric over the wire (PayFee 0, PlayCard 1) — each button carries its own value.
+                return { response: { '$type': 'LeaveJail', promptId: promptId, action: Number(btn.dataset.leavejailAction) } };
+
             case 'TargetProperty': {
                 // Collect the checked toggles; must be exactly Count (carried on [data-target-count]).
                 const selected = Array.from(promptEl.querySelectorAll('input.btn-check[data-target-index]:checked'))

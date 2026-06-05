@@ -23,6 +23,9 @@ public enum FinancialReason
     
     /// <summary>Bonus for rolling snake eyes</summary>
     SneakEyes,
+    
+    /// <summary>Bonus for rolling a triple</summary>
+    TripleBonus,
 
     /// <summary>Paying out of jail.</summary>
     JailFee,

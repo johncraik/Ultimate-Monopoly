@@ -1,3 +1,4 @@
+using MP.GameEngine.Enums;
 using MP.GameEngine.Enums.Players;
 using MP.GameEngine.Helpers.RuleSet;
 using MP.GameEngine.Models.Snapshot;
@@ -29,15 +30,32 @@ public class GoService
         };
         
         bonus *= goPasses;
+        
+        //Cite rule and give GO bonus:
+        engine.CiteRule(player.Direction == PlayerDirection.Forward ? RuleCode.Go_PassClockwise : RuleCode.Go_PassAntiClockwise);
         await _transactionService.ReceiveGoBonus(engine, player, bonus, ct);
         
         //Pay mortage fee (no-ops if no mortgages):
+        engine.CiteRule(RuleCode.Mortgage_FeeOnGo);
         await _propertyService.PayMortgageFee(engine, player, ct);
         
         //Repay any loans (no-ops if no loans):
+        engine.CiteRule(RuleCode.Loan_RepayInstalmentOnGo);
         await _loanService.ForcedRepayLoans(engine, player, ct);
 
         //Player has now passed GO (assumed since they are collecting bonus)
         player.HasPassedInitialGo = true;
+    }
+
+    public async Task LandOnGo(Framework.GameEngine engine, PlayerModel player, CancellationToken ct)
+    {
+        //TODO: Get a GO card
+        
+        //Cite rule and notify user:
+        engine.CiteRule(RuleCode.Go_LandOn);
+        _ = await engine.PromptProvider.Acknowledge(player.PlayerId, "GO", 
+            $"You have landed on GO and will collect {RuleDictionary.Currency}{RuleDictionary.LandOnGoBonus}.", ct: ct);
+        
+        await _transactionService.ReceiveGoBonus(engine, player, RuleDictionary.LandOnGoBonus, ct);
     }
 }

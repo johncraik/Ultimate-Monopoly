@@ -1,3 +1,4 @@
+using MP.GameEngine.Enums;
 using MP.GameEngine.Helpers.RuleSet;
 
 namespace MP.GameEngine.Helpers;
@@ -10,6 +11,7 @@ public static class DoubleEffects
         ushort DoubleValue,
         IReadOnlyList<int> RollerSteps,
         IReadOnlyList<int> OtherPlayerSteps,
+        RuleCode RuleCode,
         bool RollerMissesTurn = false,
         bool OtherPlayerMissesTurn = false,
         bool SnakeEyesBonus = false);
@@ -20,24 +22,30 @@ public static class DoubleEffects
             1 => new DoubleEffect(DoubleDiceDictionary.DoubleOneTitle,
                 DoubleDiceDictionary.DoubleOneBody, 1,
                 [DoubleDiceDictionary.DoubleOneMovement], [],
+                RuleCode.Double_OneSnakeEyes,
                 SnakeEyesBonus: true),
             2 => new DoubleEffect(DoubleDiceDictionary.DoubleTwoTitle,
                 DoubleDiceDictionary.DoubleTwoBody, 2,
                 [DoubleDiceDictionary.DoubleTwoMovement], [],
+                RuleCode.Double_TwoOthersMissTurn,
                 OtherPlayerMissesTurn: true),
             3 => new DoubleEffect(DoubleDiceDictionary.DoubleThreeTitle,
                 DoubleDiceDictionary.DoubleThreeBody, 3,
-                [DoubleDiceDictionary.DoubleThreeForwardMovement, DoubleDiceDictionary.DoubleThreeBackwardMovement], []),
+                [DoubleDiceDictionary.DoubleThreeForwardMovement, DoubleDiceDictionary.DoubleThreeBackwardMovement], [],
+                RuleCode.Double_ThreeForwardBack),
             4 => new DoubleEffect(DoubleDiceDictionary.DoubleFourTitle,
                 DoubleDiceDictionary.DoubleFourBody, 4,
-                [], [DoubleDiceDictionary.DoubleFourForwardMovement, DoubleDiceDictionary.DoubleFourBackwardMovement]),
+                [], [DoubleDiceDictionary.DoubleFourForwardMovement, DoubleDiceDictionary.DoubleFourBackwardMovement],
+                RuleCode.Double_FourOthersForwardBack),
             5 => new DoubleEffect(DoubleDiceDictionary.DoubleFiveTitle,
                 DoubleDiceDictionary.DoubleFiveBody, 5,
                 [DoubleDiceDictionary.DoubleFiveForwardMovement], [DoubleDiceDictionary.DoubleFiveBackwardMovement],
+                RuleCode.Double_FiveForwardOthersBack,
                 RollerMissesTurn: true),
             6 => new DoubleEffect(DoubleDiceDictionary.DoubleSixTitle,
                 DoubleDiceDictionary.DoubleSixBody, 6,
-                [DoubleDiceDictionary.DoubleSixMovement], []),
+                [DoubleDiceDictionary.DoubleSixMovement], [],
+                RuleCode.Double_SixBackTwelve),
             _ => throw new ArgumentOutOfRangeException(nameof(diceValue), diceValue, null)
         };
 }

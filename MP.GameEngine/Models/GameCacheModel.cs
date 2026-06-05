@@ -43,6 +43,14 @@ public class GameCacheModel(GameDTO gameDto, GameModel game, Board board)
     /// </summary>
     [JsonIgnore]
     public IReadOnlyList<EventReceipt> Events => _events;
+    
+    
+    /// <summary>
+    /// List of rule codes that have been executed since the begining of the turn.
+    /// These are cleared at the start/end of each turn.
+    /// </summary>
+    private readonly List<RuleCode> _ruleCodes = [];
+    public IReadOnlyList<RuleCode> RuleCodes => _ruleCodes;
 
 
     /// <summary>
@@ -90,20 +98,34 @@ public class GameCacheModel(GameDTO gameDto, GameModel game, Board board)
         _working = null;
         StampConcurrency();
     }
-    
-    public void SetBoard(Board board)
+
+
+    #region Rule Codes
+
+    internal void AddRuleCode(RuleCode ruleCode)
     {
-        Board = board;
+        _ruleCodes.Add(ruleCode);
         StampConcurrency();
     }
     
-    public void ClearEvents()
+    internal void ClearRuleCodes()
+    {
+        _ruleCodes.Clear();
+        StampConcurrency();
+    }
+
+    #endregion
+    
+    
+    #region Events
+
+    internal void ClearEvents()
     {
         _events.Clear();
         StampConcurrency();
     }
     
-    public void AddEvent(EventReceipt eventReceipt)
+    internal void AddEvent(EventReceipt eventReceipt)
     {
         // Framework-managed bookkeeping — producers set receipt-specific
         // fields (and PlayerId); cache backfills TurnNumber and the
@@ -115,7 +137,11 @@ public class GameCacheModel(GameDTO gameDto, GameModel game, Board board)
         StampConcurrency();
     }
 
-    public void SetPendingPrompt(PendingPrompt pending)
+    #endregion
+
+    #region Prompts
+
+    internal void SetPendingPrompt(PendingPrompt pending)
     {
         if (PendingPrompt is not null)
             throw new InvalidOperationException(
@@ -125,7 +151,7 @@ public class GameCacheModel(GameDTO gameDto, GameModel game, Board board)
         StampConcurrency();
     }
 
-    public void ClearPendingPrompt()
+    internal void ClearPendingPrompt()
     {
         if (PendingPrompt is null) return;
 
@@ -133,7 +159,12 @@ public class GameCacheModel(GameDTO gameDto, GameModel game, Board board)
         StampConcurrency();
     }
 
-    public DiceRoll? SetTurnDiceRoll(ushort die1, ushort die2, ushort thirdDie)
+    #endregion
+
+
+    #region Turn Dice Roll
+
+    internal DiceRoll? SetTurnDiceRoll(ushort die1, ushort die2, ushort thirdDie)
     {
         if(TurnState != TurnState.StartOfTurn || TurnDiceRoll is not null)
             return null;
@@ -144,11 +175,16 @@ public class GameCacheModel(GameDTO gameDto, GameModel game, Board board)
         return TurnDiceRoll;
     }
     
-    public void ClearTurnDiceRoll()
+    internal void ClearTurnDiceRoll()
     {
         TurnDiceRoll = null;
         StampConcurrency();
     }
+
+    #endregion
+    
+
+    
 
     /// <summary>
     /// Sets the turn phase and commits the working copy via

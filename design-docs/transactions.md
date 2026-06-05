@@ -28,7 +28,7 @@ goes through here; every `FinancialTransactionReceipt` is emitted here.
 **Out of scope** — the caller's job after a successful call:
 
 - Property ownership and state changes (`PropertyModel.OwnProperty`,
-  `MortgageProperty`, etc.) and the `PropertyTransactionReceipt` that
+  `MortgageProperty`, etc.) and the `PropertyTransferReceipt` that
   accompanies them.
 - Adding a `LoanModel` to `player.Loans` after `TakeLoan`.
 - Building-level changes (`PropertyModel.RentLevel`).
