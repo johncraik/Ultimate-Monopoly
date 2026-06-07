@@ -13,13 +13,15 @@ public class PlayerTurnOrchestrator
     private readonly PlayerService _playerService;
     private readonly JailService _jailService;
     private readonly BoardService _boardService;
+    private readonly GlobalEventService _globalEventService;
 
     public PlayerTurnOrchestrator(DiceService diceService,
         TransactionService transactionService,
         MovementService movementService,
         PlayerService playerService,
         JailService jailService,
-        BoardService boardService)
+        BoardService boardService,
+        GlobalEventService globalEventService)
     {
         _diceService = diceService;
         _transactionService = transactionService;
@@ -27,6 +29,7 @@ public class PlayerTurnOrchestrator
         _playerService = playerService;
         _jailService = jailService;
         _boardService = boardService;
+        _globalEventService = globalEventService;
     }
 
 
@@ -85,7 +88,11 @@ public class PlayerTurnOrchestrator
             case DiceRollType.Double:
                 if (player.DoublesInRow < RuleDictionary.DoublesBeforeJail)
                 {
+                    //Clear global event (always happens on a double)
+                    _globalEventService.ClearCurrentEvent(engine);
+                    
                     //TODO: Take a double card!!!
+                    //TODO: Wire global events
                     
                     //Will move player OUT of jail if in jail
                     await _jailService.CheckAndLeaveJail(engine, player, ct);

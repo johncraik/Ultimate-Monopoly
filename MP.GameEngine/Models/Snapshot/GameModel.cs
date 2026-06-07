@@ -19,6 +19,11 @@ public class GameModel
     public uint FreeParkingAmount { get; set; }
     
     /// <summary>
+    /// Global event info that impacts specific spaces/rules in the game
+    /// </summary>
+    public EventInfo GlobalEventInfo { get; set; } = new();
+    
+    /// <summary>
     /// The array of players in the game
     /// </summary>
     public List<PlayerModel> Players { get; set; } = [];
@@ -441,6 +446,12 @@ public class GameModel
         
         //Cant buy/sell on a mortgaged or reserved property; or any property in the set that has a mortgaged or reserved property
         if (ownedInSet.Any(p => p.State is PropertyState.Mortgaged or PropertyState.Reserved))
+            return (false, ownedInSet, property);
+        
+        var (housesLeft, hotelsLeft) = GetHousesAndHotelsLeft();
+        if((property.RentLevel is >= RentLevel.SET and < RentLevel.HOTEL && housesLeft == 0) 
+           || (property.RentLevel is >= RentLevel.HOTEL and < RentLevel.DOUBLE_HOTEL && hotelsLeft == 0))
+            //No more houses/hotels left to buy/sell on this property
             return (false, ownedInSet, property);
         
         //Passed all main checks for buy/sell

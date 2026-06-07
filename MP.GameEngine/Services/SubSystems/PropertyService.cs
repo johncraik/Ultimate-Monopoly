@@ -449,7 +449,9 @@ public class PropertyService
         properties = properties.Where(p => p.State == PropertyState.Mortgaged).ToList();
         if (properties.Count == 0)
             return;
-
+        
+        engine.CiteRule(RuleCode.Mortgage_FeeOnGo);
+        
         //Sum the per-property mortgage fee (20% of purchase cost, grid-rounded per property — Mortgaging rule 1)
         var fee = properties.Aggregate<PropertyModel, uint>(0,
             (current, p) => current + MoneyHelper.MortgageFee(p.BoardIndex, engine.Cache.Board, engine.Cache.RoundingRule));

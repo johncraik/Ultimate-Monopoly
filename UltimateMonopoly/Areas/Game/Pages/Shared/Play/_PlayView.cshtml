@@ -1,6 +1,7 @@
 @using JC.Core.Extensions
 @using MP.GameEngine.Enums
 @using MP.GameEngine.Enums.Properties
+@using MP.GameEngine.Helpers
 @using MP.GameEngine.Helpers.RuleSet
 @using MP.GameEngine.Models.Snapshot
 @using UltimateMonopoly.Models.ViewModels.Games
@@ -35,6 +36,80 @@
     // Rules cited this turn, resolved to player-facing text via the catalogue.
     // Newest first (reverse of the cited order); Distinct guards against repeats.
     var rules = await RuleCatalog.GetRules(cache.RuleCodes.Reverse().Distinct().ToList());
+
+    // Global "until a double is rolled" events (rail strike, tax rise, etc.).
+    // Each tuple is (icon, title, body). Each active flag contributes one item;
+    // the banner only renders if at least one is active. See EventInfo.
+    var events = new List<(string Icon, string Title, string Body)>();
+    var ev = game.GlobalEventInfo;
+    if (ev.StationEvent)
+    {
+        events.Add(ev.StationRentMultiplier == 0
+            ? ("bi-train-front-fill", "Rail Strike!", "No rent on stations until a double is rolled.")
+            : ("bi-train-front-fill", "Station Boom!", $"Station rent is ×{ev.StationRentMultiplier} until a double is rolled."));
+    }
+    if (ev.UtilityEvent)
+    {
+        events.Add(ev.UtilityRentMultiplier == 0
+            ? ("bi-lightning-charge-fill", "Utility Outage!", "No rent on utilities until a double is rolled.")
+            : ("bi-lightning-charge-fill", "Utility Surge!", $"Utility rent is ×{ev.UtilityRentMultiplier} until a double is rolled."));
+    }
+    if (ev.TaxEvent)
+    {
+        events.Add(ev.TaxMultiplier == 0
+            ? ("bi-bank2", "Tax Holiday!", "No tax until a double is rolled.")
+            : ("bi-bank2", "Tax Rises!", $"Tax is ×{ev.TaxMultiplier} until a double is rolled."));
+    }
+    if (ev.RealFreeParking)
+    {
+        events.Add(("bi-cone-striped", "Pay Machine Broken!", "Free Parking does nothing until a double is rolled."));
+    }
+    if (ev.JailFull)
+    {
+        events.Add(("bi-shield-exclamation", "Jail at Max Capacity!", "Players sent to jail must pay the fee until a double is rolled."));
+    }
+
+    // ── TEMP / SIMULATION ──────────────────────────────────────────────
+    // EventInfo isn't engine-wired yet, so force a few items in so the
+    // banner can be styled and reviewed. Delete this block once the cards
+    // that set these flags land.
+    events.Add(("bi-train-front-fill",   "Rail Strike!",         "No rent on stations until a double is rolled."));
+    events.Add(("bi-bank2",              "Tax Rises!",           "Tax is ×2 until a double is rolled."));
+    events.Add(("bi-cone-striped",       "Pay Machine Broken!",  "Free Parking does nothing until a double is rolled."));
+    events.Add(("bi-shield-exclamation", "Jail at Max Capacity!","Players sent to jail must pay the fee until a double is rolled."));
+    // ───────────────────────────────────────────────────────────────────
+}
+
+@* ───────────────────────── Event banner (full bleed) ─────────────────────────
+   Card-driven "until a double is rolled" events surface here as a single-line
+   scrolling news ticker that spans the whole viewport (the .news-banner
+   full-bleed CSS overrides the row's gutter). Pure-CSS marquee; pauses on hover.
+   The content is rendered twice for a seamless loop (-50% wraps to 0). *@
+@if (events.Count > 0)
+{
+    @* col-12 is the row child (so col-3 + col-9 below wrap to a fresh line);
+       the inner .news-banner-wrap does the full-bleed bleed-out. *@
+    <div class="col-12 p-0">
+        <div class="news-banner-wrap">
+            <div class="news-banner">
+                <div class="news-banner-track">
+                    @for (var rep = 0; rep < 2; rep++)
+                    {
+                        <div class="news-banner-set" aria-hidden="@(rep == 1 ? "true" : null)">
+                            @foreach (var (icon, title, body) in events)
+                            {
+                                <span class="news-banner-item">
+                                    <i class="bi @icon me-2"></i>
+                                    <strong>@title</strong>
+                                    <span class="ms-2">@body</span>
+                                </span>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
 }
 
 @* ───────────────────────── Sidebar (col-3) ───────────────────────── *@
@@ -167,88 +242,212 @@
             </div>
 
             <div class="col-4">
-                <div class="card h-100 play-pane">
+                <div class="card h-100 play-pane play-pane--info">
                     <div class="card-header fw-semibold">Game Info</div>
-                    <div class="card-body overflow-auto">
-                        @* TODO: global card-effect banner alerts (e.g. "no rent on stations"). *@
+                    <div class="card-body overflow-auto d-flex flex-column gap-3">
 
-                        <div class="accordion" id="gameInfoAccordion">
-                            @* Free Parking *@
+                        @* ── Reservation Rule block ─────────────────── *@
+                        <div class="gi-block text-center">
+                            <i class="bi bi-shield-lock-fill fs-2 d-block mb-2 opacity-75"></i>
+                            @if (game.ReserveRuleActive)
+                            {
+                                <span class="badge text-bg-success">Reservation Rule Active</span>
+                            }
+                            else
+                            {
+                                <span class="badge text-bg-secondary">Reservation Rule Inactive</span>
+                            }
+                        </div>
+
+                        @* ── Houses / Hotels left block (split) ─────── *@
+                        @{
+                            var (housesLeft, hotelsLeft) = game.GetHousesAndHotelsLeft();
+                        }
+                        <div class="gi-block gi-block--split d-flex text-center">
+                            <div class="flex-fill">
+                                <i class="bi bi-house-fill fs-2 d-block mb-2 opacity-75"></i>
+                                <div class="fs-5 fw-semibold">@housesLeft</div>
+                                <div class="small text-body-secondary">Houses left</div>
+                            </div>
+                            <div class="flex-fill">
+                                <i class="bi bi-buildings-fill fs-2 d-block mb-2 opacity-75"></i>
+                                <div class="fs-5 fw-semibold">@hotelsLeft</div>
+                                <div class="small text-body-secondary">Hotels left</div>
+                            </div>
+                        </div>
+
+                        @* ── Accordion: Free Parking + Available Properties ──
+                           Each body is a flat badge list (one badge per property), coloured
+                           by set via text-bg-prop-{slug} (contrast-aware) and ordered by the
+                           PropertySet enum order, BoardIndex within a set. Names come from
+                           cache.Board.Spaces (the live source of truth for skin names). *@
+                        @{
+                            var boardSpaces = cache.Board.Spaces.ToDictionary(s => s.Index);
+
+                            int SetOrder(PropertySet? s) => s.HasValue ? (int)s.Value : int.MaxValue;
+
+                            // Group by set so each set renders on its own row in the body;
+                            // properties within a set keep BoardIndex order. Null-set entries
+                            // (shouldn't exist for Properties) tail-end under a Misc bucket.
+                            var fpBySet = fpProperties
+                                .GroupBy(p => PropertySetHelper.ResolveSet(p.BoardIndex))
+                                .OrderBy(g => SetOrder(g.Key))
+                                .Select(g => (Set: g.Key, Props: g.OrderBy(p => p.BoardIndex).ToList()))
+                                .ToList();
+
+                            var availableBySet = game.Properties
+                                .Where(p => string.IsNullOrEmpty(p.OwnerPlayerId) && p.State == PropertyState.NotOwned)
+                                .GroupBy(p => PropertySetHelper.ResolveSet(p.BoardIndex))
+                                .OrderBy(g => SetOrder(g.Key))
+                                .Select(g => (Set: g.Key, Props: g.OrderBy(p => p.BoardIndex).ToList()))
+                                .ToList();
+
+                            var availableCountFromGroups = availableBySet.Sum(g => g.Props.Count);
+                        }
+                        <div class="accordion gi-accordion" id="gameInfoAccordion">
+
+                            @* Free Parking — pot in the header, FP-held properties in the body *@
                             <div class="accordion-item">
                                 <h2 class="accordion-header">
                                     <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#gi-fp">
-                                        Free Parking · @c@game.FreeParkingAmount
+                                        <span class="flex-grow-1">Free Parking</span>
+                                        <span class="badge text-bg-secondary me-2">@c@game.FreeParkingAmount</span>
                                     </button>
                                 </h2>
                                 <div id="gi-fp" class="accordion-collapse collapse show" data-bs-parent="#gameInfoAccordion">
-                                    <div class="accordion-body">
-                                        <div class="mb-1">Pot: <strong>@c@game.FreeParkingAmount</strong></div>
-                                        @if (fpProperties.Count == 0)
+                                    <div class="accordion-body d-flex flex-column gap-2">
+                                        @if (fpBySet.Count == 0)
                                         {
                                             <div class="text-body-secondary small">No properties in Free Parking.</div>
                                         }
                                         else
                                         {
-                                            <div class="small">@fpProperties.Count property(ies) held in Free Parking.</div>
-                                            @* TODO: list them by name (map BoardIndex via cache.Board.Spaces). *@
+                                            @foreach (var group in fpBySet)
+                                            {
+                                                <div class="d-flex flex-wrap gap-1">
+                                                    @foreach (var p in group.Props)
+                                                    {
+                                                        var name = boardSpaces.TryGetValue(p.BoardIndex, out var sp) ? sp.Name : p.Name;
+                                                        <span class="badge rounded-pill @(group.Set is null ? "text-bg-secondary" : $"text-bg-prop-{group.Set.Value.ToDisplayName().ToSlug()}")">@name</span>
+                                                    }
+                                                </div>
+                                            }
                                         }
                                     </div>
                                 </div>
                             </div>
 
-                            @* Available properties *@
+                            @* Available Properties — every unowned (NotOwned) space *@
                             <div class="accordion-item">
                                 <h2 class="accordion-header">
                                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#gi-avail">
-                                        Available Properties · @availableCount
+                                        <span class="flex-grow-1">Available Properties</span>
+                                        <span class="badge text-bg-secondary me-2">@availableCountFromGroups</span>
                                     </button>
                                 </h2>
                                 <div id="gi-avail" class="accordion-collapse collapse" data-bs-parent="#gameInfoAccordion">
-                                    <div class="accordion-body small text-body-secondary">
-                                        @availableCount unowned propert@(availableCount == 1 ? "y" : "ies").
-                                        @* TODO: list by name + colour (map BoardIndex via cache.Board.Spaces). *@
-                                    </div>
-                                </div>
-                            </div>
-
-                            @* Reservation rule *@
-                            <div class="accordion-item">
-                                <h2 class="accordion-header">
-                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#gi-reserve">
-                                        Reservation Rule
-                                    </button>
-                                </h2>
-                                <div id="gi-reserve" class="accordion-collapse collapse" data-bs-parent="#gameInfoAccordion">
-                                    <div class="accordion-body small">
-                                        @if (game.ReserveRuleActive)
+                                    <div class="accordion-body d-flex flex-column gap-2">
+                                        @if (availableBySet.Count == 0)
                                         {
-                                            <span class="badge text-bg-info">Active</span>
-                                            <span class="text-body-secondary ms-1">No player may hold a complete set yet.</span>
+                                            <div class="text-body-secondary small">No available properties.</div>
                                         }
                                         else
                                         {
-                                            <span class="badge text-bg-secondary">Inactive</span>
+                                            @foreach (var group in availableBySet)
+                                            {
+                                                <div class="d-flex flex-wrap gap-1">
+                                                    @foreach (var p in group.Props)
+                                                    {
+                                                        var name = boardSpaces.TryGetValue(p.BoardIndex, out var sp) ? sp.Name : p.Name;
+                                                        <span class="badge rounded-pill @(group.Set is null ? "text-bg-secondary" : $"text-bg-prop-{group.Set.Value.ToDisplayName().ToSlug()}")">@name</span>
+                                                    }
+                                                </div>
+                                            }
                                         }
-                                    </div>
-                                </div>
-                            </div>
-
-                            @* NOPE cards + per-player %cap — need helpers not yet built *@
-                            <div class="accordion-item">
-                                <h2 class="accordion-header">
-                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#gi-cards">
-                                        Cards &amp; Percentages
-                                    </button>
-                                </h2>
-                                <div id="gi-cards" class="accordion-collapse collapse" data-bs-parent="#gameInfoAccordion">
-                                    <div class="accordion-body small text-body-secondary">
-                                        @* TODO: NOPE cards remaining (cache.Game.CardDecks) and each active
-                                           player's %cap tier (needs building-state helpers). *@
-                                        Not yet available.
                                     </div>
                                 </div>
                             </div>
                         </div>
+
+                        @* Legacy accordion — replaced by the gi-block stack above. Wrapped in
+                           @if(false) rather than @* … * because the accordion already contains
+                           Razor comments and Razor comments don't nest. *@
+                        @if (false)
+                        {
+                            <div class="accordion" id="gameInfoAccordion">
+                                @* Free Parking *@
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#gi-fp">
+                                            Free Parking · @c@game.FreeParkingAmount
+                                        </button>
+                                    </h2>
+                                    <div id="gi-fp" class="accordion-collapse collapse show" data-bs-parent="#gameInfoAccordion">
+                                        <div class="accordion-body">
+                                            <div class="mb-1">Pot: <strong>@c@game.FreeParkingAmount</strong></div>
+                                            @if (fpProperties.Count == 0)
+                                            {
+                                                <div class="text-body-secondary small">No properties in Free Parking.</div>
+                                            }
+                                            else
+                                            {
+                                                <div class="small">@fpProperties.Count property(ies) held in Free Parking.</div>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+
+                                @* Available properties *@
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#gi-avail">
+                                            Available Properties · @availableCount
+                                        </button>
+                                    </h2>
+                                    <div id="gi-avail" class="accordion-collapse collapse" data-bs-parent="#gameInfoAccordion">
+                                        <div class="accordion-body small text-body-secondary">
+                                            @availableCount unowned propert@(availableCount == 1 ? "y" : "ies").
+                                        </div>
+                                    </div>
+                                </div>
+
+                                @* Reservation rule *@
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#gi-reserve">
+                                            Reservation Rule
+                                        </button>
+                                    </h2>
+                                    <div id="gi-reserve" class="accordion-collapse collapse" data-bs-parent="#gameInfoAccordion">
+                                        <div class="accordion-body small">
+                                            @if (game.ReserveRuleActive)
+                                            {
+                                                <span class="badge text-bg-info">Active</span>
+                                                <span class="text-body-secondary ms-1">No player may hold a complete set yet.</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge text-bg-secondary">Inactive</span>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+
+                                @* NOPE cards + per-player %cap — need helpers not yet built *@
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#gi-cards">
+                                            Cards &amp; Percentages
+                                        </button>
+                                    </h2>
+                                    <div id="gi-cards" class="accordion-collapse collapse" data-bs-parent="#gameInfoAccordion">
+                                        <div class="accordion-body small text-body-secondary">
+                                            Not yet available.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
                     </div>
                 </div>
             </div>

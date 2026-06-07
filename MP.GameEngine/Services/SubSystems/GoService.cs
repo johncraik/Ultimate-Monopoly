@@ -36,11 +36,9 @@ public class GoService
         await _transactionService.ReceiveGoBonus(engine, player, bonus, ct);
         
         //Pay mortage fee (no-ops if no mortgages):
-        engine.CiteRule(RuleCode.Mortgage_FeeOnGo);
         await _propertyService.PayMortgageFee(engine, player, ct);
         
         //Repay any loans (no-ops if no loans):
-        engine.CiteRule(RuleCode.Loan_RepayInstalmentOnGo);
         await _loanService.ForcedRepayLoans(engine, player, ct);
 
         //Player has now passed GO (assumed since they are collecting bonus)

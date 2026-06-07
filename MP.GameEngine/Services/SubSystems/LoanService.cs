@@ -55,6 +55,7 @@ public class LoanService
         if (firstLoan == null)
             return;
 
+        engine.CiteRule(RuleCode.Loan_RepayInstalmentOnGo);
         var amount = player.MinimumLoanRepayment();
         amount = MoneyHelper.NormaliseAmountToPositive(amount, engine.Cache.RoundingRule, FinancialReason.LoanRepay);
         _ = await engine.PromptProvider.Acknowledge(player.PlayerId, "Loan Repayment Made",

@@ -98,3 +98,82 @@
     z-index: 1040;
 }
 .player-drawer-backdrop.open { opacity: 1; visibility: visible; }
+
+
+/* ── Game Info blocks ──
+   Rounded bordered tiles in the Game Info pane (right of the board). Each block
+   is a small at-a-glance read-out (icon + value/badge). A --split block puts a
+   divider between the two halves so it reads as two read-outs in one tile. */
+.play-page .gi-block {
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
+    padding: 1rem;
+    background: var(--bs-body-bg);
+}
+
+.play-page .gi-block--split > * + * {
+    border-left: 1px solid var(--bs-border-color);
+}
+
+/* Game Info pane scrolls internally (same discipline as the rules pane): the
+   card-body fills the card height and overflows vertically, so the accordion's
+   badge lists never push the card past the board's bottom edge. */
+.play-page .play-pane--info .card-body {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+
+/* ── News banner ──
+   Card-driven "until a double is rolled" events. The wrap uses the classic
+   full-bleed trick (100vw + negative-half-vw left margin) to break out of the
+   row gutter and span the whole viewport. Inside, the track contains two
+   identical sets of items; the keyframe shifts -50% so the second set lands
+   exactly where the first started — seamless loop, no JS, no gap. */
+.play-page .news-banner-wrap {
+    position: relative;
+    width: 100vw;
+    left: 50%;
+    margin-left: -50vw;
+    overflow: hidden;
+    background: var(--bs-warning);
+    color: #1a1a1a;
+    border-top: 1px solid rgba(0, 0, 0, .15);
+    border-bottom: 1px solid rgba(0, 0, 0, .15);
+}
+.play-page .news-banner {
+    display: flex;
+    overflow: hidden;
+    padding: 0.45rem 0;
+}
+.play-page .news-banner-track {
+    display: inline-flex;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+    animation: news-scroll 60s linear infinite;
+    will-change: transform;
+}
+.play-page .news-banner-set {
+    display: inline-flex;
+    flex-wrap: nowrap;
+    gap: 3rem;
+    padding-right: 3rem;        /* gap before the duplicate set starts */
+}
+.play-page .news-banner-item {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.95rem;
+    line-height: 1.2;
+}
+.play-page .news-banner-item i { font-size: 1.1rem; }
+
+/* Pause on hover so you can actually read a message before it leaves. */
+.play-page .news-banner-wrap:hover .news-banner-track {
+    animation-play-state: paused;
+}
+
+@keyframes news-scroll {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+}
