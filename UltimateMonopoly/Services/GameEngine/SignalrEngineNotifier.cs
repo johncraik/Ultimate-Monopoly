@@ -34,6 +34,9 @@ public sealed class SignalrEngineNotifier : IEngineNotifier
         // Ships the whole cache (Board + Events are [JsonIgnore]d); ConcurrencyStamp is the version.
         => Send(cache.GameId, "StateChanged", cache);
 
+    public void GameCompleted(string gameId)
+        => Send(gameId, "GameCompleted", new GameCompletedMessage(gameId));
+
     private void Send<T>(string gameId, string method, T message)
     {
         // Fire-and-forget: never await broadcast latency inside engine flow.
@@ -63,3 +66,6 @@ public sealed record PromptOpenedMessage(Prompt Prompt, string ConcurrencyStamp)
 
 /// <summary>Wire payload for <c>PromptClosed</c>.</summary>
 public sealed record PromptClosedMessage(string PromptId, string ConcurrencyStamp);
+
+/// <summary>Wire payload for <c>GameCompleted</c> — the in-game pages redirect to the finished-game page.</summary>
+public sealed record GameCompletedMessage(string GameId);

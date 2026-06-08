@@ -69,8 +69,7 @@ public class GameCacheModel(GameDTO gameDto, GameModel game, Board board)
     
     public GameRoundingRule RoundingRule { get; } = gameDto.RoundingRule;
         
-    public GameState GameState { get; } = gameDto.State;
-    public GameOutcome? GameOutcome { get; } = gameDto.Outcome;
+    public GameState GameState { get; internal set; } = gameDto.State;
     
     public DiceRoll? TurnDiceRoll { get; private set; }
     public TurnState TurnState { get; private set; } = TurnState.StartOfTurn;

@@ -1,4 +1,6 @@
+using MP.GameEngine.Abstractions;
 using MP.GameEngine.Enums;
+using MP.GameEngine.Enums.Games;
 using MP.GameEngine.Helpers;
 using MP.GameEngine.Helpers.RuleSet;
 using MP.GameEngine.Services.SubSystems;
@@ -14,6 +16,7 @@ public class PlayerTurnOrchestrator
     private readonly JailService _jailService;
     private readonly BoardService _boardService;
     private readonly GlobalEventService _globalEventService;
+    private readonly IGameCompletionService _completionService;
 
     public PlayerTurnOrchestrator(DiceService diceService,
         TransactionService transactionService,
@@ -21,7 +24,8 @@ public class PlayerTurnOrchestrator
         PlayerService playerService,
         JailService jailService,
         BoardService boardService,
-        GlobalEventService globalEventService)
+        GlobalEventService globalEventService,
+        IGameCompletionService completionService)
     {
         _diceService = diceService;
         _transactionService = transactionService;
@@ -30,11 +34,19 @@ public class PlayerTurnOrchestrator
         _jailService = jailService;
         _boardService = boardService;
         _globalEventService = globalEventService;
+        _completionService = completionService;
     }
 
 
     public async Task StartPlayerTurn(Framework.GameEngine engine, CancellationToken ct)
     {
+        if (engine.Cache.Game.GetPlayers(excludePovPlayer: false).Count == 1)
+        {
+            //Declares a winner
+            await _completionService.DeclareWinner(engine);
+            return;
+        }
+        
         // Defensive no-op: a turn is only kicked off from StartOfTurn. A stale or
         // duplicate StartTurn (e.g. a second tap that queued behind the first)
         // refuses here rather than rolling into the engine and throwing — an

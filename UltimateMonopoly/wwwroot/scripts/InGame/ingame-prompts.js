@@ -43,6 +43,37 @@
                 // [data-prompt-submit] = accept; [data-prompt-decline] = decline.
                 return { response: { '$type': 'AcquireProperty', promptId: promptId, accept: !decline } };
 
+            case 'Deal':
+                // Counter party's accept/decline ([data-prompt-submit] = accept,
+                // [data-prompt-decline] = decline). Contents are server-authored on the
+                // prompt, so the response is just the bool.
+                return { response: { '$type': 'Deal', promptId: promptId, accept: !decline } };
+
+            case 'BuildDeal': {
+                // The shortfall debtor builds a deal in the embedded _MakeDealPartial.
+                // Cancel ([data-prompt-decline]) backs out; Offer Deal reads the builder
+                // controls into a DealContents.
+                if (decline)
+                    return { response: { '$type': 'BuildDeal', promptId: promptId, cancelled: true,
+                        contents: { moneyFromProposer: 0, moneyFromCounterParty: 0, propertiesFromProposer: [], propertiesFromCounterParty: [] } } };
+
+                const root = promptEl.querySelector('[data-deal]');
+                if (!root) return { error: 'Deal builder not found.' };
+                const moneyOf = side => {
+                    const el = root.querySelector('[data-deal-money="' + side + '"]');
+                    return el ? Math.max(0, Math.floor(Number(el.value) || 0)) : 0;
+                };
+                const propsOf = side =>
+                    Array.from(root.querySelectorAll('[data-deal-grid="' + side + '"] input.btn-check[data-deal-index]:checked'))
+                        .map(i => Number(i.dataset.dealIndex));
+                return { response: { '$type': 'BuildDeal', promptId: promptId, cancelled: false, contents: {
+                    moneyFromProposer: moneyOf('proposer'),
+                    moneyFromCounterParty: moneyOf('counterparty'),
+                    propertiesFromProposer: propsOf('proposer'),
+                    propertiesFromCounterParty: propsOf('counterparty')
+                } } };
+            }
+
             case 'AuctionBid':
                 // AuctionBidAction is numeric over the wire (Bid = 0, Pass = 1).
                 return decline

@@ -53,7 +53,11 @@ public class TransactionService_Tests
     /// <summary>Snapshots are never written by TransactionService — no-op stub for the engine bundle.</summary>
     private sealed class NoOpSnapshotService : ISnapshotService
     {
-        public Task CreateSnapshotAsync(GameModel game, bool completeTransaction = true) => Task.CompletedTask;
+        public Task CreateSnapshotAsync(GameModel game, bool completeTransaction = true, bool isFinal = false) => Task.CompletedTask;
+        public Task CreateTurnEventSnapshotAsync(string gameId, string turnId, List<EventReceipt> receipts)
+        {
+            return Task.CompletedTask;
+        }
     }
 
     /// <summary>No-op notifier — these tests don't assert on broadcasts.</summary>
@@ -62,13 +66,16 @@ public class TransactionService_Tests
         public void PromptOpened(string gameId, Prompt prompt, string concurrencyStamp) { }
         public void PromptClosed(string gameId, string promptId, string concurrencyStamp) { }
         public void StateChanged(GameCacheModel cache) { }
+        public void GameCompleted(string gameId)
+        {
+        }
     }
     
     private sealed class NoOpShortfallService : IShortfallService
     {
         public Task<ShortfallOutcome> ResolveShortfall(Services.Framework.GameEngine engine,
             PlayerModel player,
-            uint shortfallAmount,
+            uint amountOwed,
             string? owedToPlayerId,
             ushort? counterpartyPropertyIndex,
             CancellationToken ct)

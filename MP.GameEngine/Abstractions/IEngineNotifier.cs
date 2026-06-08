@@ -33,4 +33,11 @@ public interface IEngineNotifier
     /// unit of engine work completes.
     /// </summary>
     void StateChanged(GameCacheModel cache);
+
+    /// <summary>
+    /// The game has finished (a winner or a draw). Implementations announce it to
+    /// the game's connected clients so they can move on (the in-game pages redirect
+    /// to the finished-game results). Called once the conclusion is persisted.
+    /// </summary>
+    void GameCompleted(string gameId);
 }

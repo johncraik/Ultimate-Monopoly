@@ -47,6 +47,7 @@ public class Game : AuditModel
     public ICollection<GamePlayer> Players { get; set; } 
     public ICollection<GameTurn> Turns { get; set; }
     public ICollection<GameSnapshot> Snapshots { get; set; }
+    public ICollection<GameTurnEvents> TurnEvents { get; set; }
     
 
     //EF Core constructor

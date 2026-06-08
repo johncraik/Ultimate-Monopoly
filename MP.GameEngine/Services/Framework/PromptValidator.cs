@@ -38,8 +38,67 @@ public static class PromptValidator
             ShortfallPrompt p => ValidateShortfall(p, response, submittingUserId, cache),
             AuctionBidPrompt p => ValidateAuctionBid(p, response, submittingUserId, cache),
             CardOptionPrompt p => ValidateCardOption(p, response, submittingUserId, cache),
+            BuildDealPrompt p => ValidateBuildDeal(p, response, submittingUserId, cache),
+            DealPrompt p => ValidateDeal(p, response, submittingUserId, cache),
             _ => false
         };
+    }
+
+    /// <summary>
+    /// A built deal must come from the named proposer (the debtor) or the host.
+    /// Every property the proposer puts up must be drawn from the prompt's
+    /// <see cref="BuildDealPrompt.ProposerDealableIndexes"/> and every property
+    /// the counter party puts up from
+    /// <see cref="BuildDealPrompt.CounterPartyDealableIndexes"/>, with no
+    /// duplicates on either side; and each side's offered money must not exceed
+    /// that side's cash (<see cref="BuildDealPrompt.ProposerBalance"/> /
+    /// <see cref="BuildDealPrompt.CounterPartyBalance"/>) — deal spend comes from
+    /// cash on hand (<c>game-rules.md</c> Default rule 7).
+    /// </summary>
+    private static bool ValidateBuildDeal(
+        BuildDealPrompt prompt,
+        PromptResponse response,
+        string submittingUserId,
+        GameCacheModel cache)
+    {
+        if (response is not BuildDealResponse r) return false;
+
+        if (submittingUserId != prompt.PlayerId && submittingUserId != cache.HostPlayerId)
+            return false;
+
+        var contents = r.Contents;
+        if (contents is null) return false;
+
+        if (contents.MoneyFromProposer > prompt.ProposerBalance) return false;
+        if (contents.MoneyFromCounterParty > prompt.CounterPartyBalance) return false;
+
+        return AllDrawnFrom(contents.PropertiesFromProposer, prompt.ProposerDealableIndexes)
+            && AllDrawnFrom(contents.PropertiesFromCounterParty, prompt.CounterPartyDealableIndexes);
+
+        static bool AllDrawnFrom(IReadOnlyList<ushort> selected, IReadOnlyList<ushort> eligible)
+        {
+            if (selected.Distinct().Count() != selected.Count) return false;   // no duplicates
+            var set = eligible.ToHashSet();
+            return selected.All(set.Contains);
+        }
+    }
+
+    /// <summary>
+    /// A deal accept/decline must come from the named counter party or the host.
+    /// The response is a bare <see cref="Responses.DealResponse.Accept"/> bool —
+    /// the contents are server-authored on the prompt and not re-supplied, so
+    /// there is nothing further to validate.
+    /// </summary>
+    private static bool ValidateDeal(
+        DealPrompt prompt,
+        PromptResponse response,
+        string submittingUserId,
+        GameCacheModel cache)
+    {
+        if (response is not DealResponse) return false;
+
+        return submittingUserId == prompt.PlayerId
+            || submittingUserId == cache.HostPlayerId;
     }
 
     /// <summary>

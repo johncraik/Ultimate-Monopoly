@@ -520,16 +520,17 @@ public class PropertyService
         
         var space = engine.Cache.Board.GetBoardSpace(boardIndex);
         var property = engine.Cache.Game.GetPropertySpace(boardIndex);
-        if(property is null)
+        if(property is null || space.PropertySet is null)
             return;
         
-        var cost = PropertySetHelper.GetBuildCost(boardIndex, engine.Cache.Board);
+        var streetEffect = engine.Cache.Game.HasStreetEffect((PropertySet)space.PropertySet);
+        var cost = PropertySetHelper.GetBuildCost(boardIndex, engine.Cache.Board, streetEffect);
         uint? doubleHotelCost = null;
         if (property.RentLevel == RentLevel.HOTEL)
         {
             //Property has a hotel, and we have passed increase rent level check
             //Therefore, we must be building a double hotel (build cost * 5)
-            doubleHotelCost = PropertySetHelper.GetDoubleHotelCost(boardIndex, engine.Cache.Board);
+            doubleHotelCost = PropertySetHelper.GetDoubleHotelCost(boardIndex, engine.Cache.Board, streetEffect);
             cost = (uint)doubleHotelCost;
         }
         
@@ -576,8 +577,11 @@ public class PropertyService
         
         var index = PropertySetHelper.GetIndexes(set)[0];
         var space = engine.Cache.Board.GetBoardSpace(index);
+        if(space.PropertySet is null)
+            return;
         
-        var cost = PropertySetHelper.GetBuildCost(set, engine.Cache.Board);
+        var streetEffect = engine.Cache.Game.HasStreetEffect((PropertySet)space.PropertySet);
+        var cost = PropertySetHelper.GetBuildCost(set, engine.Cache.Board, streetEffect);
         cost = MoneyHelper.NormaliseAmountToPositive(cost, engine.Cache.RoundingRule, FinancialReason.Build);
         
         if (player.Money < cost)
@@ -634,7 +638,8 @@ public class PropertyService
             var iList = PropertySetHelper.GetIndexes(set);
             indexes.AddRange(iList);
             
-            cost += PropertySetHelper.GetBuildCost(set, engine.Cache.Board);
+            var streetEffect = engine.Cache.Game.HasStreetEffect(set);
+            cost += PropertySetHelper.GetBuildCost(set, engine.Cache.Board, streetEffect);
         }
         
         cost = MoneyHelper.NormaliseAmountToPositive(cost, engine.Cache.RoundingRule, FinancialReason.Build);
@@ -698,7 +703,12 @@ public class PropertyService
             property.RentLevel += 1;
             property.HasBeenBuiltOnThisTurn = true;
             
-            var cost = PropertySetHelper.GetBuildCost(property.BoardIndex, engine.Cache.Board);
+            var space = engine.Cache.Board.GetBoardSpace(property.BoardIndex);
+            if(space.PropertySet is null)
+                throw new InvalidOperationException("Property space has no property set");
+            
+            var streetEffect = engine.Cache.Game.HasStreetEffect((PropertySet)space.PropertySet);
+            var cost = PropertySetHelper.GetBuildCost(property.BoardIndex, engine.Cache.Board, streetEffect);
             await _transactionService.PayForBuild(engine, player, doubleHotelCost ?? cost, property.BoardIndex, ct);
         }
     }
@@ -721,16 +731,17 @@ public class PropertyService
         
         var space = engine.Cache.Board.GetBoardSpace(boardIndex);
         var property = engine.Cache.Game.GetPropertySpace(boardIndex);
-        if(property is null)
+        if(property is null || space.PropertySet is null)
             return;
         
-        var value = PropertySetHelper.GetSellValue(boardIndex, engine.Cache.Board);
+        var streetEffect = engine.Cache.Game.HasStreetEffect((PropertySet)space.PropertySet);
+        var value = PropertySetHelper.GetSellValue(boardIndex, engine.Cache.Board, streetEffect);
         uint? doubleHotelValue = null;
         if (property.RentLevel == RentLevel.HOTEL)
         {
             //Property has a double hotel, and we have passed decreased rent level check
             //Therefore, we must be selling a double hotel (build cost * 5)/2
-            doubleHotelValue = PropertySetHelper.GetDoubleHotelSellValue(boardIndex, engine.Cache.Board);
+            doubleHotelValue = PropertySetHelper.GetDoubleHotelSellValue(boardIndex, engine.Cache.Board, streetEffect);
             value = (uint)doubleHotelValue;
         }
         
@@ -770,8 +781,11 @@ public class PropertyService
         
         var index = PropertySetHelper.GetIndexes(set)[0];
         var space = engine.Cache.Board.GetBoardSpace(index);
+        if(space.PropertySet is null)
+            return;
         
-        var value = PropertySetHelper.GetSellValue(set, engine.Cache.Board);
+        var streetEffect = engine.Cache.Game.HasStreetEffect((PropertySet)space.PropertySet);
+        var value = PropertySetHelper.GetSellValue(set, engine.Cache.Board, streetEffect);
         value = MoneyHelper.NormaliseAmountToPositive(value, engine.Cache.RoundingRule, FinancialReason.Build);
         
         var response = await engine.PromptProvider.RequestAsync(new AcquirePropertyPrompt
@@ -821,7 +835,8 @@ public class PropertyService
             var iList = PropertySetHelper.GetIndexes(set);
             indexes.AddRange(iList);
             
-            value += PropertySetHelper.GetSellValue(set, engine.Cache.Board);
+            var streetEffect = engine.Cache.Game.HasStreetEffect(set);
+            value += PropertySetHelper.GetSellValue(set, engine.Cache.Board, streetEffect);
         }
         
         value = MoneyHelper.NormaliseAmountToPositive(value, engine.Cache.RoundingRule, FinancialReason.Build);
@@ -876,7 +891,12 @@ public class PropertyService
             
             property.RentLevel -= 1;
             
-            var value = PropertySetHelper.GetSellValue(property.BoardIndex, engine.Cache.Board);
+            var space = engine.Cache.Board.GetBoardSpace(property.BoardIndex);
+            if(space.PropertySet is null)
+                throw new InvalidOperationException("Property space has no property set");
+            
+            var streetEffect = engine.Cache.Game.HasStreetEffect((PropertySet)space.PropertySet);
+            var value = PropertySetHelper.GetSellValue(property.BoardIndex, engine.Cache.Board, streetEffect);
             await _transactionService.ReceiveForSell(engine, player, doubleHotelValue ?? value, property.BoardIndex, ct);
         }
     }

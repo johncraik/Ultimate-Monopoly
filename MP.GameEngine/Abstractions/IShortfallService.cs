@@ -8,7 +8,7 @@ public interface IShortfallService
     Task<ShortfallOutcome> ResolveShortfall(
         Services.Framework.GameEngine engine,
         PlayerModel player,
-        uint shortfallAmount,
+        uint amountOwed,
         string? owedToPlayerId,
         ushort? counterpartyPropertyIndex,
         CancellationToken ct);

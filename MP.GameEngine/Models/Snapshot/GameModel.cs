@@ -274,13 +274,13 @@ public class GameModel
     }
 
     
-    public List<PropertyModel> TradableProperties(PropertySet? set = null)
-        => TradableProperties(Metadata.CurrentPlayerId, set);
+    public List<PropertyModel> TradableProperties(PropertySet? set = null, bool includeMortgaged = false)
+        => TradableProperties(Metadata.CurrentPlayerId, set, includeMortgaged);
     
-    public List<PropertyModel> TradableProperties(string playerId, PropertySet? set = null)
+    public List<PropertyModel> TradableProperties(string playerId, PropertySet? set = null, bool includeMortgaged = false)
     {
         //Tradable properties are ones that can be traded/mortgaged/handed into free parking
-        var properties = GetOwnedProperties(playerId, set, false, false);
+        var properties = GetOwnedProperties(playerId, set, includeMortgaged, false);
         
         var validProps = new List<PropertyModel>();
         foreach (var p in properties)
@@ -421,6 +421,13 @@ public class GameModel
     public (ushort HousesLeft, ushort HotelsLeft) GetHousesAndHotelsLeft()
     {
         var (houses, hotels) = GetHousesAndHotelsTaken();
+        
+        if(houses > RuleDictionary.HouseCount)
+            houses = RuleDictionary.HouseCount;
+        
+        if(hotels > RuleDictionary.HotelCount)
+            hotels = RuleDictionary.HotelCount;
+        
         return ((ushort)(RuleDictionary.HouseCount - houses), (ushort)(RuleDictionary.HotelCount - hotels));
     }
 
@@ -448,12 +455,6 @@ public class GameModel
         if (ownedInSet.Any(p => p.State is PropertyState.Mortgaged or PropertyState.Reserved))
             return (false, ownedInSet, property);
         
-        var (housesLeft, hotelsLeft) = GetHousesAndHotelsLeft();
-        if((property.RentLevel is >= RentLevel.SET and < RentLevel.HOTEL && housesLeft == 0) 
-           || (property.RentLevel is >= RentLevel.HOTEL and < RentLevel.DOUBLE_HOTEL && hotelsLeft == 0))
-            //No more houses/hotels left to buy/sell on this property
-            return (false, ownedInSet, property);
-        
         //Passed all main checks for buy/sell
         return (true, ownedInSet, property);
     }
@@ -466,7 +467,17 @@ public class GameModel
     {
        var (success, ownedInSet, property) = RentLevelBuySellCheck(playerId, boardIndex);
        if(!success || property == null) return false;
-        
+       
+       var (housesLeft, hotelsLeft) = GetHousesAndHotelsLeft();
+       switch (property.RentLevel)
+       {
+           //Building a house (SET, 1house, 2houses, 3houses)
+           case >= RentLevel.SET and < RentLevel.FOUR_HOUSES when housesLeft == 0:
+           //Building a hotel (4houses, Hotel)
+           case >= RentLevel.FOUR_HOUSES and < RentLevel.DOUBLE_HOTEL when hotelsLeft == 0:
+               return false;
+       }
+
        //Cant build on a property that has already been built on this turn
        if(property.HasBeenBuiltOnThisTurn)
            return false;
@@ -496,6 +507,22 @@ public class GameModel
     {
         var canIncreaseAll = true;
         var indexes = PropertySetHelper.GetIndexes(set);
+        
+        var properties = GetOwnedProperties(playerId, set, includeMortgaged: false, includeReserved: false);
+        //Number of properties where we are building a house on (set, 1 house, 2 houses, or 3 houses)
+        var numHouses = properties.Count(p => p.RentLevel is >= RentLevel.SET and < RentLevel.FOUR_HOUSES);
+        //Number of properties where we are building a new hotel on (4 houses)
+        var numNewHotels = properties.Count(p => p.RentLevel is RentLevel.FOUR_HOUSES);
+        var extraHouses = numNewHotels * 4; //New hotel frees up 4 houses each
+        
+        var numHotels = properties.Count(p => p.RentLevel is RentLevel.HOTEL);
+        numHotels += numNewHotels;
+        
+        //Check there is enough houses and hotels left to build on all properties in the set
+        var (housesLeft, hotelsLeft) = GetHousesAndHotelsLeft();
+        if (numHouses > (housesLeft + extraHouses) || numHotels > hotelsLeft)
+            return false;
+        
         foreach (var i in indexes)
         {
             canIncreaseAll = CanIncreaseRentLevel(playerId, i);
@@ -537,6 +564,11 @@ public class GameModel
         var (success, ownedInSet, property) = RentLevelBuySellCheck(playerId, boardIndex);
         if(!success || property == null) return false;
         
+        var (housesLeft, _) = GetHousesAndHotelsLeft();
+        if(property.RentLevel == RentLevel.HOTEL && housesLeft < 4)
+            //Selling a hotel requires 4 houses to be left (hotel -> 4 houses)
+            return false;
+        
         //Cannot sell houses on a purged property (purged flag removed when rent level stabilises)
         if(property.IsPurged)
             return false;
@@ -566,6 +598,20 @@ public class GameModel
     {
         var canDecreaseAll = true;
         var indexes = PropertySetHelper.GetIndexes(set);
+        
+        var properties = GetOwnedProperties(playerId, set, includeMortgaged: false, includeReserved: false);
+        
+        var numNew4Houses = properties.Count(p => p.RentLevel is RentLevel.HOTEL);      //H -> 4h
+        var housesRequired = numNew4Houses * 4; //Need 4 houses per property downgrading to 4houses
+        
+        //Number of properties downgrading where a house is sold (returned back)
+        var numHouses = properties.Count(p => p.RentLevel is > RentLevel.SET and <= RentLevel.FOUR_HOUSES);
+        
+        //Check there is enough houses to sell (no hotel check is requird)
+        var (housesLeft, _) = GetHousesAndHotelsLeft();
+        if (housesRequired > (housesLeft + numHouses))
+            return false;
+        
         foreach (var i in indexes)
         {
             canDecreaseAll = CanDecreaseRentLevel(playerId, i);

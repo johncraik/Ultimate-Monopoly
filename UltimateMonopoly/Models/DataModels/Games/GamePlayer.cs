@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using JC.Core.Models.Auditing;
 using Microsoft.EntityFrameworkCore;
 using MP.GameEngine.Helpers.RuleSet;
+using UltimateMonopoly.Enums;
 
 namespace UltimateMonopoly.Models.DataModels.Games;
 
@@ -30,6 +31,7 @@ public class GamePlayer : AuditModel
     [Range(1, 6)]
     public ushort? Dice2 { get; private set; }
     
+    public PlayerGameOutcome? PlayerGameOutcome { get; set; }
 
     public GamePlayer()
     {

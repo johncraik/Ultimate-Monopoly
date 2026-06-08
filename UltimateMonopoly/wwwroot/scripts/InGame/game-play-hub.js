@@ -151,6 +151,12 @@
         connection.on('PromptOpened', dispatchOpen);
         connection.on('PromptClosed', (msg) => { if (msg) dispatchClose(msg.promptId); });
         connection.on('GameFaulted', (msg) => showFatalError(msg && msg.message));
+        // Game over: the server finished the game and persisted the result. Every client
+        // (host tablet + phones) moves to the finished-game results page.
+        connection.on('GameCompleted', (msg) => {
+            const id = (msg && msg.gameId) || gameId;
+            window.location.href = '/Games/Finished/' + encodeURIComponent(id);
+        });
         queued.forEach(h => connection.on(h.event, h.callback));
 
         // Re-sync the open prompt after a dropped connection is restored.

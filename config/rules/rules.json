@@ -4,7 +4,7 @@
     "Rule": 1,
     "Point": null,
     "Title": "Buying requires passing GO",
-    "RuleDescription": "You can't buy a property until you've passed GO at least once. Land on an unowned property before then and nothing happens — it isn't bought or auctioned, and it stays with the bank.",
+    "RuleDescription": "You can't buy a property until you've passed GO at least once. Land on an unowned property before then and nothing happens.",
     "RawRuleCode": "Default_BuyRequiresPassingGo"
   },
   {
@@ -23,7 +23,6 @@
     "RuleDescription": "Fines — including tax and the jail fee — are paid into the Free Parking pot, not to the bank.",
     "RawRuleCode": "Default_FinesToFreeParking"
   },
-
   {
     "Section": 2,
     "Rule": 1,
@@ -37,7 +36,7 @@
     "Rule": 2,
     "Point": null,
     "Title": "Someone rolled your dice number",
-    "RuleDescription": "When another player rolls your personal dice number, you collect £100 from the bank — plus a third card at the end of the turn.",
+    "RuleDescription": "When another player rolls your personal dice number, you collect £100 from the bank — plus a third card at the end of your movement.",
     "RawRuleCode": "Roll_DiceNumberByOther"
   },
   {
@@ -45,19 +44,17 @@
     "Rule": 3,
     "Point": null,
     "Title": "You rolled your own dice number",
-    "RuleDescription": "Rolling your own dice number pays you £100 from the bank and £100 from every other player — plus a third card at the end of the turn.",
+    "RuleDescription": "Rolling your own dice number pays you £100 from the bank and £100 from every other player — plus a third card at the end of your movement.",
     "RawRuleCode": "Roll_DiceNumberBySelf"
   },
-
   {
     "Section": 3,
     "Rule": 2,
     "Point": null,
     "Title": "Direction is locked until you pass GO",
-    "RuleDescription": "You can't change direction — even by rolling a double — until you've passed GO at least once. The first move off GO at the start of the game doesn't count.",
+    "RuleDescription": "You can't change direction until you've passed GO at least once. The first move off GO at the start of the game doesn't count.",
     "RawRuleCode": "Move_DirectionLockedUntilGo"
   },
-
   {
     "Section": 4,
     "Rule": 1,
@@ -122,7 +119,6 @@
     "RuleDescription": "Rolling three doubles in a row sends you straight to jail and ends your turn. The other players still take their third-die move for that roll.",
     "RawRuleCode": "Double_ThreeInRowToJail"
   },
-
   {
     "Section": 5,
     "Rule": 2,
@@ -155,7 +151,6 @@
     "RuleDescription": "Rolling three triples in a row sends you straight to jail.",
     "RawRuleCode": "Triple_ThreeInRowToJail"
   },
-
   {
     "Section": 7,
     "Rule": 2,
@@ -169,7 +164,7 @@
     "Rule": 3,
     "Point": null,
     "Title": "Passing GO anti-clockwise",
-    "RuleDescription": "Passing GO while travelling anti-clockwise pays you £100 — less than a clockwise pass.",
+    "RuleDescription": "Passing GO while travelling anti-clockwise pays you £100.",
     "RawRuleCode": "Go_PassAntiClockwise"
   },
   {
@@ -177,10 +172,9 @@
     "Rule": 4,
     "Point": null,
     "Title": "Landing on GO",
-    "RuleDescription": "Landing exactly on GO pays £200, whichever direction you're travelling.",
+    "RuleDescription": "Landing exactly on GO pays £200.",
     "RawRuleCode": "Go_LandOn"
   },
-
   {
     "Section": 8,
     "Rule": 2,
@@ -189,7 +183,6 @@
     "RuleDescription": "Landing on Go To Jail sends you straight to jail (unless a card you draw says otherwise).",
     "RawRuleCode": "GoToJail_SendToJail"
   },
-
   {
     "Section": 9,
     "Rule": 1,
@@ -203,7 +196,7 @@
     "Rule": 2,
     "Point": null,
     "Title": "Three turns in jail, then you pay",
-    "RuleDescription": "You can stay in jail for at most three turns. If you haven't left by then, you must pay the jail fee to leave on the third turn.",
+    "RuleDescription": "You can stay in jail for at most three turns. If you haven't left by then, you must pay the jail fee (or use card) to leave on the third turn.",
     "RawRuleCode": "Jail_ThreeTurnLimit"
   },
   {
@@ -211,16 +204,15 @@
     "Rule": 3,
     "Point": null,
     "Title": "The jail fee grows each turn",
-    "RuleDescription": "The fee to leave jail starts at £50 and rises 50% for each turn you've spent inside (£50, then £75, then £113). It resets to £50 the next time you're jailed.",
+    "RuleDescription": "The fee to leave jail starts at £50 and rises 50% for each turn you've spent inside (£50, then £75, then £113).",
     "RawRuleCode": "Jail_FeeEscalates"
   },
-
   {
     "Section": 10,
     "Rule": 2,
     "Point": null,
     "Title": "Free Parking fee when there's nothing to take",
-    "RuleDescription": "If the pot is empty, or you own no properties, you pay into Free Parking the difference between your two main dice times 100 (e.g. a 3 and a 5 → £200).",
+    "RuleDescription": "If the pot is empty, or you own no properties, you pay into Free Parking the difference between the two main dice times 100.",
     "RawRuleCode": "FreeParking_PayDiceDifference"
   },
   {
@@ -260,7 +252,7 @@
     "Rule": 6,
     "Point": null,
     "Title": "Hand-ins are tracked per set",
-    "RuleDescription": "Once you hand a property into Free Parking, you can't hand in any other property from that same set for the rest of the game. All stations count as one set; all utilities as another.",
+    "RuleDescription": "Once you hand a property into Free Parking, you can't hand in any other property from that same set for the rest of the game.",
     "RawRuleCode": "FreeParking_HandInTrackedPerSet"
   },
   {
@@ -271,7 +263,6 @@
     "RuleDescription": "If there's money to take but you have no property eligible to hand in, you purge one of your properties instead, and still take the money and any properties in Free Parking.",
     "RawRuleCode": "FreeParking_PurgeWhenNoneEligible"
   },
-
   {
     "Section": 12,
     "Rule": 1,
@@ -285,7 +276,7 @@
     "Rule": 3,
     "Point": null,
     "Title": "Keep up to £200 when taking a loan",
-    "RuleDescription": "When you take a loan you may keep up to £200 in cash — only money above £200 goes toward what you owe, and the loan covers the rest.",
+    "RuleDescription": "When you take a loan you may keep £200 in cash — only money above £200 goes toward what you owe, and the loan covers the rest.",
     "RawRuleCode": "Loan_KeepUpTo200"
   },
   {
@@ -301,7 +292,7 @@
     "Rule": 5,
     "Point": null,
     "Title": "Loan repayment when you pass GO",
-    "RuleDescription": "Each time you pass GO you repay 10% of the total you originally borrowed across your outstanding loans (never less than the smallest grid amount). Only passing GO triggers this — not Free Parking.",
+    "RuleDescription": "Each time you pass GO you repay 10% of the total you originally borrowed across your outstanding loans (never less than the smallest grid amount).",
     "RawRuleCode": "Loan_RepayInstalmentOnGo"
   },
   {
@@ -312,7 +303,6 @@
     "RuleDescription": "Repayments clear your oldest loan first. The full instalment is paid even if it's more than that loan needs — any overpayment is lost, not carried over to the next loan.",
     "RawRuleCode": "Loan_RepaidOldestOverpaymentLost"
   },
-
   {
     "Section": 13,
     "Rule": 1,
@@ -326,10 +316,9 @@
     "Rule": 4,
     "Point": null,
     "Title": "A mortgaged property breaks its set's rent",
-    "RuleDescription": "A mortgaged property earns no rent and stops counting toward its set — so the rest of the colour set (or a station's combined rent) drops to single rent until you unmortgage it.",
+    "RuleDescription": "A mortgaged property earns no rent and stops counting toward its set — so the rest of the set drops to single rent until you unmortgage it.",
     "RawRuleCode": "Mortgage_NoSetRentWhileMortgaged"
   },
-
   {
     "Section": 14,
     "Rule": 1,
@@ -358,11 +347,10 @@
     "Section": 14,
     "Rule": 6,
     "Point": null,
-    "Title": "Reserved properties end once everyone has a set",
+    "Title": "Reserved properties end once someone has a set",
     "RuleDescription": "As soon as a player breaks through to a complete set, the reservation rule is spent and no longer applies for the rest of the game.",
     "RawRuleCode": "Reserved_MechanicEnds"
   },
-
   {
     "Section": 15,
     "Rule": 1,
@@ -395,7 +383,6 @@
     "RuleDescription": "If no player can afford even the minimum bid, the auction is cancelled and the property stays with the bank.",
     "RawRuleCode": "Auction_NobodyCanAfford"
   },
-
   {
     "Section": 16,
     "Rule": 1,
@@ -409,10 +396,9 @@
     "Rule": 2,
     "Point": null,
     "Title": "Mortgaged stations still raise the price",
-    "RuleDescription": "Stations you've mortgaged still count toward the price of your next station — you can't dodge the rising cost by mortgaging. This is the opposite of rent, where a mortgaged station counts for nothing.",
+    "RuleDescription": "Stations you've mortgaged still count toward the price of your next station — you can't dodge the rising cost by mortgaging.",
     "RawRuleCode": "Station_MortgagedCountsForPrice"
   },
-
   {
     "Section": 17,
     "Rule": 1,
@@ -434,10 +420,9 @@
     "Rule": 3,
     "Point": null,
     "Title": "Owning both utilities pays more",
-    "RuleDescription": "Owning a single utility uses the lower multiplier; owning both uses the higher one. A mortgaged utility earns nothing and doesn't count toward the pair.",
+    "RuleDescription": "Owning a single utility uses the lower multiplier; owning both uses the higher one.",
     "RawRuleCode": "Utility_PairMultiplier"
   },
-
   {
     "Section": 19,
     "Rule": 1,
@@ -451,7 +436,7 @@
     "Rule": 2,
     "Point": null,
     "Title": "Bankrupt assets go to the bank",
-    "RuleDescription": "When you go bankrupt, all your money and properties return to the bank — never to another player.",
+    "RuleDescription": "When you go bankrupt, all your money and properties return to the bank.",
     "RawRuleCode": "Bankruptcy_AssetsToBank"
   },
   {

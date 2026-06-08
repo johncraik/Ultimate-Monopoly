@@ -265,3 +265,31 @@ Two consequences:
 5. **Code (when built)** — `Models/DataModels/Games/GameTurnEvents.*`,
    `Services/GameEngine/SnapshotService.cs` (or a new event-store), the engine
    `GameCacheModel.Events` / `ClearEvents` seam, and the web-side stats service.
+
+
+---
+
+---
+
+## 13. Planned Player Stats (per game):
+
+- Money Earned
+- Money Spent
+- Amount spent buying properties
+- Amount spent on building
+- Amount spent on fines
+- Amount spent to leave Jail
+- Amount spent on loans
+- Maximum number of sets obtained
+- Most profitable property
+- Least profitable property
+- Most profitable set
+- Least profitable set
+- Number of cards drawn
+- Number of cards kept
+- Number of cards played (after keeping)
+- Times landed on free parking,
+- Times landed on tax,
+- Times landed on GO,
+
+List is TODO/WIP

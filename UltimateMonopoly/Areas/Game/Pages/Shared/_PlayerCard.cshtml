@@ -28,22 +28,32 @@
             </div>
         </div>
 
-        <button type="button" class="btn btn-sm btn-outline-info"
-                data-bs-toggle="modal" data-bs-target="#setDiceModal"
-                data-set-dice
-                data-user-id="@Model.Profile.UserId"
-                data-name="@Model.Profile.DisplayName"
-                data-dice1="@(Model.Dice1?.ToString() ?? string.Empty)"
-                data-dice2="@(Model.Dice2?.ToString() ?? string.Empty)">
-            Set Dice
-        </button>
-
-        @if (!Model.IsHost)
+        @if (Model.IsSetup)
         {
-            <form method="post" asp-page-handler="Kick" class="m-0">
-                <input type="hidden" name="targetUserId" value="@Model.Profile.UserId" />
-                <button type="submit" class="btn btn-sm btn-outline-danger">Kick</button>
-            </form>
+            <button type="button" class="btn btn-sm btn-outline-info"
+                    data-bs-toggle="modal" data-bs-target="#setDiceModal"
+                    data-set-dice
+                    data-user-id="@Model.Profile.UserId"
+                    data-name="@Model.Profile.DisplayName"
+                    data-dice1="@(Model.Dice1?.ToString() ?? string.Empty)"
+                    data-dice2="@(Model.Dice2?.ToString() ?? string.Empty)">
+                Set Dice
+            </button>
+
+            @if (!Model.IsHost)
+            {
+                <form method="post" asp-page-handler="Kick" class="m-0">
+                    <input type="hidden" name="targetUserId" value="@Model.Profile.UserId" />
+                    <button type="submit" class="btn btn-sm btn-outline-danger">Kick</button>
+                </form>
+            }
+        }
+        else
+        {
+            <a class="btn btn-sm btn-primary"
+               asp-area="Social" asp-page="/Friends/Profile" asp-route-userId="@Model.Profile.UserId">
+                <i class="bi bi-person-lines-fill me-1"></i> View
+            </a>
         }
     </div>
 </div>

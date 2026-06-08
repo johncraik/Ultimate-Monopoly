@@ -31,7 +31,8 @@ public static class ServiceRegistration
             typeof(Game),
             typeof(GamePlayer),
             typeof(GameTurn),
-            typeof(GameSnapshot));
+            typeof(GameSnapshot),
+            typeof(GameTurnEvents));
 
         services.TryAddSingleton<FilePathProvider>();
         services.TryAddScoped<UserService>();
@@ -65,6 +66,7 @@ public static class ServiceRegistration
         services.TryAddScoped<GameCacheService>();
         
         // Game Engine
+        services.TryAddScoped<IGameCompletionService, GameCompletionService>();
         services.TryAddScoped<ISnapshotService, SnapshotService>();
         services.TryAddScoped<IGameEngineFactory, GameEngineFactory>();
         services.TryAddSingleton<IEngineNotifier, SignalrEngineNotifier>();

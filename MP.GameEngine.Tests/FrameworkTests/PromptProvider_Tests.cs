@@ -51,6 +51,9 @@ public class PromptProvider_Tests
         public void PromptOpened(string gameId, Prompt prompt, string concurrencyStamp) { }
         public void PromptClosed(string gameId, string promptId, string concurrencyStamp) { }
         public void StateChanged(GameCacheModel cache) { }
+        public void GameCompleted(string gameId)
+        {
+        }
     }
     
     private static PromptProvider CreateProvider(GameCacheModel cache) => new(cache, new NoOpNotifier());

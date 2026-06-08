@@ -5,15 +5,15 @@
 - [ ] Cards
 - [ ] Go to / Leave Jail
 - [ ] Taxes
-- [ ] Loans
-- [ ] Deals
-- [ ] Portfolio Commands
+- [x] Loans
+- [x] Deals
+- [x] Portfolio Commands
 
 ## Free Parking
 - [ ] Get a FP card
-- [ ] Resolve a  FP scenarios
-- [ ] Update player(s) and free parking pot
-- (TODO/PLAN)
+- [x] Resolve a  FP scenarios
+- [x] Update player(s) and free parking pot
+- [ ] Purging properties
 
 ## Cards
 - Defered on purpose
@@ -21,14 +21,14 @@
 
 ## Go to / Leave Jail
 - [ ] Get go to jail card
-- [ ] Send player to jail (unless card says otherwise)
+- [x] Send player to jail (unless card says otherwise)
 - [ ] Handle get out of jail free card
-- [ ] Handle paying to leave jail (partly done)
+- [x] Handle paying to leave jail (partly done)
 - (TODO/PLAN)
 
 ## Taxes
 - [ ] Get a tax card
-- [ ] Pay the tax, unless card says otherwise
+- [x] Pay the tax, unless card says otherwise
 - (TODO/PLAN)
 
 ## Loans
@@ -36,11 +36,9 @@
 - [x] 10% of total originally-borrowed across outstanding loans; pays loans off one at a time in order; overpayment on clearing a loan is lost (not carried to the next)
 
 ## Deals
-- [ ] Make an offer
-- [ ] Accept an offer 
-- [ ] Decline an offer
-- [ ] Counter an offer
-- (TODO/PLAN)
+- [x] Make an offer
+- [x] Accept an offer 
+- [x] Decline an offer
 
 ## Portfolio Commands
 - [x] <del>Un-Reserve a property
@@ -48,7 +46,7 @@
 - [x] <del>Unmortgage a property
 - [x] <del>Buy a house/rent level
 - [x] <del>Sell a house/rent level
-- [ ] Declare bankruptcy
+- [x] Declare bankruptcy
 
 ## Other
 - [ ] Double/Triples grab a card

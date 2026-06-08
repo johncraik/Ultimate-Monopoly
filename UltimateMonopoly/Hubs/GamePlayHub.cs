@@ -1,6 +1,7 @@
 using JC.Core.Models;
 using MP.GameEngine.Abstractions;
 using MP.GameEngine.Models.Boards;
+using MP.GameEngine.Models.Deals;
 using MP.GameEngine.Models.Prompts;
 using UltimateMonopoly.Services.GameEngine;
 using UltimateMonopoly.Services.Games;
@@ -144,6 +145,30 @@ public class GamePlayHub : GameBaseHub
             return false;
 
         _playerProfiles.EnqueueLeaveJailPay(gameId, Context.UserIdentifier);
+        return true;
+    }
+
+    /// <summary>
+    /// Proposes a turn-boundary deal from <paramref name="proposerId"/> to
+    /// <paramref name="counterPartyId"/> with the built <paramref name="contents"/>. Unlike a
+    /// portfolio command the proposer need not be the current player (deals fire at any turn
+    /// boundary), so the proposer is named explicitly; <c>CanDeal</c> authorises the proposer
+    /// themselves or the host. Optimistic pre-check, then enqueues on the single-writer
+    /// executor, which re-checks and opens the accept/decline prompt to the counter party.
+    /// </summary>
+    public async Task<bool> ProposeDeal(string proposerId, string counterPartyId, DealContents contents)
+    {
+        var gameId = GetGameId();
+        if (string.IsNullOrEmpty(gameId) || string.IsNullOrEmpty(Context.UserIdentifier))
+            return false;
+        if (string.IsNullOrEmpty(proposerId) || string.IsNullOrEmpty(counterPartyId) || contents is null)
+            return false;
+
+        var engine = await _engineFactory.GetAsync(gameId);
+        if (!engine.TurnStateProvider.CanDeal(proposerId, Context.UserIdentifier))
+            return false;
+
+        _playerProfiles.EnqueueProposeDeal(gameId, Context.UserIdentifier, proposerId, counterPartyId, contents);
         return true;
     }
 

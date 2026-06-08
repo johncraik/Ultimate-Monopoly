@@ -19,6 +19,8 @@ namespace MP.GameEngine.Models.Prompts;
 [JsonDerivedType(typeof(ShortfallResponse), "Shortfall")]
 [JsonDerivedType(typeof(AuctionBidResponse), "AuctionBid")]
 [JsonDerivedType(typeof(CardOptionResponse), "CardOption")]
+[JsonDerivedType(typeof(BuildDealResponse), "BuildDeal")]
+[JsonDerivedType(typeof(DealResponse), "Deal")]
 public abstract class PromptResponse
 {
     /// <summary>

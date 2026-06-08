@@ -8,7 +8,7 @@ namespace UltimateMonopoly.Models.ViewModels;
 public record FriendRequestResult(bool Success, string? ErrorMessage);
 public record ChatMessage(bool FromMe, string AuthorDisplay, string Body, DateTime SentUtc);
 
-public record PlayerCard(ushort OrderId, UserProfileViewModel Profile, ushort? Dice1, ushort? Dice2, bool IsHost);
+public record PlayerCard(ushort OrderId, UserProfileViewModel Profile, ushort? Dice1, ushort? Dice2, bool IsHost, bool IsSetup);
 
 
 //Board Skin Editor Records:

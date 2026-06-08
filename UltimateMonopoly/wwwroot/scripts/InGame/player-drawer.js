@@ -129,11 +129,29 @@
     backdrop.addEventListener('click', close);
     document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
 
+    // "Open Profile on Prompt" toggle (host sidebar). When on, the drawer auto-opens on
+    // the prompted player; when off, the host opens drawers manually. Persisted in
+    // localStorage (default on) so it survives the live body re-render — the toggle lives
+    // inside the swapped .play-page, so re-apply the stored value after each swap.
+    const OPEN_ON_PROMPT_KEY = 'um:openProfileOnPrompt';
+    const openOnPrompt = () => localStorage.getItem(OPEN_ON_PROMPT_KEY) !== 'false';
+    function syncToggle() {
+        document.querySelectorAll('[data-open-on-prompt]').forEach(el => { el.checked = openOnPrompt(); });
+    }
+    document.addEventListener('change', function (e) {
+        const t = e.target.closest('[data-open-on-prompt]');
+        if (t) localStorage.setItem(OPEN_ON_PROMPT_KEY, t.checked ? 'true' : 'false');
+    });
+    new MutationObserver(syncToggle).observe(host, { childList: true });
+    syncToggle();
+
     // Auto-open the drawer on the prompted player so the host sees the prompt (it
-    // renders inside the loaded profile). No auto-close — manual only. Covers the
-    // reconnect/initial resync too (see game-play-hub.js).
+    // renders inside the loaded profile) — unless the host turned the toggle off. No
+    // auto-close — manual only. Covers the reconnect/initial resync too (see game-play-hub.js).
     GamePlayHub.observePrompts({
-        onOpen: function (prompt) { if (prompt && prompt.playerId) open(prompt.playerId); }
+        onOpen: function (prompt) {
+            if (openOnPrompt() && prompt && prompt.playerId) open(prompt.playerId);
+        }
     });
 
     // Keep the open drawer's profile current with the live state.

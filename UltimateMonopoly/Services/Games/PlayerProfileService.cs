@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using MP.GameEngine.Enums.Games;
 using MP.GameEngine.Helpers;
+using MP.GameEngine.Models.Deals;
 using MP.GameEngine.Services.SubSystems;
 using UltimateMonopoly.Models.DataModels.Games;
 using UltimateMonopoly.Services.GameEngine;
@@ -137,6 +138,21 @@ public class PlayerProfileService
                 return;
 
             await sp.GetRequiredService<JailService>().LeaveJailByPaying(engine, current, ct);
+        });
+
+    // Turn-boundary deal command. Unlike portfolio commands the proposer isn't necessarily the
+    // current player (deals fire at any turn boundary), so the proposer id is explicit and the
+    // gate is CanDeal (host-bypass aware). DealService resolves the players and runs the deal.
+    public void EnqueueProposeDeal(string gameId, string submittingUserId, string proposerId,
+        string counterPartyId, DealContents contents)
+        => _executor.Enqueue(gameId, async (engine, sp, ct) =>
+        {
+            // Authoritative gate re-check on the writer thread (web-orchestration.md §5).
+            if (!engine.TurnStateProvider.CanDeal(proposerId, submittingUserId))
+                return;
+
+            await sp.GetRequiredService<DealService>()
+                .ProposeDealCommand(engine, proposerId, counterPartyId, contents, ct);
         });
 
     private void EnqueuePortfolioCommand(string gameId, string submittingUserId,

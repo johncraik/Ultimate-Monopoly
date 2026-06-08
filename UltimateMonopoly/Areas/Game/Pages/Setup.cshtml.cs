@@ -145,6 +145,6 @@ public class SetupModel : PageModel
         var profile = await _profiles.GetUserProfileViewModelAsync(player.UserId);
         return profile is null
             ? null
-            : new PlayerCard(player.OrderId, profile, player.Dice1, player.Dice2, player.UserId == hostUserId);
+            : new PlayerCard(player.OrderId, profile, player.Dice1, player.Dice2, player.UserId == hostUserId, true);
     }
 }

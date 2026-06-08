@@ -113,24 +113,26 @@ public static class PropertySetHelper
            && GetIndexes(set).Count - 1 == ownedPropertiesInSet.Count;
 
 
-    public static uint GetBuildCost(ushort boardIndex, Board board)
+    public static uint GetBuildCost(ushort boardIndex, Board board, bool hasStreetEffect)
     {
         var space = board.GetBoardSpace(boardIndex);
         if(!space.IsBuildable || space.BuildCost == null)
             return 0;
 
-        return (uint)space.BuildCost;
+        return hasStreetEffect 
+            ? Half((uint)space.BuildCost) 
+            : (uint)space.BuildCost;
     }
 
-    public static uint GetBuildCost(PropertySet set, Board board)
+    public static uint GetBuildCost(PropertySet set, Board board, bool hasStreetEffect)
     {
         var indexes = GetIndexes(set);
-        return indexes.Aggregate<ushort, uint>(0, (current, i) => current + GetBuildCost(i, board));
+        return indexes.Aggregate<ushort, uint>(0, (current, i) => current + GetBuildCost(i, board, hasStreetEffect));
     }
 
-    public static uint GetDoubleHotelCost(ushort boardIndex, Board board)
+    public static uint GetDoubleHotelCost(ushort boardIndex, Board board, bool hasStreetEffect)
     {
-        var buildCost = GetBuildCost(boardIndex, board);
+        var buildCost = GetBuildCost(boardIndex, board, hasStreetEffect);
         
         //Double hotel cost is the total cost of a hotel
         //Build cost = £100: you pay £100 FIVE times to reach hotel level
@@ -138,37 +140,37 @@ public static class PropertySetHelper
         return buildCost * 5;
     }
     
-    public static uint GetDoubleHotelCost(PropertySet set, Board board)
+    public static uint GetDoubleHotelCost(PropertySet set, Board board, bool hasStreetEffect)
     {
         var indexes = GetIndexes(set);
-        return GetDoubleHotelCost(indexes[0], board);
+        return GetDoubleHotelCost(indexes[0], board, hasStreetEffect);
     }
 
     
     private static uint Half(uint value)
         => (uint)Math.Round((value / 2d), MidpointRounding.AwayFromZero);
     
-    public static uint GetSellValue(ushort boardIndex, Board board)
+    public static uint GetSellValue(ushort boardIndex, Board board, bool hasStreetEffect)
     {
-        var cost = GetBuildCost(boardIndex, board);
+        var cost = GetBuildCost(boardIndex, board, hasStreetEffect);
         return Half(cost);
     }
     
-    public static uint GetSellValue(PropertySet set, Board board)
+    public static uint GetSellValue(PropertySet set, Board board, bool hasStreetEffect)
     {
         var indexes = GetIndexes(set);
-        return indexes.Aggregate<ushort, uint>(0, (current, i) => current + GetSellValue(i, board));
+        return indexes.Aggregate<ushort, uint>(0, (current, i) => current + GetSellValue(i, board, hasStreetEffect));
     }
 
-    public static uint GetDoubleHotelSellValue(ushort boardIndex, Board board)
+    public static uint GetDoubleHotelSellValue(ushort boardIndex, Board board, bool hasStreetEffect)
     {
-        var cost = GetDoubleHotelCost(boardIndex, board);
+        var cost = GetDoubleHotelCost(boardIndex, board, hasStreetEffect);
         return Half(cost);
     }
     
-    public static uint GetDoubleHotelSellValue(PropertySet set, Board board)
+    public static uint GetDoubleHotelSellValue(PropertySet set, Board board, bool hasStreetEffect)
     {
         var indexes = GetIndexes(set);
-        return GetDoubleHotelSellValue(indexes[0], board);
+        return GetDoubleHotelSellValue(indexes[0], board, hasStreetEffect);
     }
 }

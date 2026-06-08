@@ -73,5 +73,8 @@ public enum FinancialReason
     CardCharge,
 
     /// <summary>Money component of a player-to-player deal.</summary>
-    Deal
+    Deal,
+    
+    /// <summary>Money received from a bankrupt player.</summary>
+    BankruptedPlayer
 }

@@ -50,7 +50,8 @@ else
                                 break;
                             }
                             case "finished":
-                                <a class="btn btn-sm btn-outline-secondary" href="#">View</a>
+                                <a class="btn btn-sm btn-outline-secondary"
+                                   asp-page="/Games/Finished" asp-route-gameId="@game.Id">View</a>
                                 break;
                             case "cancelled" when game.IsHost:
                                 <form method="post" asp-page-handler="Delete" class="m-0">

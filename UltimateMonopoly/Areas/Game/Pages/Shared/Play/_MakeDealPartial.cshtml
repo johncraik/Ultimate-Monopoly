@@ -1,0 +1,142 @@
+@using JC.Core.Extensions
+@using MP.GameEngine.Abstractions
+@using MP.GameEngine.Enums.Properties
+@using MP.GameEngine.Helpers
+@using MP.GameEngine.Helpers.RuleSet
+@using MP.GameEngine.Models.Snapshot
+@using UltimateMonopoly.Models.ViewModels.Games
+@using UltimateMonopoly.Services.Cache
+@model MakeDealViewModel
+@inject IGameEngineFactory EngineFactory
+@inject PlayerCacheService PlayerCache
+@{
+    // DEAL BUILDER — the reusable inner fragment for constructing a deal: a money
+    // input + a property grid per side ("What you give" = proposer, "What you
+    // receive" = counter party), then a live summary of the selection. The grid
+    // squares are colour-only btn-check toggles (one row per set, in PropertySet
+    // enum order, each row ordered left→right by board index); make-deal.js mirrors
+    // checked squares + money into the summary boxes. No Propose/Cancel buttons here
+    // — the embedding prompt/command surface owns those and reads the built deal off
+    // these controls. Shared by the Deal tab (command) and the BuildDealPrompt
+    // (shortfall); the caller passes only the gameId + the two player ids, and this
+    // partial derives the pools / balances / names from the cache.
+    // See design-docs/game-deals.md §14.
+    const string cur = RuleDictionary.Currency;
+
+    // Resolve the engine for this game (caller-supplied id). The cache is already
+    // loaded in every context this renders in; tolerate a miss rather than throw.
+    MP.GameEngine.Services.Framework.GameEngine? engine = null;
+    try { engine = await EngineFactory.GetAsync(Model.GameId); }
+    catch { /* no cache — render the unavailable state below */ }
+
+    PlayerModel? proposer = null, counterparty = null;
+    if (engine is not null)
+    {
+        proposer = engine.Cache.Game.GetPlayer(Model.ProposerId);
+        counterparty = engine.Cache.Game.GetPlayer(Model.CounterPartyId);
+    }
+}
+
+@if (engine is null || proposer is null || counterparty is null)
+{
+    <div class="text-body-secondary small text-center py-3">Deal unavailable.</div>
+    return;
+}
+
+@{
+    var game = engine.Cache.Game;
+    var board = engine.Cache.Board;
+    var counterName = await PlayerCache.GetPlayerName(Model.CounterPartyId);
+
+    // Group a side's dealable indexes by set, in PropertySet enum order (top→bottom),
+    // each row ordered by board index (left→right as on the board). Skips empty sets.
+    List<(PropertySet Set, string Slug, List<ushort> Indexes)> GroupBySet(IEnumerable<ushort> indexes)
+        => Enum.GetValues<PropertySet>()
+            .Select(set => (
+                Set: set,
+                Slug: set.ToDisplayName().ToSlug(),
+                Indexes: indexes.Where(i => PropertySetHelper.ResolveSet(i) == set).OrderBy(i => i).ToList()))
+            .Where(r => r.Indexes.Count > 0)
+            .ToList();
+
+    // Dealable = owned, not reserved, not built-on (and not in a built-on set), mortgaged
+    // allowed — game-deals.md §5. TradableProperties(includeMortgaged: true) is exactly that.
+    var proposerRows = GroupBySet(game.TradableProperties(Model.ProposerId, includeMortgaged: true).Select(p => p.BoardIndex));
+    var counterRows = GroupBySet(game.TradableProperties(Model.CounterPartyId, includeMortgaged: true).Select(p => p.BoardIndex));
+
+    // The two sides share identical markup — drive both from one list.
+    var sides = new[]
+    {
+        (Side: "proposer",     Label: "What you give",    Sub: $"to {counterName}",   Balance: proposer.Money,     Rows: proposerRows),
+        (Side: "counterparty", Label: "What you receive", Sub: $"from {counterName}", Balance: counterparty.Money, Rows: counterRows)
+    };
+}
+
+<div class="deal-builder" data-deal data-deal-currency="@cur"
+     data-proposer-id="@Model.ProposerId" data-counterparty-id="@Model.CounterPartyId">
+
+    @* ── Builder sides: money input + property grid ── *@
+    @foreach (var s in sides)
+    {
+        <div class="card mb-2">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-baseline mb-2">
+                    <span class="fw-semibold">@s.Label</span>
+                    <span class="small text-body-secondary text-truncate ms-2">@s.Sub</span>
+                </div>
+
+                @* Money — capped at this side's cash (deal spend comes from cash on hand). *@
+                <div class="input-group input-group-sm mb-2">
+                    <span class="input-group-text">@cur</span>
+                    <input type="number" class="form-control" data-deal-money="@s.Side"
+                           min="0" max="@s.Balance" step="1" placeholder="0" inputmode="numeric" />
+                    <span class="input-group-text text-body-secondary">/ @cur@s.Balance</span>
+                </div>
+
+                @* Property grid — squares act as checkboxes (one row per set). *@
+                @if (s.Rows.Count == 0)
+                {
+                    <div class="text-body-secondary small">No tradeable properties.</div>
+                }
+                else
+                {
+                    <div class="deal-grid" data-deal-grid="@s.Side">
+                        @foreach (var row in s.Rows)
+                        {
+                            <div class="deal-row">
+                                @foreach (var i in row.Indexes)
+                                {
+                                    // Counter-party id keeps these unique when several builders are
+                                    // rendered on one page (e.g. one per candidate on the Deal tab),
+                                    // so each label[for] targets its own input rather than the first.
+                                    var id = $"deal-{Model.CounterPartyId}-{s.Side}-{i}";
+                                    var name = board.GetBoardSpace(i).Name;
+                                    <input type="checkbox" class="btn-check" id="@id" autocomplete="off"
+                                           data-deal-index="@i" data-deal-name="@name" data-deal-slug="@row.Slug" />
+                                    <label class="deal-sq bg-prop-@row.Slug" for="@id" title="@name"></label>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    @* ── Summary: mirrors the selection live (make-deal.js) ── *@
+    <div class="card">
+        <div class="card-body py-2">
+            @foreach (var s in sides)
+            {
+                <div class="@(s.Side == "proposer" ? "mb-2" : null)" data-deal-summary="@s.Side">
+                    <div class="small text-body-secondary mb-1">@s.Label:</div>
+                    <div class="d-flex flex-wrap gap-1 align-items-center">
+                        <span class="badge text-bg-secondary d-none" data-deal-summary-money></span>
+                        <span class="d-flex flex-wrap gap-1" data-deal-summary-props></span>
+                        <span class="text-body-secondary small fst-italic" data-deal-summary-empty>Nothing selected</span>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>

@@ -1,5 +1,6 @@
 using MP.GameEngine.Abstractions;
 using MP.GameEngine.Enums;
+using MP.GameEngine.Enums.Games;
 using MP.GameEngine.Models;
 using MP.GameEngine.Models.Snapshot;
 
@@ -201,11 +202,16 @@ public class TurnStateProvider(GameCacheModel cache, ISnapshotService snapshotSe
         ClearBuiltOnTurnFlags();
         UpdateMetadata(player.PlayerId);
 
-        cache.ClearEvents();
         cache.ClearRuleCodes();
         cache.SetTurnState(TurnState.StartOfTurn);
         
+        //Store the CURRENT turn ID (for event snapshot);
+        //when snapshot is created, a new game turn is created, changing the ID
+        var turnId = cache.Game.Metadata.CurrentTurnId;
         await snapshotService.CreateSnapshotAsync(cache.Game);
+        await snapshotService.CreateTurnEventSnapshotAsync(cache.GameId, turnId, cache.Events.ToList());
+        
+        cache.ClearEvents();
         cache.SaveChanges();
     }
 
@@ -226,11 +232,43 @@ public class TurnStateProvider(GameCacheModel cache, ISnapshotService snapshotSe
         ClearBuiltOnTurnFlags();
         AdvancePlayer();
 
-        cache.ClearEvents();
         cache.ClearRuleCodes();
         cache.SetTurnState(TurnState.StartOfTurn);
         
+        //Store the CURRENT turn ID (for event snapshot);
+        //when snapshot is created, a new game turn is created, changing the ID
+        var turnId = cache.Game.Metadata.CurrentTurnId;
         await snapshotService.CreateSnapshotAsync(cache.Game);
+        await snapshotService.CreateTurnEventSnapshotAsync(cache.GameId, turnId, cache.Events.ToList());
+        
+        cache.ClearEvents();
+        cache.SaveChanges();
+    }
+
+    public async Task TransitionToFinalTurn()
+    {
+        ClearBuiltOnTurnFlags();
+        
+        var lastPlayer = cache.Game.GetPlayers(excludePovPlayer: false)
+            .FirstOrDefault();
+        if(lastPlayer == null)
+            throw new InvalidOperationException("No players in game.");
+        
+        UpdateMetadata(lastPlayer.PlayerId);
+        
+        cache.ClearRuleCodes();
+        cache.SetTurnState(TurnState.EndOfTurn);
+        //Set to a finished state, so last snapshot (final turn snapshot) has a state of finished,
+        //Final turn snapshot is just to save the outcome of the previous turn; and conclude the game
+        cache.GameState = GameState.Finished;
+        
+        //Store the CURRENT turn ID (for event snapshot);
+        //when snapshot is created, a new game turn is created, changing the ID
+        var turnId = cache.Game.Metadata.CurrentTurnId;
+        await snapshotService.CreateSnapshotAsync(cache.Game, finalTurn: true);
+        await snapshotService.CreateTurnEventSnapshotAsync(cache.GameId, turnId, cache.Events.ToList());
+        
+        cache.ClearEvents();
         cache.SaveChanges();
     }
 

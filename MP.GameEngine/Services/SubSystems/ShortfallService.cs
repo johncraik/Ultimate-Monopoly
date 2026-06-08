@@ -13,12 +13,21 @@ public class ShortfallService : IShortfallService
 {
     private readonly PropertyService _propertyService;
     private readonly LoanService _loanService;
+    private readonly DealService _dealService;
+    private readonly BankruptcyService _bankruptcyService;
+    private readonly TransactionService _transactionService;
 
     public ShortfallService(PropertyService propertyService,
-        LoanService loanService)
+        LoanService loanService,
+        DealService dealService,
+        BankruptcyService bankruptcyService,
+        TransactionService transactionService)
     {
         _propertyService = propertyService;
         _loanService = loanService;
+        _dealService = dealService;
+        _bankruptcyService = bankruptcyService;
+        _transactionService = transactionService;
     }
     
     private async Task<List<ushort>> TargetPropertyPrompt(Framework.GameEngine engine, string playerId, string title, string body, 
@@ -40,37 +49,30 @@ public class ShortfallService : IShortfallService
     /// Opens a <see cref="ShortfallPrompt"/> and dispatches the chosen action to the
     /// relevant sub-service.
     /// </summary>
-    /// <remarks>
-    /// Sub-services (LoanService, MortgageService, SellService, DealService,
-    /// BankruptcyService) are not yet implemented — see the payment-service-pending
-    /// project memory. The branches are TODO-stubbed and currently report the
-    /// expected outcome shape so the outer <see cref="Move"/> logic can be wired
-    /// against the final contract.
-    /// </remarks>
     public async Task<ShortfallOutcome> ResolveShortfall(
         Framework.GameEngine engine,
         PlayerModel player,
-        uint shortfallAmount,
+        uint amountOwed,
         string? owedToPlayerId,
         ushort? counterpartyPropertyIndex,
         CancellationToken ct)
     {
-        var remainingShortfall = shortfallAmount;
+        var remainingShortfall = player.Money >= amountOwed 
+            ? 0 
+            : amountOwed - player.Money;
+        
         while (remainingShortfall > 0)
         {
             var response = await engine.PromptProvider.RequestAsync(new ShortfallPrompt
             {
                 PlayerId = player.PlayerId,
                 Title = "You can't afford this",
-                Body = $"You owe {RuleDictionary.Currency}{shortfallAmount} but only have {RuleDictionary.Currency}{player.Money}. Choose how to settle.",
+                Body = $"You owe {RuleDictionary.Currency}{amountOwed} but only have {RuleDictionary.Currency}{player.Money}. Choose how to settle.",
                 PlayerBalance = player.Money,
-                Cost = shortfallAmount,
+                Cost = amountOwed,
                 OwedToPlayerId = owedToPlayerId
             }, ct);
 
-            //TODO: These methods needs to modify remaining shortfall amount:
-            //This is so we can keep prompting for shortfall until the player has raised enough.
-            //original shortfallAmount variable kept for prompt, and final settlement - shortfallAmount = amount owed
             switch (response.Action)
             {
                 case ShortfallAction.TakeLoan:
@@ -83,25 +85,31 @@ public class ShortfallService : IShortfallService
 
                 case ShortfallAction.Mortgage:
                     await ResolveViaMortgage(engine, player, ct);
-                    remainingShortfall = player.Money >= shortfallAmount ? 0 : shortfallAmount - player.Money;
+                    remainingShortfall = player.Money >= amountOwed ? 0 : amountOwed - player.Money;
                     break;
 
                 case ShortfallAction.SellHouses:
                     await ResolveViaSell(engine, player, ct);
-                    remainingShortfall = player.Money >= shortfallAmount ? 0 : shortfallAmount - player.Money; 
+                    remainingShortfall = player.Money >= amountOwed ? 0 : amountOwed - player.Money; 
                     break;
 
                 case ShortfallAction.ProposeDeal:
-                    //TODO DealService.ProposeSettlingDeal(engine, player, owedToPlayerId!, shortfallAmount, ct);
-                    //  A creditor-deal that's accepted DISCHARGES the original debt — the
-                    //  deal itself is the settlement (game-rules.md Default rule 7). Return
-                    //  DebtSettled so the outer transaction does NOT apply.
-                    //  A creditor-deal that's rejected re-opens the shortfall prompt; the
-                    //  deal sub-service handles that loop internally before returning here.
-                    return ShortfallOutcome.DebtSettled;
+                    if(string.IsNullOrEmpty(owedToPlayerId))
+                        break;
+                    
+                    var counterpartyPlayer = engine.Cache.Game.GetPlayer(owedToPlayerId);
+                    if (counterpartyPlayer == null)
+                        //No counterparty player, therefore a no-op
+                        break;
+                    
+                    var accepted = await _dealService.DealForShortfall(engine, player, counterpartyPlayer, ct);
+                    if (accepted) return ShortfallOutcome.DebtSettled;
 
+                    //Deal not accepted, therefore a no-op
+                    break;
+                    
                 case ShortfallAction.DeclareBankruptcy:
-                    //TODO BankruptcyService.Declare(engine, player, owedToPlayerId, ct);
+                    await _bankruptcyService.DeclareBankruptcyFromShortfall(engine, player, amountOwed, owedToPlayerId, ct);
                     return ShortfallOutcome.Bankrupted;
 
                 default:

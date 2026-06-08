@@ -1,3 +1,4 @@
+using MP.GameEngine.Models.EventReceipts;
 using MP.GameEngine.Models.Snapshot;
 
 namespace MP.GameEngine.Abstractions;
@@ -13,5 +14,7 @@ public interface ISnapshotService
     /// the call returns — callers should expect <c>game.Metadata</c> to
     /// be updated. Throws on persistence failure.
     /// </summary>
-    Task CreateSnapshotAsync(GameModel game, bool completeTransaction = true);
+    Task CreateSnapshotAsync(GameModel game, bool completeTransaction = true, bool finalTurn = false);
+
+    Task CreateTurnEventSnapshotAsync(string gameId, string turnId, List<EventReceipt> receipts);
 }

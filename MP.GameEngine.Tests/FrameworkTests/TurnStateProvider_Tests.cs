@@ -90,11 +90,16 @@ public class TurnStateProvider_Tests
         public int CallCount { get; private set; }
         public List<GameModel> Calls { get; } = [];
 
-        public Task CreateSnapshotAsync(GameModel game, bool completeTransaction = true)
+        public Task CreateSnapshotAsync(GameModel game, bool completeTransaction = true, bool isFinal = false)
         {
             CallCount++;
             Calls.Add(game);
             game.Metadata.CurrentTurnId = Guid.NewGuid().ToString();
+            return Task.CompletedTask;
+        }
+
+        public Task CreateTurnEventSnapshotAsync(string gameId, string turnId, List<EventReceipt> receipts)
+        {
             return Task.CompletedTask;
         }
     }
@@ -126,6 +131,9 @@ public class TurnStateProvider_Tests
         public void PromptOpened(string gameId, Prompt prompt, string concurrencyStamp) { }
         public void PromptClosed(string gameId, string promptId, string concurrencyStamp) { }
         public void StateChanged(GameCacheModel cache) { }
+        public void GameCompleted(string gameId)
+        {
+        }
     }
 
     /// <summary>Drops a prompt into the cache so IsEngineIdle returns false.</summary>

@@ -25,6 +25,8 @@
 
     var players = game.GetPlayers(excludePovPlayer: false);
     var playerCounters = new List<(UserProfileViewModel, PlayerModel)>();
+
+    var bankruptPlayers = game.GetPlayers(true);
     
     var canEndTurn = turnStateProvider.CanEndTurn(current.PlayerId, cache.HostPlayerId);
 
@@ -116,6 +118,18 @@
 <div class="col-3">
     <div class="h-100 d-flex flex-column gap-3">
 
+        @* "Open Profile on Prompt" — when on, a player's profile drawer auto-opens as a
+           prompt fires for them. Persisted client-side (player-drawer.js); default on. *@
+        <div class="card flex-shrink-0">
+            <div class="card-body py-2">
+                <div class="form-check form-switch d-flex justify-content-between align-items-center ps-0 m-0">
+                    <label class="form-check-label fw-semibold" for="openOnPromptToggle">Open Profile on Prompt</label>
+                    <input class="form-check-input ms-0 mt-0" type="checkbox" role="switch"
+                           id="openOnPromptToggle" data-open-on-prompt checked>
+                </div>
+            </div>
+        </div>
+
         @* Top: player list (40% of the sidebar) *@
         <div class="card play-pane play-pane--players">
             <div class="card-header fw-semibold d-flex justify-content-between align-items-center">
@@ -127,6 +141,37 @@
                 {
                     var profile = await PlayerCache.GetPlayerProfile(p.PlayerId);
                     playerCounters.Add((profile, p));
+                    
+                    var isHost = p.PlayerId == cache.HostPlayerId;
+                    var isCurrent = p.PlayerId == current.PlayerId;
+                    <div class="card play-player-card @(isHost ? "play-player-card--host" : null) @(isCurrent ? "border-info" : null) @(p.IsBankrupt ? "opacity-50" : null)"
+                         data-player-card data-user-id="@p.PlayerId" data-player-name="@profile.DisplayName"
+                         data-view-player="@(p.IsBankrupt ? (string?)null : "")"
+                         style="@(string.IsNullOrEmpty(profile.AvatarColour) ? null : $"--player-colour:{profile.AvatarColour}")">
+                        <div class="card-body d-flex align-items-center gap-2 py-2">
+                            <profile-circle user="profile" size="Md" />
+                            <div class="flex-grow-1 min-w-0">
+                                <div class="fw-semibold text-truncate">
+                                    @profile.DisplayName
+                                    @if (p.IsBankrupt)
+                                    {
+                                        <span class="badge text-bg-danger ms-1">Bankrupt</span>
+                                    }
+                                </div>
+                                <div class="small text-body-secondary d-flex flex-wrap align-items-center gap-2">
+                                    <span>Seat @(p.OrderId + 1)</span>
+                                    <span>Dice <span class="badge text-bg-secondary">@p.Dice1 | @p.Dice2</span></span>
+                                    <span class="fw-semibold text-body">@c@p.Money</span>
+                                </div>
+                            </div>
+                        </div>
+                        <span class="play-arrow" aria-hidden="true"></span>
+                    </div>
+                }
+                
+                @foreach (var p in bankruptPlayers)
+                {
+                    var profile = await PlayerCache.GetPlayerProfile(p.PlayerId);
                     
                     var isHost = p.PlayerId == cache.HostPlayerId;
                     var isCurrent = p.PlayerId == current.PlayerId;

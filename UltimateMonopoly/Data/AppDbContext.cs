@@ -35,6 +35,7 @@ public class AppDbContext : IdentityDataDbContext<AppUser, AppRole>,
     public DbSet<GamePlayer> GamePlayers { get; set; }
     public DbSet<GameTurn> GameTurns { get; set; }
     public DbSet<GameSnapshot> GameSnapshots { get; set; }
+    public DbSet<GameTurnEvents> GameTurnEvents { get; set; }
     
     // Social
     public DbSet<Friend> Friends { get; set; }

@@ -1,0 +1,40 @@
+@using MP.GameEngine.Models.Prompts.PromptTypes
+@using UltimateMonopoly.Models.ViewModels.Games
+@model BuildDealPrompt
+@{
+    var gameId = ViewContext.RouteData.Values["gameId"]?.ToString() ?? "";
+}
+@*
+    BUILD-DEAL PROMPT — server-rendered fragment. The shortfall path's "build a deal with
+    the creditor, or back out" step (option #2). Reuses the shared _MakeDealPartial builder
+    — the counter party is fixed to the creditor (Model.CounterPartyId). Offer Deal
+    ([data-prompt-submit]) reads the builder selection into a DealContents; Cancel
+    ([data-prompt-decline]) backs out. ingame-prompts.js submits
+    BuildDealResponse { cancelled, contents }. See design-docs/game-deals.md §7, §13.
+*@
+<div class="pp-prompt-card border border-2 border-primary">
+    <div class="pp-prompt-head text-bg-primary">
+        @(string.IsNullOrEmpty(Model.Title) ? "Build a deal" : Model.Title)
+    </div>
+    <div class="pp-prompt-body">
+        @if (!string.IsNullOrEmpty(Model.Body))
+        {
+            <p class="mb-2">@Model.Body</p>
+        }
+
+        @* The shared builder — money + property grid per side, with the live give/receive summary. *@
+        <partial name="Play/_MakeDealPartial" model="new MakeDealViewModel(gameId, Model.PlayerId, Model.CounterPartyId)" />
+
+        <div class="text-danger small d-none mt-2" data-prompt-error></div>
+    </div>
+    <div class="pp-prompt-foot">
+        <div class="d-grid gap-2">
+            <button type="button" class="btn btn-primary" data-prompt-submit>
+                <i class="bi bi-arrow-left-right me-1"></i> Offer Deal
+            </button>
+            <button type="button" class="btn btn-outline-secondary" data-prompt-decline>
+                <i class="bi bi-x-lg me-1"></i> Cancel
+            </button>
+        </div>
+    </div>
+</div>

@@ -16,4 +16,5 @@ public interface ITurnStateProvider
     void TransitionToEndOfTurn();
     Task TransitionToExtraTurn(bool isTriple);
     Task TransitionToNextPlayer();
+    Task TransitionToFinalTurn();
 }

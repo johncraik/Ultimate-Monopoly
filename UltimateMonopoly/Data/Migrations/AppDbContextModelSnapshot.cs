@@ -1506,6 +1506,9 @@ namespace UltimateMonopoly.Data.Migrations
                     b.Property<ushort>("OrderId")
                         .HasColumnType("smallint unsigned");
 
+                    b.Property<int?>("PlayerGameOutcome")
+                        .HasColumnType("int");
+
                     b.Property<string>("RestoredById")
                         .HasColumnType("longtext");
 
@@ -1627,6 +1630,54 @@ namespace UltimateMonopoly.Data.Migrations
                     b.HasIndex("GameId", "UserId");
 
                     b.ToTable("GameTurns");
+                });
+
+            modelBuilder.Entity("UltimateMonopoly.Models.DataModels.Games.GameTurnEvents", b =>
+                {
+                    b.Property<string>("TurnId")
+                        .HasColumnType("varchar(38)");
+
+                    b.Property<string>("CreatedById")
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime>("CreatedUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("DeletedById")
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime?>("DeletedUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("EventsJson")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("GameId")
+                        .IsRequired()
+                        .HasMaxLength(38)
+                        .HasColumnType("varchar(38)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("LastModifiedById")
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime?>("LastModifiedUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("RestoredById")
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime?>("RestoredUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("TurnId");
+
+                    b.HasIndex("GameId");
+
+                    b.ToTable("GameTurnEvents");
                 });
 
             modelBuilder.Entity("UltimateMonopoly.Models.DataModels.Social.BlockedUser", b =>
@@ -2083,6 +2134,25 @@ namespace UltimateMonopoly.Data.Migrations
                     b.Navigation("Player");
                 });
 
+            modelBuilder.Entity("UltimateMonopoly.Models.DataModels.Games.GameTurnEvents", b =>
+                {
+                    b.HasOne("UltimateMonopoly.Models.DataModels.Games.Game", "Game")
+                        .WithMany("TurnEvents")
+                        .HasForeignKey("GameId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("UltimateMonopoly.Models.DataModels.Games.GameTurn", "GameTurn")
+                        .WithMany()
+                        .HasForeignKey("TurnId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Game");
+
+                    b.Navigation("GameTurn");
+                });
+
             modelBuilder.Entity("UltimateMonopoly.Models.DataModels.Social.ReportedUser", b =>
                 {
                     b.HasOne("UltimateMonopoly.Models.DataModels.Social.BlockedUser", "BlockedUser")
@@ -2131,6 +2201,8 @@ namespace UltimateMonopoly.Data.Migrations
                     b.Navigation("Players");
 
                     b.Navigation("Snapshots");
+
+                    b.Navigation("TurnEvents");
 
                     b.Navigation("Turns");
                 });

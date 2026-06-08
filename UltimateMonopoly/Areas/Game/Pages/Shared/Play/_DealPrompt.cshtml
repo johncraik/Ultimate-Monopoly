@@ -1,0 +1,90 @@
+@using JC.Core.Extensions
+@using MP.GameEngine.Abstractions
+@using MP.GameEngine.Helpers
+@using MP.GameEngine.Helpers.RuleSet
+@using MP.GameEngine.Models.Boards
+@using MP.GameEngine.Models.Prompts.PromptTypes
+@using UltimateMonopoly.Services.Cache
+@model DealPrompt
+@inject IGameEngineFactory EngineFactory
+@inject PlayerCacheService PlayerCache
+@*
+    DEAL PROMPT — server-rendered fragment. The counter party (Model.PlayerId) accepts or
+    declines a deal the proposer built. The summary mirrors the bottom of _MakeDealPartial
+    (money badge + named, set-coloured property badges) but is static and flipped to this
+    player's perspective: what the proposer puts up is what *you* receive, and vice versa.
+    No counter-offer — Accept ([data-prompt-submit]) or Decline ([data-prompt-decline]);
+    ingame-prompts.js submits DealResponse { accept }. See design-docs/game-deals.md §13.
+*@
+@{
+    const string cur = RuleDictionary.Currency;
+
+    // Resolve property names from the game's board for readable badges. gameId is on the
+    // route and the cache is already loaded for this render — an in-memory lookup.
+    Board? board = null;
+    var gameId = ViewContext.RouteData.Values["gameId"]?.ToString();
+    if (!string.IsNullOrEmpty(gameId))
+    {
+        try { board = (await EngineFactory.GetAsync(gameId)).Cache.Board; }
+        catch { /* "#index" labels */ }
+    }
+
+    var proposerName = await PlayerCache.GetPlayerName(Model.ProposerId);
+    var c = Model.Contents;
+
+    // Flip to the counter party's view: they GIVE what they put up, RECEIVE what the
+    // proposer put up. Same order as the _MakeDealPartial summary (give, then receive).
+    var sides = new[]
+    {
+        (Label: "What you give",    Money: c.MoneyFromCounterParty, Indexes: c.PropertiesFromCounterParty),
+        (Label: "What you receive", Money: c.MoneyFromProposer,     Indexes: c.PropertiesFromProposer)
+    };
+}
+<div class="pp-prompt-card border border-2 border-success">
+    <div class="pp-prompt-head text-bg-success">
+        @(string.IsNullOrEmpty(Model.Title) ? "Deal offer" : Model.Title)
+    </div>
+    <div class="pp-prompt-body">
+        <p class="mb-2"><span class="fw-semibold">@proposerName</span> has offered you a deal.</p>
+        @if (!string.IsNullOrEmpty(Model.Body))
+        {
+            <p class="text-body-secondary small mb-3">@Model.Body</p>
+        }
+
+        @* Summary — rendered like the make-deal builder's bottom summary, but static. *@
+        @foreach (var s in sides)
+        {
+            <div class="mb-2">
+                <div class="small text-body-secondary mb-1">@s.Label:</div>
+                <div class="d-flex flex-wrap gap-1 align-items-center">
+                    @if (s.Money > 0)
+                    {
+                        <span class="badge text-bg-secondary">@cur@s.Money</span>
+                    }
+                    @foreach (var i in s.Indexes)
+                    {
+                        var slug = PropertySetHelper.ResolveSet(i) is { } set ? set.ToDisplayName().ToSlug() : null;
+                        var name = board?.GetBoardSpace(i).Name ?? $"#{i}";
+                        <span class="badge deal-badge @(slug is null ? "text-bg-secondary" : $"text-bg-prop-{slug}")">@name</span>
+                    }
+                    @if (s.Money == 0 && s.Indexes.Count == 0)
+                    {
+                        <span class="text-body-secondary small fst-italic">Nothing</span>
+                    }
+                </div>
+            </div>
+        }
+
+        <div class="text-danger small d-none mt-2" data-prompt-error></div>
+    </div>
+    <div class="pp-prompt-foot">
+        <div class="d-grid gap-2">
+            <button type="button" class="btn btn-success" data-prompt-submit>
+                <i class="bi bi-check2 me-1"></i> Accept
+            </button>
+            <button type="button" class="btn btn-outline-danger" data-prompt-decline>
+                <i class="bi bi-x-lg me-1"></i> Decline
+            </button>
+        </div>
+    </div>
+</div>

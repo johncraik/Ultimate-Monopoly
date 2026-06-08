@@ -31,7 +31,7 @@ public class GameService
     }
 
     private IQueryable<Game> QueryGames(bool asNoTracking, bool includePlayers, bool includeBoardSkin, bool includeTurns,
-        bool includeSnapshots, bool joinedGames, GameState? state)
+        bool includeSnapshots, bool? joinedGames, GameState? state)
     {
         var query = _repos.GetRepository<Game>()
             .AsQueryable().FilterDeleted(DeletedQueryType.OnlyActive);
@@ -55,9 +55,10 @@ public class GameService
         if(state.HasValue)
             query = query.Where(g => g.State == state);
         
-        query = joinedGames 
-            ? query.Where(g => g.CreatedById != _userInfo.UserId) 
-            : query.Where(g => g.CreatedById == _userInfo.UserId);
+        if(joinedGames.HasValue)
+            query = joinedGames.Value
+                ? query.Where(g => g.CreatedById != _userInfo.UserId) 
+                : query.Where(g => g.CreatedById == _userInfo.UserId);
         
         return query
             .Where(g => g.Players.Any(p => p.UserId == _userInfo.UserId))
@@ -157,4 +158,10 @@ public class GameService
             await orchestrator.EndPlayerTurn(engine, ct);
         });
     }
+
+
+    public async Task<Game?> GetFinishedGame(string gameId)
+        => await QueryGames(true, true, true, true, 
+                false, null, GameState.Finished)
+            .FirstOrDefaultAsync(g => g.Id == gameId);
 }

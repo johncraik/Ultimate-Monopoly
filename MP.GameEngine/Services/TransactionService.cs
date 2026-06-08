@@ -263,20 +263,24 @@ public class TransactionService
         => Move(engine, player, RuleDictionary.SnakeEyesBonus, FinancialReason.SneakEyes, 
             counterparty: TransactionCounterparty.Bank,
             ct: ct);
+    
+    public Task ReceiveFromBankruptPlayer(Framework.GameEngine engine, PlayerModel player, uint amount, CancellationToken ct)
+        => Move(engine, player, amount, FinancialReason.BankruptedPlayer,
+            counterparty: TransactionCounterparty.Bank,
+            ct: ct);
+    
 
     // ───────────────────── Player-to-player ─────────────────────
 
     /// <summary>
-    /// Money component of a player-to-player deal. <paramref name="amount"/> is signed
-    /// from <paramref name="player"/>'s perspective — positive = receive from
-    /// <paramref name="otherPlayer"/>, negative = pay <paramref name="otherPlayer"/>.
-    /// Shortfall allowed when paying.
+    /// Money component of a player-to-player deal.
+    /// Amount is taken from player and sent to counterparty
     /// </summary>
     public Task ProcessDealPayment(Framework.GameEngine engine, PlayerModel player, PlayerModel otherPlayer, long amount, CancellationToken ct)
-        => Move(engine, player, amount, FinancialReason.Deal,
+        => Move(engine, player, -amount, FinancialReason.Deal,
             counterparty: TransactionCounterparty.Player,
             counterpartyPlayer: otherPlayer,
-            allowShortfall: amount < 0,
+            allowShortfall: false,
             ct: ct);
 
 

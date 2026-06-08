@@ -80,6 +80,30 @@
     border-radius: 50%;
 }
 
+/* ── Deal builder (_MakeDealPartial) — colour-only property squares act as
+   checkboxes, laid out one row per set; the bottom summary mirrors the live
+   selection (make-deal.js). ── */
+.deal-grid { display: flex; flex-direction: column; gap: 4px; }
+.deal-row { display: flex; flex-wrap: wrap; gap: 4px; }
+.deal-sq {
+    width: 1.6rem;
+    height: 1.6rem;
+    margin: 0;
+    border-radius: 4px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    opacity: 0.8;
+    transition: opacity .1s ease, transform .05s ease;
+}
+.deal-sq:hover { opacity: 1; }
+/* Selected (btn-check :checked) — full opacity, dark ring, slight lift. */
+.btn-check:checked + .deal-sq {
+    opacity: 1;
+    border-color: var(--bs-body-color);
+    transform: scale(1.06);
+}
+.deal-badge { font-weight: 600; }
+
 /* ── Engine prompt overlay ──
    Server-rendered into the profile (see _PlayerProfileView's .pp-prompt) when a prompt
    is pending for this player. Covers the profile "screen" with a scoped backdrop and a
