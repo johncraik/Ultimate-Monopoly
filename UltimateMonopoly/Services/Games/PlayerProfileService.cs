@@ -155,6 +155,22 @@ public class PlayerProfileService
                 .ProposeDealCommand(engine, proposerId, counterPartyId, contents, ct);
         });
 
+    // Voluntary bankruptcy. Like a deal the target player is explicit (bankruptcy isn't
+    // a current-player-only command — any player can quit at a turn boundary, and the
+    // host can declare on their behalf), gated by CanDeclareBankruptcy. BankruptcyService
+    // returns the player's assets to the bank and, if they were the last solvent player,
+    // concludes the game.
+    public void EnqueueDeclareBankruptcy(string gameId, string submittingUserId, string playerId)
+        => _executor.Enqueue(gameId, async (engine, sp, ct) =>
+        {
+            // Authoritative gate re-check on the writer thread (web-orchestration.md §5).
+            if (!engine.TurnStateProvider.CanDeclareBankruptcy(playerId, submittingUserId))
+                return;
+
+            await sp.GetRequiredService<BankruptcyService>()
+                .DeclareBankruptcy(engine, playerId, ct);
+        });
+
     private void EnqueuePortfolioCommand(string gameId, string submittingUserId,
         Func<PropertyService, EngineRuntime, CancellationToken, Task> command)
     {

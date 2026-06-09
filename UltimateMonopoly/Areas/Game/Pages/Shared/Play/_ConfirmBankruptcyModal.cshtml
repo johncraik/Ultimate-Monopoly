@@ -1,0 +1,37 @@
+@*
+    DECLARE-BANKRUPTCY CONFIRMATION MODAL — a guard against an accidental tap on the
+    profile's "Declare bankruptcy" button. Lives in stable page DOM (included by the
+    phone page and the host play page OUTSIDE their live-swapped regions), so a
+    StateChanged re-render of the profile body can't destroy it mid-open and strand
+    the backdrop — the same reason engine prompts were moved off Bootstrap modals.
+
+    The trigger button (inside the swapped profile) opens this via Bootstrap's
+    delegated data-bs-toggle and carries the target player's id; bankruptcy.js reads
+    it off the show event's relatedTarget, stashes it on the confirm button, and
+    invokes GamePlayHub.DeclareBankruptcy(playerId) on confirm.
+*@
+<div class="modal fade" id="bankruptcyConfirmModal" tabindex="-1"
+     aria-labelledby="bankruptcyConfirmLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-danger">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="bankruptcyConfirmLabel">
+                    <i class="bi bi-flag me-2"></i>Declare bankruptcy?
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0">
+                    Are you sure you want to declare bankruptcy? This <strong>cannot be undone</strong> —
+                    all your properties return to the bank and you are out of the game.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" data-bankruptcy-confirm>
+                    <i class="bi bi-flag me-1"></i> Declare bankruptcy
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

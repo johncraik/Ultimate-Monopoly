@@ -359,10 +359,14 @@
                         </div>
                     </div>
 
-                    @* Block 3 — declare bankruptcy (disabled unless allowed; no-op for now) *@
+                    @* Block 3 — declare bankruptcy (disabled unless allowed). Opens the
+                       confirmation modal (stable page DOM, outside this live-swapped body) via
+                       Bootstrap's delegated toggle, carrying this player's id; bankruptcy.js reads
+                       it off relatedTarget and fires GamePlayHub.DeclareBankruptcy on confirm. *@
                     <div class="d-grid">
-                        @* TODO(no-op): bankruptcy command not built. Disabled via CanDeclareBankruptcy. *@
-                        <button type="button" class="btn btn-outline-danger" data-noop disabled="@(!canBankrupt)">
+                        <button type="button" class="btn btn-outline-danger"
+                                data-bs-toggle="modal" data-bs-target="#bankruptcyConfirmModal"
+                                data-bankrupt-target="@playerId" disabled="@(!canBankrupt)">
                             <i class="bi bi-flag me-1"></i> Declare bankruptcy
                         </button>
                     </div>

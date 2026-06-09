@@ -6,19 +6,19 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
-<!--    <ItemGroup>-->
-<!--        <Reference Include="JC.Core">-->
-<!--            <HintPath>..\..\JC.Core.dll</HintPath>-->
-<!--        </Reference>-->
-<!--    </ItemGroup>-->
-
     <ItemGroup>
-      <PackageReference Include="JC.Core" Version="3.6.1" />
-      <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.16" />
-      <PackageReference Include="Microsoft.TestPlatform.TestHost" Version="17.12.0" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.16" />
+    </ItemGroup>
+    
+    <ItemGroup>
+        <Reference Include="JC.Core">
+            <HintPath>..\..\JC.Core.dll</HintPath>
+        </Reference>
     </ItemGroup>
 
     <ItemGroup>
         <InternalsVisibleTo Include="MP.GameEngine.Tests"/>
     </ItemGroup>
 </Project>
+
+

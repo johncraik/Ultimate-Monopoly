@@ -52,6 +52,11 @@
    so they surface only within the host's player-profile drawer — see the .pp-prompt
    overlay in _PlayerProfileView. No page-level prompt modals here. *@
 
+@* Declare-bankruptcy confirmation — stable page DOM, outside the drawer's swapped
+   body, so a live re-render can't strand an open modal. The trigger inside the drawer
+   profile carries the target player's id (host-bypass declares on their behalf). *@
+<partial name="Play/_ConfirmBankruptcyModal" />
+
 @section Styles {
     <link rel="stylesheet" href="~/css/play.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/player-profile.css" asp-append-version="true" />
@@ -63,6 +68,8 @@
     <script src="~/scripts/InGame/play-state.js" asp-append-version="true"></script>
     <script src="~/scripts/InGame/play-page.js" asp-append-version="true"></script>
     <script src="~/scripts/InGame/player-drawer.js" asp-append-version="true"></script>
+    @* Declare-bankruptcy confirmation modal flow. *@
+    <script src="~/scripts/InGame/bankruptcy.js" asp-append-version="true"></script>
     @* Submits the server-rendered prompts (the .pp-prompt overlay inside the drawer's profile). *@
     <script src="~/scripts/InGame/ingame-prompts.js" asp-append-version="true"></script>
     @* Live "give / receive" summary for the deal builder (_MakeDealPartial). *@

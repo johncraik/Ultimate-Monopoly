@@ -172,6 +172,31 @@ public class GamePlayHub : GameBaseHub
         return true;
     }
 
+    /// <summary>
+    /// Declares voluntary bankruptcy for <paramref name="playerId"/> — the player on
+    /// themselves, or the host on their behalf. Like a deal the player is named explicitly
+    /// (bankruptcy isn't current-player-only — any player may quit at a turn boundary);
+    /// <c>CanDeclareBankruptcy</c> authorises the player themselves or the host while the
+    /// engine is idle. Optimistic pre-check, then enqueues on the single-writer executor
+    /// (which re-checks). The engine returns the player's assets to the bank and concludes
+    /// the game if they were the last solvent player.
+    /// </summary>
+    public async Task<bool> DeclareBankruptcy(string playerId)
+    {
+        var gameId = GetGameId();
+        if (string.IsNullOrEmpty(gameId) || string.IsNullOrEmpty(Context.UserIdentifier))
+            return false;
+        if (string.IsNullOrEmpty(playerId))
+            return false;
+
+        var engine = await _engineFactory.GetAsync(gameId);
+        if (!engine.TurnStateProvider.CanDeclareBankruptcy(playerId, Context.UserIdentifier))
+            return false;
+
+        _playerProfiles.EnqueueDeclareBankruptcy(gameId, Context.UserIdentifier, playerId);
+        return true;
+    }
+
 
     // ─── Portfolio commands ──────────────────────────────────────────────
     // Player-initiated property actions on the named property (boardIndex). Each

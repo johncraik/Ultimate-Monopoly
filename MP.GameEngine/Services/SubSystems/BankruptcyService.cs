@@ -88,7 +88,12 @@ public class BankruptcyService
         //Check if game completed:
         var otherPlayers = engine.Cache.Game.GetPlayers(excludePovPlayer: false);
         if(otherPlayers.Count > 1)
+        {
+            //End players turn, and transition to next player:
+            engine.Cache.SetTurnState(TurnState.EndOfTurn);
+            await engine.TurnStateProvider.TransitionToNextPlayer();
             return;
+        }
         
         engine.CiteRule(RuleCode.Bankruptcy_LastPlayerWins);
         _ = await engine.PromptProvider.Acknowledge(otherPlayers[0].PlayerId, "Winner!",

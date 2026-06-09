@@ -20,6 +20,10 @@
 @* Engine prompts now render inside _PlayerProfileView (server-side) as a scoped
    .pp-prompt overlay — part of the swapped state, not separate page-level modals. *@
 
+@* Declare-bankruptcy confirmation — stable page DOM, outside the swapped [data-player]
+   body, so a live re-render can't strand an open modal. *@
+<partial name="Play/_ConfirmBankruptcyModal" />
+
 @section Styles {
     <link rel="stylesheet" href="~/css/player-profile.css" asp-append-version="true" />
 }
@@ -29,6 +33,8 @@
     <script src="~/scripts/InGame/game-play-hub.js" asp-append-version="true"></script>
     <script src="~/scripts/InGame/player-state.js" asp-append-version="true"></script>
     <script src="~/scripts/InGame/player-page.js" asp-append-version="true"></script>
+    @* Declare-bankruptcy confirmation modal flow. *@
+    <script src="~/scripts/InGame/bankruptcy.js" asp-append-version="true"></script>
     @* Submits the server-rendered prompts (the .pp-prompt overlay inside the profile). *@
     <script src="~/scripts/InGame/ingame-prompts.js" asp-append-version="true"></script>
     @* Live "give / receive" summary for the deal builder (_MakeDealPartial). *@

@@ -3,6 +3,7 @@ using MP.GameEngine.Enums.Games;
 using MP.GameEngine.Enums.Players;
 using MP.GameEngine.Helpers;
 using MP.GameEngine.Helpers.RuleSet;
+using MP.GameEngine.Models.EventReceipts;
 using MP.GameEngine.Models.Prompts.PromptTypes;
 using MP.GameEngine.Models.Prompts.PromptTypes.Responses;
 using MP.GameEngine.Models.Snapshot;
@@ -28,6 +29,11 @@ public class JailService
         player.DoublesInRow = 0;
         player.TriplesInRow = 0;
         await _movementService.SendPlayerToJail(engine, player, ct);
+        
+        engine.EventEmitter.Emit(new PlayerEnteredJailReceipt
+        {
+            PlayerId = player.PlayerId
+        });
     }
 
     public async Task CheckAndLeaveJail(Framework.GameEngine engine, PlayerModel player, CancellationToken ct)
