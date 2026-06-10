@@ -18,6 +18,9 @@
     game view, and that isn't wired yet.
 *@
 
+@* Host control panel (top sheet) — stable DOM, outside the swapped .play-page. *@
+<partial name="Play/_HostPanel" />
+
 <div class="play-page row g-3" data-play data-game-id="@cache.GameId">
     <partial name="Play/_PlayView" model="Model.Engine" />
 </div>
@@ -60,6 +63,7 @@
 @section Styles {
     <link rel="stylesheet" href="~/css/play.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/player-profile.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/host-panel.css" asp-append-version="true" />
 }
 
 @section Scripts {
@@ -70,6 +74,8 @@
     <script src="~/scripts/InGame/player-drawer.js" asp-append-version="true"></script>
     @* Declare-bankruptcy confirmation modal flow. *@
     <script src="~/scripts/InGame/bankruptcy.js" asp-append-version="true"></script>
+    @* Host control panel — open/close + confirm-then-invoke host actions (Draw Game, etc.). *@
+    <script src="~/scripts/InGame/host-panel.js" asp-append-version="true"></script>
     @* Submits the server-rendered prompts (the .pp-prompt overlay inside the drawer's profile). *@
     <script src="~/scripts/InGame/ingame-prompts.js" asp-append-version="true"></script>
     @* Live "give / receive" summary for the deal builder (_MakeDealPartial). *@

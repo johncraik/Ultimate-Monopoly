@@ -72,16 +72,16 @@ public class CashFlowStatsService : IStatsService
 
             //Continue if not found largest rent
             if (largestRent == null) continue;
-            
-            //Continue if rent is lower or equal to largest rent
+
+            //Skip only when we already have a larger rent. Note the explicit null check: the
+            //accumulator starts null (rent is null until the first payment), and `lr > null`
+            //is always false, so a bare `lr > largestRentFinal` would never record anything.
             var lr = (uint)Math.Abs(largestRent.Amount);
-            if (!(lr > largestRentFinal)) continue;
-            
-            //Set the largest rent
+            if (largestRentFinal is not null && lr <= largestRentFinal.Value) continue;
+
+            //Set the largest rent (largestRent is always a Rent payment — the where-clause above)
             largestRentFinal = lr;
-            if(largestRent.Reason is FinancialReason.Rent)
-                //Defensive IF - should be rent reason due to where clause above
-                largestRentPropIndex = largestRent.CounterpartyPropertyIndex;
+            largestRentPropIndex = largestRent.CounterpartyPropertyIndex;
         }
 
         //Set the stats

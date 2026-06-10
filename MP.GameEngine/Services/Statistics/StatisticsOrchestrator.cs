@@ -35,7 +35,7 @@ public class StatisticsOrchestrator
     {
         var players = snapshot.Players;
         return (from p in players 
-            let record = new PlayerStatRecord() 
+            let record = new PlayerStatRecord(p.PlayerId) 
             //For each player in the game, creates a new player stats record
             //then calls each stats service to compute the stats, mutilating the player stats record,
             //and finally returns the list of player stats records

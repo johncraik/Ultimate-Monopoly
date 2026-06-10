@@ -40,4 +40,18 @@ public interface IEngineNotifier
     /// to the finished-game results). Called once the conclusion is persisted.
     /// </summary>
     void GameCompleted(string gameId);
+    /// <summary>
+    /// Host-initiated: tells the game's connected clients to hard-reload and re-fetch the
+    /// current live state — the host "Force Refresh" control (<c>Game-UI.md</c>). Not an
+    /// engine event; the web layer calls it directly, off the turn pump, so it fires even
+    /// while the pump is parked on a prompt.
+    /// </summary>
+    void ForceRefresh(string gameId);
+
+    /// <summary>
+    /// Host-initiated: the game was cancelled (abandoned — no winner/draw). Tells the game's
+    /// connected clients to leave (the in-game pages redirect home). Not an engine event;
+    /// the web layer calls it after the cancellation is committed.
+    /// </summary>
+    void GameCancelled(string gameId);
 }

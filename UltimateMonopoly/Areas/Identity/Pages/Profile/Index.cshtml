@@ -145,7 +145,61 @@
             }
             else
             {
-                <partial name="_GameStatsCards" model="Model.CurrentUser" />
+                <div class="mb-3">
+                    <partial name="_GameStatsCards" model="Model.CurrentUser" />
+                </div>
+                
+                // One tab per aggregate view; each renders the SAME stats partial with that view's model.
+                // Data is null when the player has no finished games (GameStatsService returns null then).
+                var tabs = new[]
+                {
+                    (Id: "avg",   Label: "Average", Icon: "bi-bar-chart-fill",        Data: Model.AvgStats),
+                    (Id: "total", Label: "Total",   Icon: "bi-sigma",                 Data: Model.TotalStats),
+                    (Id: "max",   Label: "Highest", Icon: "bi-arrow-up-circle-fill",  Data: Model.MaxStats),
+                    (Id: "min",   Label: "Lowest",  Icon: "bi-arrow-down-circle-fill",Data: Model.MinStats)
+                };
+
+                if (tabs.All(t => t.Data is null))
+                {
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body text-center text-body-secondary py-5">
+                            <div class="display-6 mb-2"><i class="bi bi-bar-chart"></i></div>
+                            <p class="mb-0">No statistics available</p>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <ul class="nav nav-tabs mb-3" role="tablist">
+                        @for (var i = 0; i < tabs.Length; i++)
+                        {
+                            var t = tabs[i];
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link @(i == 0 ? "active" : null)" id="tab-@t.Id" type="button" role="tab"
+                                        data-bs-toggle="tab" data-bs-target="#pane-@t.Id"
+                                        aria-controls="pane-@t.Id" aria-selected="@(i == 0 ? "true" : "false")">
+                                    <i class="bi @t.Icon me-1"></i>@t.Label
+                                </button>
+                            </li>
+                        }
+                    </ul>
+                    <div class="tab-content">
+                        @for (var i = 0; i < tabs.Length; i++)
+                        {
+                            var t = tabs[i];
+                            <div class="tab-pane fade @(i == 0 ? "show active" : null)" id="pane-@t.Id" role="tabpanel" aria-labelledby="tab-@t.Id">
+                                @if (t.Data is { } v)
+                                {
+                                    <partial name="~/Pages/Shared/_PlayerStatsPartial.cshtml" model="v" />
+                                }
+                                else
+                                {
+                                    <div class="text-center text-body-secondary py-5">Not enough games to show this view.</div>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
             }
         </div>
 

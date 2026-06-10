@@ -15,6 +15,16 @@ public class DiceRollReceipt : EventReceipt
     [JsonIgnore]
     public bool IsTurnRoll => Die2 != null && ThirdDie != null;
 
+    // Deserialization ctor: unlike the other receipts, this type has a parameterized
+    // emission ctor (below), whose `dice` parameter doesn't bind to a property — so
+    // System.Text.Json needs an explicit parameterless ctor to rehydrate the persisted
+    // event stream (it sets the init properties). Without it, deserialising a turn's
+    // events throws (the StatisticsJob comb reads this stream back).
+    [JsonConstructor]
+    public DiceRollReceipt()
+    {
+    }
+
     public DiceRollReceipt(string playerId, DiceRoll dice)
     {
         PlayerId = playerId;

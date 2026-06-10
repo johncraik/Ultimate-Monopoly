@@ -1,9 +1,11 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 using MP.GameEngine.Models.Statistics;
 
 namespace UltimateMonopoly.Models.DataModels.Games;
 
+[PrimaryKey(nameof(GameId), nameof(UserId))]
 public class PlayerGameStat : PlayerStatRecord
 {
     [MaxLength(38)]

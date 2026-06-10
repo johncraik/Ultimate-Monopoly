@@ -18,16 +18,25 @@ public class GameService
     private readonly IUserInfo _userInfo;
     private readonly IGameEngineFactory _engineFactory;
     private readonly IGameExecutor _executor;
+    private readonly GameCacheService _cacheService;
+    private readonly IEngineNotifier _notifier;
+    private readonly ILogger<GameService> _logger;
 
     public GameService(IRepositoryManager repos,
         IUserInfo userInfo,
         IGameEngineFactory engineFactory,
-        IGameExecutor executor)
+        IGameExecutor executor,
+        GameCacheService cacheService,
+        IEngineNotifier notifier,
+        ILogger<GameService> logger)
     {
         _repos = repos;
         _userInfo = userInfo;
         _engineFactory = engineFactory;
         _executor = executor;
+        _cacheService = cacheService;
+        _notifier = notifier;
+        _logger = logger;
     }
 
     private IQueryable<Game> QueryGames(bool asNoTracking, bool includePlayers, bool includeBoardSkin, bool includeTurns,
@@ -159,9 +168,120 @@ public class GameService
         });
     }
 
+    public void EnqueueDrawGame(string gameId, string submittingUserId)
+    {
+        _executor.Enqueue(gameId, async (engine, sp, _) =>
+        {
+            if(engine.Cache.HostPlayerId != submittingUserId)
+                return;
+            
+            var completionService = sp.GetRequiredService<IGameCompletionService>();
+            await completionService.DrawGame(engine);
+        });
+    }
+
+    /// <summary>
+    /// Host-only: tells every connected client to hard-reload and re-fetch the current live
+    /// state (the host "Force Refresh" control). Unlike the other host actions this is NOT
+    /// enqueued — it broadcasts directly via the notifier, off the turn pump, so it still fires
+    /// when the pump is parked on a prompt or wedged (the very situation it recovers from).
+    /// Returns false when the caller isn't the host.
+    /// </summary>
+    public async Task<bool> ForceRefresh(string gameId, string submittingUserId)
+    {
+        var engine = await _engineFactory.GetAsync(gameId);
+        if (engine.Cache.HostPlayerId != submittingUserId)
+            return false;
+
+        _notifier.ForceRefresh(gameId);
+        return true;
+    }
+
 
     public async Task<Game?> GetFinishedGame(string gameId)
         => await QueryGames(true, true, true, true, 
                 false, null, GameState.Finished)
             .FirstOrDefaultAsync(g => g.Id == gameId);
+
+    public async Task<bool> TryCancelGame(string gameId)
+    {
+        //Get the game as tracking, no includes, created only (no joined games):
+        var game = await QueryGames(false, false, false, false, false, false, null)
+            .FirstOrDefaultAsync(g => g.Id == gameId && (g.State == GameState.Setup || g.State == GameState.InPlay));
+        if(game is null)
+            return false;
+
+        var clearInPlayGame = game.State == GameState.InPlay;
+        
+        var result = game.CancelGame();
+        if(!result) return false;
+        
+        await _repos.GetRepository<Game>()
+            .UpdateAsync(game);
+        
+        if(!clearInPlayGame) return true;
+
+        //Game was in play — tear down the live runtime now its cancellation is committed:
+        //evict the cache and stop the pump (mirrors GameCompletionService.ClearGameRuntime).
+        //The pump stop is fire-and-forget — it may be mid-work or wedged, and we must not
+        //block the cancel on it.
+        _cacheService.Invalidate(gameId);
+        _ = _executor.StopAsync(gameId).AsTask();
+        return true;
+    }
+
+    public async Task<bool> TryDeleteGame(string gameId)
+    {
+        var game = await QueryGames(false, true, false, false, false, false, GameState.Cancelled)
+            .FirstOrDefaultAsync(g => g.Id == gameId);
+        if(game is null)
+            return false;
+        
+        var players = game.Players.ToList();
+        var turns = await _repos.GetRepository<GameTurn>()
+            .AsQueryable().FilterDeleted(DeletedQueryType.OnlyActive)
+            .Where(t => t.GameId == gameId)
+            .ToListAsync();
+        var snapshots = await _repos.GetRepository<GameSnapshot>()
+            .AsQueryable().FilterDeleted(DeletedQueryType.OnlyActive)
+            .Where(s => s.GameId == gameId)
+            .ToListAsync();
+        var turnEvents = await _repos.GetRepository<GameTurnEvents>()
+            .AsQueryable().FilterDeleted(DeletedQueryType.OnlyActive)
+            .Where(s => s.GameId == gameId)
+            .ToListAsync();
+
+        await _repos.BeginTransactionAsync();
+        try
+        {
+            if(snapshots.Count > 0)
+                await _repos.GetRepository<GameSnapshot>()
+                    .SoftDeleteRangeAsync(snapshots, saveNow: false);
+            
+            if(turnEvents.Count > 0)
+                await _repos.GetRepository<GameTurnEvents>()
+                    .SoftDeleteRangeAsync(turnEvents, saveNow: false);
+            
+            if(turns.Count > 0)
+                await _repos.GetRepository<GameTurn>()
+                    .SoftDeleteRangeAsync(turns, saveNow: false);
+            
+            if(players.Count > 0)
+                await _repos.GetRepository<GamePlayer>()
+                    .SoftDeleteRangeAsync(players, saveNow: false);
+            
+            await _repos.GetRepository<Game>()
+                .SoftDeleteAsync(game, saveNow: false);
+            
+            await _repos.SaveChangesAsync();
+            await _repos.CommitTransactionAsync();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            await _repos.RollbackTransactionAsync();
+            _logger.LogError(ex, "Failed to delete game {GameId}", gameId);
+            return false;
+        }
+    }
 }

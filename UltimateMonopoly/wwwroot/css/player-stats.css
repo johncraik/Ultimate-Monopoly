@@ -1,0 +1,207 @@
+/* Player statistics panel (_PlayerStatsPartial) — a "glorified statistics panel".
+   Colours reference theme CSS variables / Bootstrap utility tokens only (no hex,
+   bar the board "white" body inherited from the prop-colour classes). */
+
+/* ── Hero header ── */
+.stats-hero {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--bs-border-radius-lg);
+    padding: 1.4rem 1.6rem;
+    color: #fff;
+    background: linear-gradient(135deg,
+        rgba(var(--bs-primary-rgb), 0.92),
+        rgba(var(--bs-info-rgb), 0.7));
+}
+.stats-hero::after {
+    /* subtle decorative coin/disc in the corner */
+    content: "";
+    position: absolute;
+    top: -40%;
+    right: -4%;
+    width: 14rem;
+    height: 14rem;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+}
+.stats-hero h1,
+.stats-hero h2 { color: #fff; }
+
+/* ── Section cards ── */
+.stats-card-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 700;
+}
+.stats-card-title .stats-card-ico {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.1rem;
+    height: 2.1rem;
+    border-radius: 0.6rem;
+    font-size: 1.05rem;
+    flex: 0 0 auto;
+}
+
+/* ── Stat tile ── */
+.stat-tile {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    padding: 0.7rem 0.85rem;
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius-lg);
+    background-color: var(--bs-body-bg);
+    transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+}
+.stat-tile:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.25);
+    border-color: var(--bs-secondary-border-subtle);
+}
+
+.stat-tile-top {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.stat-ico {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.6rem;
+    font-size: 1rem;
+    flex: 0 0 auto;
+}
+.stat-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    color: var(--bs-secondary-color);
+    line-height: 1.1;
+}
+.stat-value {
+    font-size: 1.45rem;
+    font-weight: 700;
+    line-height: 1.15;
+    word-break: break-word;
+}
+.stat-sub {
+    font-size: 0.72rem;
+    color: var(--bs-secondary-color);
+    line-height: 1.2;
+}
+.stat-delta {
+    font-size: 0.8rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.1rem;
+    line-height: 1;
+}
+.stat-delta i { font-size: 1.05rem; }
+.stat-was { align-self: flex-start; font-weight: 600; }
+
+/* ── Mini property/space rectangle (board-index values) — a coloured banner over
+   the space name, echoing the board's space cells. ── */
+.stat-space {
+    display: flex;
+    flex-direction: column;
+    width: 100%;                /* fill the tile/box it sits in */
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
+    overflow: hidden;
+    background-color: var(--bs-secondary-bg);
+}
+.stat-space-banner { height: 0.6rem; }
+.stat-space-name {
+    padding: 0.55rem 0.6rem;    /* roomier top/bottom */
+    font-size: 0.9rem;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+/* ── Split tile (two related numbers in one box: "you | someone", "taken | repaid") ── */
+.stat-split .stat-value { font-size: 1.15rem; }
+.stat-split-divider {
+    align-self: stretch;
+    width: 1px;
+    background-color: var(--bs-border-color);
+}
+
+/* ── Charts ── */
+.stats-chart {
+    width: 100%;
+    height: 320px;
+}
+
+/* Legend chip for the comparison key in the hero. */
+.stats-key {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.8rem;
+}
+.stats-key-line {
+    display: inline-block;
+    width: 1.6rem;
+    height: 0;
+    border-top: 3px solid currentColor;
+}
+.stats-key-line.dashed { border-top-style: dashed; }
+
+/* ── All-players comparison table ──
+   Scrollable panel with a sticky header row (player circles) and sticky first column
+   (stat labels); collapsible sections; subtle leader highlight per row. */
+.stat-compare-wrap {
+    max-height: 75vh;
+    overflow: auto;
+}
+.stat-compare-table {
+    margin-bottom: 0;
+    --bs-table-bg: var(--bs-body-bg);   /* opaque base so the sticky column/header don't show-through */
+}
+.stat-compare-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background-color: var(--bs-body-bg);
+    vertical-align: bottom;
+    border-bottom: 2px solid var(--bs-border-color);
+}
+.stat-compare-table tbody th.stat-compare-label,
+.stat-compare-table thead th.stat-compare-corner {
+    position: sticky;
+    left: 0;
+    background-color: var(--bs-body-bg);
+}
+.stat-compare-table thead th.stat-compare-corner { z-index: 3; }   /* top-left corner sits above both */
+.stat-compare-table tbody th.stat-compare-label {
+    z-index: 1;
+    font-weight: 600;
+    white-space: nowrap;
+    text-align: left;
+}
+
+/* Section header rows — clickable, tinted, with a chevron that rotates when collapsed. */
+.stat-compare-section th {
+    cursor: pointer;
+    background-color: var(--bs-tertiary-bg);
+    border-top: 2px solid var(--bs-border-color);
+    user-select: none;
+}
+.stat-compare-section th .stat-compare-chev { transition: transform 0.15s ease; }
+.stat-compare-section th[aria-expanded="false"] .stat-compare-chev { transform: rotate(-90deg); }
+
+/* Subtle, translucent "info" highlight on the leading cell in each numeric row. */
+.stat-compare-table td.stat-leader {
+    background-color: rgba(var(--bs-info-rgb), 0.18) !important;
+    font-weight: 600;
+}
+.stat-compare-value { font-weight: 600; }

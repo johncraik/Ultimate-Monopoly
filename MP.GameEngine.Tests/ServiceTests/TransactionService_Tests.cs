@@ -69,6 +69,8 @@ public class TransactionService_Tests
         public void GameCompleted(string gameId)
         {
         }
+        public void ForceRefresh(string gameId) { }
+        public void GameCancelled(string gameId) { }
     }
     
     private sealed class NoOpShortfallService : IShortfallService

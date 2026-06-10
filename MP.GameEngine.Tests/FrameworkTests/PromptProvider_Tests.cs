@@ -54,6 +54,8 @@ public class PromptProvider_Tests
         public void GameCompleted(string gameId)
         {
         }
+        public void ForceRefresh(string gameId) { }
+        public void GameCancelled(string gameId) { }
     }
     
     private static PromptProvider CreateProvider(GameCacheModel cache) => new(cache, new NoOpNotifier());

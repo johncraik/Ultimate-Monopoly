@@ -1,4 +1,5 @@
 using JC.BackgroundJobs.Extensions;
+using JC.BackgroundJobs.Models;
 using JC.Core.Extensions;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using MP.GameEngine.Abstractions;
@@ -13,6 +14,7 @@ using UltimateMonopoly.Services.Friends;
 using UltimateMonopoly.Services.GameEngine;
 using UltimateMonopoly.Services.Games;
 using UltimateMonopoly.Services.Imports;
+using UltimateMonopoly.Services.Statistics;
 
 namespace UltimateMonopoly.Extensions;
 
@@ -32,7 +34,8 @@ public static class ServiceRegistration
             typeof(GamePlayer),
             typeof(GameTurn),
             typeof(GameSnapshot),
-            typeof(GameTurnEvents));
+            typeof(GameTurnEvents),
+            typeof(PlayerGameStat));
 
         services.TryAddSingleton<FilePathProvider>();
         services.TryAddScoped<UserService>();
@@ -72,7 +75,19 @@ public static class ServiceRegistration
         services.TryAddSingleton<IEngineNotifier, SignalrEngineNotifier>();
         services.TryAddSingleton<IGameExecutor, GameExecutor>();
         services.AddGameEngine();
-        
+
+        // Statistics — the per-game projection. Enqueued fire-and-forget by GameStatsService when
+        // a game concludes (the ad-hoc scheduler registration), and also run on a recurring
+        // schedule as a safety-net: it sweeps every finished game and is idempotent, so it
+        // backfills any game whose stats never got written. 03:00 and 15:00 UK time (every 12h).
+        services.TryAddScoped<GameStatsService>();
+        services.AddHangfireScheduler(AdHocJobRegistration.For<StatisticsJob>());
+        services.AddHangfireJob<StatisticsJob>(opts =>
+        {
+            opts.Cron = "0 3,15 * * *";
+            opts.TimeZone = TimeZoneInfo.FindSystemTimeZoneById("Europe/London");
+        });
+
         // Rules
         services.TryAddSingleton<RuleCatalog>();
 

@@ -1,0 +1,223 @@
+@page "{gameId}"
+@using System.Text.Json
+@using UltimateMonopoly.Enums
+@using UltimateMonopoly.Models.Statistics
+@model UltimateMonopoly.Pages.Games.CompareModel
+@{
+    ViewData["Title"] = $"Compare — {Model.GameName}";
+
+    double[] Series(string? json)
+        => string.IsNullOrWhiteSpace(json) ? [] : (JsonSerializer.Deserialize<List<double>>(json) ?? []).ToArray();
+
+    (string Tone, string Icon, string Text) Outcome(PlayerGameOutcome? o) => o switch
+    {
+        PlayerGameOutcome.Winner => ("warning", "bi-trophy-fill", "Winner"),
+        PlayerGameOutcome.Drawn => ("info", "bi-people-fill", "Drawn"),
+        PlayerGameOutcome.Loser => ("danger", "bi-emoji-frown-fill", "Bankrupt"),
+        _ => ("secondary", "bi-dash", "Finished")
+    };
+
+    var cols = Model.Players.Count + 1;
+}
+
+<link rel="stylesheet" href="~/css/player-stats.css" asp-append-version="true" />
+
+<div class="mb-3">
+    <a asp-page="/Games/Finished" asp-route-gameId="@Model.GameId" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Back to results
+    </a>
+</div>
+
+<div class="stats-hero mb-4">
+    <h1 class="h3 mb-1"><i class="bi bi-bar-chart-steps me-2"></i>Player Comparison</h1>
+    <p class="mb-2 opacity-75">@Model.GameName</p>
+    <div class="d-flex flex-wrap gap-2">
+        <span class="badge text-bg-light"><i class="bi bi-calculator me-1"></i>@Model.RoundingRule</span>
+        <span class="badge text-bg-light"><i class="bi bi-grid-3x3-gap-fill me-1"></i>@Model.BoardName</span>
+    </div>
+</div>
+
+@if (Model.Players.Count == 0)
+{
+    <div class="card border-0 shadow-sm">
+        <div class="card-body text-center text-body-secondary py-5">
+            <div class="display-6 mb-2"><i class="bi bi-bar-chart"></i></div>
+            <p class="mb-0">Statistics not available</p>
+        </div>
+    </div>
+    return;
+}
+
+@* ── Comparison table — sticky header (players) + sticky first column (stats), collapsible sections ── *@
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body p-0">
+        <div class="table-responsive stat-compare-wrap">
+            <table class="table table-striped align-middle stat-compare-table mb-0">
+                <thead>
+                    <tr>
+                        <th class="stat-compare-corner"></th>
+                        @foreach (var p in Model.Players)
+                        {
+                            var oc = Outcome(p.Outcome);
+                            <th class="text-center" title="@p.Profile.DisplayName">
+                                <div class="d-flex flex-column align-items-center gap-1">
+                                    <profile-circle user="p.Profile" size="Sm" />
+                                    <span class="badge rounded-pill text-bg-@oc.Tone" title="@oc.Text"><i class="bi @oc.Icon"></i></span>
+                                </div>
+                            </th>
+                        }
+                    </tr>
+                </thead>
+
+                @for (var i = 0; i < StatCatalogue.Sections.Count; i++)
+                {
+                    var statSection = StatCatalogue.Sections[i];
+                    <tbody>
+                        <tr class="stat-compare-section">
+                            <th colspan="@cols" role="button" data-bs-toggle="collapse"
+                                data-bs-target="#cmp-sec-@i" aria-expanded="true">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="stats-card-ico text-@statSection.Tone bg-@(statSection.Tone)-subtle">
+                                        <i class="bi @statSection.Icon"></i>
+                                    </span>
+                                    <span class="fw-semibold">@statSection.Title</span>
+                                    <i class="bi bi-chevron-down stat-compare-chev ms-auto"></i>
+                                </div>
+                            </th>
+                        </tr>
+                    </tbody>
+                    <tbody class="collapse show" id="cmp-sec-@i">
+                        @foreach (var stat in statSection.Stats)
+                        {
+                            if (stat.Secondary is null)
+                            {
+                                var part = stat.Primary;
+                                var leader = StatRender.Leader(part.Sentiment,
+                                    Model.Players.Select(p => StatRender.AsNumber(part, p.Stat)));
+                                <tr>
+                                    <th class="stat-compare-label">@stat.Label</th>
+                                    @foreach (var p in Model.Players)
+                                    {
+                                        var lead = leader is not null && StatRender.AsNumber(part, p.Stat) == leader;
+                                        <td class="text-center @(lead ? "stat-leader" : null)">
+                                            <div class="stat-compare-value">@StatRender.Value(part, p.Stat, Model.Board)</div>
+                                            @if (stat.Sub is not null)
+                                            {
+                                                var sub = stat.Sub(p.Stat);
+                                                if (!string.IsNullOrEmpty(sub))
+                                                {
+                                                    <div class="stat-sub">@sub</div>
+                                                }
+                                            }
+                                            @if (stat.Details is not null)
+                                            {
+                                                <div class="d-flex flex-wrap justify-content-center gap-1 mt-1">
+                                                    @foreach (var detail in stat.Details)
+                                                    {
+                                                        @StatRender.Value(detail, p.Stat, Model.Board)
+                                                    }
+                                                </div>
+                                            }
+                                        </td>
+                                    }
+                                </tr>
+                            }
+                            else
+                            {
+                                @* Split stat → one row per half (each with its own leader). *@
+                                foreach (var part in new[] { stat.Primary, stat.Secondary })
+                                {
+                                    var leader = StatRender.Leader(part.Sentiment,
+                                        Model.Players.Select(p => StatRender.AsNumber(part, p.Stat)));
+                                    <tr>
+                                        <th class="stat-compare-label">
+                                            @stat.Label <span class="text-body-secondary fw-normal">· @part.Label</span>
+                                        </th>
+                                        @foreach (var p in Model.Players)
+                                        {
+                                            var lead = leader is not null && StatRender.AsNumber(part, p.Stat) == leader;
+                                            <td class="text-center @(lead ? "stat-leader" : null)">
+                                                <div class="stat-compare-value">@StatRender.Value(part, p.Stat, Model.Board)</div>
+                                            </td>
+                                        }
+                                    </tr>
+                                }
+                            }
+                        }
+                    </tbody>
+                }
+            </table>
+        </div>
+    </div>
+</div>
+
+@* ── Over-time graphs — one line per player ── *@
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body">
+        <h2 class="h5 stats-card-title mb-3">
+            <span class="stats-card-ico text-info bg-info-subtle"><i class="bi bi-graph-up"></i></span>
+            Over time
+        </h2>
+        <div class="row g-4">
+            <div class="col-12 col-xl-6"><div id="cmpChartBalance" class="stats-chart"></div></div>
+            <div class="col-12 col-xl-6"><div id="cmpChartNetWorth" class="stats-chart"></div></div>
+            <div class="col-12 col-xl-6"><div id="cmpChartProps" class="stats-chart"></div></div>
+            <div class="col-12 col-xl-6"><div id="cmpChartRank" class="stats-chart"></div></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        var players = @Html.Raw(JsonSerializer.Serialize(Model.Players.Select(p => p.Profile.DisplayName)));
+        var data = {
+            balance:  @Html.Raw(JsonSerializer.Serialize(Model.Players.Select(p => Series(p.Stat.BalanceOverTimeJson)))),
+            networth: @Html.Raw(JsonSerializer.Serialize(Model.Players.Select(p => Series(p.Stat.NetWorthOverTimeJson)))),
+            props:    @Html.Raw(JsonSerializer.Serialize(Model.Players.Select(p => Series(p.Stat.PropertyCountOverTimeJson)))),
+            rank:     @Html.Raw(JsonSerializer.Serialize(Model.Players.Select(p => Series(p.Stat.WealthRankOverTimeJson))))
+        };
+
+        // Fixed per-player palette (max 6 players) — same colour per player across every chart.
+        var PALETTE = ['#fd7e14', '#40c057', '#0dcaf0', '#fa5252', '#cc5de8', '#ffc107'];
+
+        function pts(a) { return (a || []).map(function (v, i) { return { x: i + 1, y: v }; }); }
+
+        function build(id, title, yTitle, perPlayer, inversed) {
+            var el = document.getElementById(id);
+            if (!el) return;
+            if (!perPlayer.some(function (d) { return d && d.length; })) {
+                el.innerHTML = '<div class="text-body-secondary small text-center py-5">No data yet.</div>';
+                return;
+            }
+            var series = perPlayer.map(function (d, i) {
+                return {
+                    dataSource: pts(d), xName: 'x', yName: 'y', name: players[i] || ('Player ' + (i + 1)),
+                    type: 'Line', width: 2, marker: { visible: true, width: 5, height: 5 }
+                };
+            });
+            new ej.charts.Chart({
+                theme: 'Bootstrap5Dark',
+                title: title,
+                palettes: PALETTE,
+                primaryXAxis: { title: 'Turn', valueType: 'Double', interval: 1, minimum: 1, edgeLabelPlacement: 'Shift' },
+                primaryYAxis: { title: yTitle, isInversed: !!inversed },
+                series: series,
+                tooltip: { enable: true, shared: true },
+                legendSettings: { visible: true },
+                chartArea: { border: { width: 0 } }
+            }).appendTo('#' + id);
+        }
+
+        function start() {
+            if (typeof ej === 'undefined' || !ej.charts) return;
+            ej.charts.Chart.Inject(ej.charts.LineSeries, ej.charts.Tooltip, ej.charts.Legend);
+            build('cmpChartBalance', 'Balance over time', 'Balance (£)', data.balance, false);
+            build('cmpChartNetWorth', 'Net worth over time', 'Net worth (£)', data.networth, false);
+            build('cmpChartProps', 'Properties over time', 'Properties', data.props, false);
+            build('cmpChartRank', 'Wealth rank over time', 'Rank (1 = richest)', data.rank, true);
+        }
+
+        if (document.readyState !== 'loading') start();
+        else document.addEventListener('DOMContentLoaded', start);
+    })();
+</script>

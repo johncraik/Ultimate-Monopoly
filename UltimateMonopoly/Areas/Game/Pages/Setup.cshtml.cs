@@ -100,6 +100,18 @@ public class SetupModel : PageModel
         return RedirectToPage(new { id });
     }
 
+    public async Task<IActionResult> OnPostCancelAsync(string id)
+    {
+        if (!await ViewerIsHostOf(id))
+            return Forbid();
+
+        var ok = await _gameSetup.TryCancelGame(id);
+        if (ok) return Redirect("/Index");
+
+        SetStatus(false, string.Empty, "Could not cancel the game.");
+        return RedirectToPage(new { id });
+    }
+
     private async Task<bool> ViewerIsHostOf(string gameId)
     {
         var game = await _gameSetup.GetSetupGame(gameId);

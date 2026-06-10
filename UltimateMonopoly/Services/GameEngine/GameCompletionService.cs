@@ -10,6 +10,7 @@ using UltimateMonopoly.Data;
 using UltimateMonopoly.Enums;
 using UltimateMonopoly.Models.DataModels.Games;
 using UltimateMonopoly.Services.Cache;
+using UltimateMonopoly.Services.Statistics;
 
 namespace UltimateMonopoly.Services.GameEngine;
 
@@ -20,6 +21,7 @@ public class GameCompletionService : IGameCompletionService
     private readonly IGameExecutor _executor;
     private readonly GameCacheService _cacheService;
     private readonly IEngineNotifier _notifier;
+    private readonly GameStatsService _gameStatsService;
     private readonly ILogger<GameCompletionService> _logger;
 
     public GameCompletionService(IRepositoryManager repos,
@@ -27,6 +29,7 @@ public class GameCompletionService : IGameCompletionService
         IGameExecutor executor,
         GameCacheService cacheService,
         IEngineNotifier notifier,
+        GameStatsService gameStatsService,
         ILogger<GameCompletionService> logger)
     {
         _repos = repos;
@@ -34,6 +37,7 @@ public class GameCompletionService : IGameCompletionService
         _executor = executor;
         _cacheService = cacheService;
         _notifier = notifier;
+        _gameStatsService = gameStatsService;
         _logger = logger;
     }
 
@@ -57,12 +61,12 @@ public class GameCompletionService : IGameCompletionService
         if(game is null)
             throw new InvalidOperationException("Game not found");
         
-        //TODO: Process snapshot and turn events into stat records for each player:
-        //This would be done in a separate transaction to finishing the game!
-        //This allows stats to persist, when game fails to update state
-        //Likewise, failure to persist stats will not prevent game completion
+        //Stats projection (snapshot + turn events → PlayerGameStat per player) runs in its own
+        //transaction, decoupled from finishing the game: it is enqueued as a fire-and-forget
+        //Hangfire job AFTER this conclude transaction commits (see below), so a failure to
+        //persist stats can't prevent game completion, and the job reads the game as Finished.
 
-        
+
         //Tear down the live runtime (cache + pump) now the game is over:
         ClearGameRuntime(gameCache.GameId);
 
@@ -153,8 +157,12 @@ public class GameCompletionService : IGameCompletionService
             throw;
         }
 
-        // The game is persisted as finished — tell the connected clients so the in-game
-        // pages redirect to the results. Fire-and-forget (the notifier never blocks/throws).
+        // The game is now committed as finished — enqueue the stats projection (fire-and-forget;
+        // the job reads committed data and writes PlayerGameStat in its own transaction).
+        _gameStatsService.ComputeForGame();
+
+        // Tell the connected clients so the in-game pages redirect to the results.
+        // Fire-and-forget (the notifier never blocks/throws).
         _notifier.GameCompleted(gameCache.GameId);
     }
     

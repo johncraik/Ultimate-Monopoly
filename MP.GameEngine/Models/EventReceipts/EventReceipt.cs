@@ -36,8 +36,13 @@ public abstract class EventReceipt
     public string PlayerId { get; init; } = "";
 
     /// <summary>The turn this receipt was emitted within. Set by <see cref="GameCacheModel.AddEvent"/>.</summary>
+    // [JsonInclude] so the persisted event stream round-trips this through System.Text.Json — the
+    // internal setter is skipped on deserialize otherwise, leaving it 0 (e.g. the stats projection
+    // reads PlayerBankruptedReceipt.TurnNumber for "turns survived").
+    [JsonInclude]
     public uint TurnNumber { get; internal set; }
 
     /// <summary>Position within the per-turn event list at the moment of emission. Set by <see cref="GameCacheModel.AddEvent"/>.</summary>
+    [JsonInclude]
     public ushort SequenceIndex { get; internal set; }
 }

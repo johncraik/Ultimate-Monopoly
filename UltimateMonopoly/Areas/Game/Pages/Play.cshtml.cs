@@ -5,6 +5,7 @@ using MP.GameEngine.Abstractions;
 using MP.GameEngine.Enums.Games;
 using MP.GameEngine.Models;
 using MP.GameEngine.Services.Framework;
+using UltimateMonopoly.Services.Games;
 
 namespace UltimateMonopoly.Areas.Game.Pages;
 
@@ -17,12 +18,18 @@ public class PlayModel : PageModel
 {
     private readonly IGameEngineFactory _engineFactory;
     private readonly IUserInfo _userInfo;
+    private readonly GameService _gameService;
+    private readonly IEngineNotifier _notifier;
 
     public PlayModel(IGameEngineFactory engineFactory,
-        IUserInfo userInfo)
+        IUserInfo userInfo,
+        GameService gameService,
+        IEngineNotifier notifier)
     {
         _engineFactory = engineFactory;
         _userInfo = userInfo;
+        _gameService = gameService;
+        _notifier = notifier;
     }
 
     /// <summary>The live game cache — the single source the view renders from.</summary>
@@ -64,6 +71,22 @@ public class PlayModel : PageModel
         }
 
         return Partial("Play/_PlayView", Engine);
+    }
+
+    /// <summary>
+    /// Host "Cancel Game" (the host panel's confirm-POST). Cancels the game — no winner/draw —
+    /// which also tears down the live runtime (cache + pump), then broadcasts so the other
+    /// clients (players' phones) redirect home; the host follows the POST redirect itself.
+    /// <see cref="GameService.TryCancelGame"/> is scoped to the game's creator, so a non-host
+    /// POST simply no-ops.
+    /// </summary>
+    public async Task<IActionResult> OnPostCancelAsync(string gameId)
+    {
+        var cancelled = await _gameService.TryCancelGame(gameId);
+        if (cancelled)
+            _notifier.GameCancelled(gameId);
+
+        return Redirect("/Index");
     }
 
     private async Task<IActionResult?> LoadAsync(string gameId)

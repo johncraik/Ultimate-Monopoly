@@ -85,6 +85,32 @@
                 {
                     <div class="space-banner @propClass"></div>
                     <div class="space-body @stateClass"></div>
+
+                    @* Rent level — building squares for built levels (max 2 per row), else a
+                       lettered badge. Sits under the player chips (lower z-index). *@
+                    @if (prop is not null && prop.State == PropertyState.Owned)
+                    {
+                        var rentVisual = RentLevelVisual(prop.RentLevel);
+                        <div class="space-buildings" aria-hidden="true">
+                            @if (rentVisual.Badge is not null)
+                            {
+                                <span class="rent-badge">@rentVisual.Badge</span>
+                            }
+                            else
+                            {
+                                <div class="space-buildings-inner">
+                                    @for (var b = 0; b < rentVisual.Houses; b++)
+                                    {
+                                        <span class="building building--house"></span>
+                                    }
+                                    @for (var b = 0; b < rentVisual.Hotels; b++)
+                                    {
+                                        <span class="building building--hotel"></span>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
                 }
                 else if (isCorner && space.Index == IndexHelper.JustVisitingSpace)
                 {
@@ -169,6 +195,24 @@
         RentLevel.HOTEL => "Hotel",
         RentLevel.DOUBLE_HOTEL => "Double hotel",
         _ => level.ToString()
+    };
+
+    // The board-rectangle rent indicator: building squares for built levels (houses + hotels),
+    // a single lettered badge for the rest. Houses/hotels render as squares (max 2 per row);
+    // SINGLE/SET/DOUBLE/TRIPLE render as a secondary badge "1"/"S"/"D"/"T".
+    static (string? Badge, int Houses, int Hotels) RentLevelVisual(RentLevel level) => level switch
+    {
+        RentLevel.SINGLE => ("1", 0, 0),
+        RentLevel.SET => ("S", 0, 0),
+        RentLevel.DOUBLE => ("D", 0, 0),
+        RentLevel.TRIPLE => ("T", 0, 0),
+        RentLevel.ONE_HOUSE => (null, 1, 0),
+        RentLevel.TWO_HOUSES => (null, 2, 0),
+        RentLevel.THREE_HOUSES => (null, 3, 0),
+        RentLevel.FOUR_HOUSES => (null, 4, 0),
+        RentLevel.HOTEL => (null, 0, 1),
+        RentLevel.DOUBLE_HOTEL => (null, 0, 2),
+        _ => (null, 0, 0)
     };
 
     static string SideClass(BoardSide side) => side switch
@@ -341,6 +385,49 @@
     .space-counter-extra.cnt-tr { top: 0; right: 0; }
     .space-counter-extra.cnt-bl { bottom: 0; left: 0; }
     .space-counter-extra.cnt-br { bottom: 0; right: 0; }
+
+    /* Rent-level indicator — centred in the rectangle, beneath the player chips (z-index 1
+       vs the counters' 2). Built levels show building squares (max two per row); the rest
+       show a single secondary badge. */
+    .space-buildings {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+    }
+    .space-buildings-inner {
+        display: flex;
+        flex-wrap: wrap;
+        align-content: center;
+        justify-content: center;
+        gap: 2px;
+        width: 64%;                       /* fits exactly two squares per row */
+    }
+    .building {
+        width: calc(50% - 2px);
+        aspect-ratio: 1 / 1;
+        border-radius: 1px;
+        border: 1px solid rgba(0, 0, 0, 0.35);
+    }
+    .building--house { background: #2e9e4f; }   /* houses — green */
+    .building--hotel { background: #d63a3a; }   /* hotels — red */
+    .rent-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 1rem;
+        height: 1rem;
+        padding: 0 0.2rem;
+        border-radius: 1rem;
+        background: var(--bs-secondary);
+        color: #fff;
+        font-size: 0.6rem;
+        font-weight: 700;
+        line-height: 1;
+    }
 
     /* Corners + centre share the board base colour */
     .board-space.is-corner { background: #e9e4d6; }

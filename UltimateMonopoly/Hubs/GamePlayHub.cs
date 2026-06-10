@@ -198,6 +198,49 @@ public class GamePlayHub : GameBaseHub
     }
 
 
+    // ─── Host controls (the host-panel top sheet) ────────────────────────
+    // Host-only game-level actions. Each verifies the caller is the host before
+    // touching the game; the engine work (where any) runs on the single-writer
+    // executor, which re-checks the host too.
+
+    /// <summary>
+    /// Ends the game now as a draw (host only). Enqueues on the single-writer executor →
+    /// <c>GameCompletionService.DrawGame</c> concludes the game and the <c>GameCompleted</c>
+    /// broadcast moves every client to the results page. Returns false when not the host
+    /// or the engine is unavailable.
+    /// </summary>
+    public async Task<bool> DrawGame()
+    {
+        var gameId = GetGameId();
+        if (string.IsNullOrEmpty(gameId) || string.IsNullOrEmpty(Context.UserIdentifier))
+            return false;
+
+        var engine = await _engineFactory.GetAsync(gameId);
+        if (engine.Cache.HostPlayerId != Context.UserIdentifier)
+            return false;
+
+        _gameService.EnqueueDrawGame(gameId, Context.UserIdentifier);
+        return true;
+    }
+
+    /// <summary>
+    /// Forces every connected client to hard-reload and re-fetch the current live state
+    /// (host only). Delegates to <see cref="GameService.ForceRefresh"/>, which broadcasts
+    /// directly (off the pump) so it fires even while the engine is parked on a prompt.
+    /// </summary>
+    public async Task<bool> ForceRefresh()
+    {
+        var gameId = GetGameId();
+        if (string.IsNullOrEmpty(gameId) || string.IsNullOrEmpty(Context.UserIdentifier))
+            return false;
+
+        return await _gameService.ForceRefresh(gameId, Context.UserIdentifier);
+    }
+
+    // Cancel Game is not a hub method — the host panel posts to the Play page's Cancel
+    // handler (it cancels server-side and broadcasts GameCancelled so clients redirect home).
+
+
     // ─── Portfolio commands ──────────────────────────────────────────────
     // Player-initiated property actions on the named property (boardIndex). Each
     // gates on the host-bypass-aware CanPortfolioCommand as an early-out, then

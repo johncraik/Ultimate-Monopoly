@@ -66,11 +66,15 @@
             </div>
         }
 
-        @* ───────────── Stats CTA (no-op for now) ───────────── *@
-        <div class="d-grid">
-            <button type="button" class="btn btn-hero-primary">
+        @* ───────────── Stats CTAs ───────────── *@
+        <div class="d-grid gap-2">
+            <a class="btn btn-hero-primary" asp-page="/Games/GameStats"
+               asp-route-gameId="@Model.GameId" asp-route-userId="@Model.CurrentUserId">
                 <i class="bi bi-bar-chart-line-fill me-2"></i> View My Game Stats
-            </button>
+            </a>
+            <a class="btn btn-outline-primary" asp-page="/Games/Compare" asp-route-gameId="@Model.GameId">
+                <i class="bi bi-bar-chart-steps me-2"></i> Compare All Players
+            </a>
         </div>
 
     </div>

@@ -1,0 +1,56 @@
+@page "{gameId}/{userId}"
+@using MP.GameEngine.Models.Statistics
+@using UltimateMonopoly.Enums
+@model UltimateMonopoly.Pages.Games.GameStatsModel
+@{
+    ViewData["Title"] = $"{Model.Player.DisplayName} — {Model.GameName}";
+
+    var (outcomeText, outcomeClass, outcomeIcon) = Model.Outcome switch
+    {
+        PlayerGameOutcome.Winner => ("Winner", "text-bg-warning", "bi-trophy-fill"),
+        PlayerGameOutcome.Drawn => ("Drawn", "text-bg-info", "bi-people-fill"),
+        PlayerGameOutcome.Loser => ("Bankrupt", "text-bg-danger", "bi-emoji-frown-fill"),
+        _ => ("Finished", "text-bg-secondary", "bi-flag")
+    };
+}
+
+<div class="mb-3">
+    <a asp-page="/Games/Finished" asp-route-gameId="@Model.GameId" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Back to results
+    </a>
+</div>
+
+@* ── Header: player + game context (info not held on the stat record itself) ── *@
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body d-flex flex-wrap align-items-center gap-3">
+        <profile-circle user="Model.Player" size="Lg" />
+        <div class="flex-grow-1 min-w-0">
+            <h1 class="h4 mb-1 text-truncate">@Model.Player.DisplayName</h1>
+            <div class="text-body-secondary">@@@Model.Player.Username</div>
+        </div>
+        <div class="text-md-end">
+            <div class="fw-semibold mb-1">@Model.GameName</div>
+            <div class="d-flex flex-wrap gap-2">
+                <span class="badge @outcomeClass"><i class="bi @outcomeIcon me-1"></i>@outcomeText</span>
+                <span class="badge text-bg-secondary"><i class="bi bi-calculator me-1"></i>@Model.RoundingRule</span>
+                <span class="badge text-bg-secondary"><i class="bi bi-grid-3x3-gap-fill me-1"></i>@Model.BoardName</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Single game → no comparison aggregate. Stats may not exist yet (projection pending). *@
+@if (Model.Stat is not null)
+{
+    <partial name="~/Pages/Shared/_PlayerStatsPartial.cshtml"
+             model="((PlayerStatRecord)Model.Stat, (PlayerStatRecord?)null)" />
+}
+else
+{
+    <div class="card border-0 shadow-sm">
+        <div class="card-body text-center text-body-secondary py-5">
+            <div class="display-6 mb-2"><i class="bi bi-bar-chart"></i></div>
+            <p class="mb-0">Statistics not available</p>
+        </div>
+    </div>
+}

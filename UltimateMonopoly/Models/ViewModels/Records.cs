@@ -8,7 +8,9 @@ namespace UltimateMonopoly.Models.ViewModels;
 public record FriendRequestResult(bool Success, string? ErrorMessage);
 public record ChatMessage(bool FromMe, string AuthorDisplay, string Body, DateTime SentUtc);
 
-public record PlayerCard(ushort OrderId, UserProfileViewModel Profile, ushort? Dice1, ushort? Dice2, bool IsHost, bool IsSetup);
+// GameId set → the (non-setup) View button opens that player's game stats for the game;
+// null → it opens the player's social profile.
+public record PlayerCard(ushort OrderId, UserProfileViewModel Profile, ushort? Dice1, ushort? Dice2, bool IsHost, bool IsSetup, string? GameId = null);
 
 
 //Board Skin Editor Records:

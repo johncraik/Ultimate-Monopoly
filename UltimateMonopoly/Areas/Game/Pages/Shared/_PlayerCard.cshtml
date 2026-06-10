@@ -48,12 +48,25 @@
                 </form>
             }
         }
-        else
+        else if (!string.IsNullOrEmpty(Model.Profile.UserId))
         {
-            <a class="btn btn-sm btn-primary"
-               asp-area="Social" asp-page="/Friends/Profile" asp-route-userId="@Model.Profile.UserId">
-                <i class="bi bi-person-lines-fill me-1"></i> View
-            </a>
+            @* No UserId ⇒ a masked (blocked) player — render no action at all. *@
+            @if (Model.GameId is not null)
+            {
+                @* Finished-game context → open this player's stats for the game. *@
+                <a class="btn btn-sm btn-primary"
+                   asp-area="" asp-page="/Games/GameStats"
+                   asp-route-gameId="@Model.GameId" asp-route-userId="@Model.Profile.UserId">
+                    <i class="bi bi-bar-chart-line-fill me-1"></i> View Stats
+                </a>
+            }
+            else
+            {
+                <a class="btn btn-sm btn-primary"
+                   asp-area="Social" asp-page="/Friends/Profile" asp-route-userId="@Model.Profile.UserId">
+                    <i class="bi bi-person-lines-fill me-1"></i> View
+                </a>
+            }
         }
     </div>
 </div>

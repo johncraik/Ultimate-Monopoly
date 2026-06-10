@@ -106,5 +106,10 @@
         window.location.href = '/Game/Play/' + encodeURIComponent(gameId);
     });
 
+    // Host cancelled the game — everyone leaves the setup screen.
+    connection.on('GameCancelled', () => {
+        window.location.href = '/Index';
+    });
+
     connection.start().catch(err => console.error('Game setup hub failed to connect:', err));
 })();

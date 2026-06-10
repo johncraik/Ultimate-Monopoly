@@ -37,6 +37,12 @@ public sealed class SignalrEngineNotifier : IEngineNotifier
     public void GameCompleted(string gameId)
         => Send(gameId, "GameCompleted", new GameCompletedMessage(gameId));
 
+    public void ForceRefresh(string gameId)
+        => Send(gameId, "ForceRefresh", new ForceRefreshMessage(gameId));
+
+    public void GameCancelled(string gameId)
+        => Send(gameId, "GameCancelled", new GameCancelledMessage(gameId));
+
     private void Send<T>(string gameId, string method, T message)
     {
         // Fire-and-forget: never await broadcast latency inside engine flow.
@@ -69,3 +75,9 @@ public sealed record PromptClosedMessage(string PromptId, string ConcurrencyStam
 
 /// <summary>Wire payload for <c>GameCompleted</c> — the in-game pages redirect to the finished-game page.</summary>
 public sealed record GameCompletedMessage(string GameId);
+
+/// <summary>Wire payload for <c>ForceRefresh</c> — every in-game client hard-reloads.</summary>
+public sealed record ForceRefreshMessage(string GameId);
+
+/// <summary>Wire payload for <c>GameCancelled</c> — every in-game client redirects home.</summary>
+public sealed record GameCancelledMessage(string GameId);

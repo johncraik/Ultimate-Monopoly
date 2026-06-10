@@ -21,9 +21,11 @@ public class MyGamesModel : PageModel
         Games = await _game.GetAllMyGames();
     }
 
-    public IActionResult OnPostDelete(string gameId)
+    public async Task<IActionResult> OnPostDeleteAsync(string gameId)
     {
-        // TODO: soft-delete the game — backend not yet implemented.
+        // Soft-deletes the game (+ its players/turns/snapshots/events). Scoped to the
+        // creator's cancelled games, so a non-owner / non-cancelled post simply no-ops.
+        await _game.TryDeleteGame(gameId);
         return RedirectToPage();
     }
 }

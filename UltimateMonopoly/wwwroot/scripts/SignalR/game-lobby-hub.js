@@ -69,5 +69,12 @@
             + encodeURIComponent(gameId) + '/' + encodeURIComponent(userId);
     });
 
+    // Host cancelled the game while we waited in the lobby — lock the page and head home.
+    connection.on('GameCancelled', () => {
+        lockDownPage();
+        showBlockingAlert('The game was cancelled by the host.');
+        setTimeout(() => { window.location.href = '/Index'; }, 3000);
+    });
+
     connection.start().catch(err => console.error('Game lobby hub failed to connect:', err));
 })();

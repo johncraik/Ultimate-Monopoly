@@ -85,14 +85,15 @@
 </div>
 
 <div class="row g-2 mt-4">
-    @* TODO: wire up Cancel once TryCancelGame exists *@
     <div class="col-6">
         <form method="post" asp-page-handler="Start">
             <button type="submit" class="btn btn-hero-primary w-100" disabled="@(!ready)">Start Game</button>
         </form>
     </div>
     <div class="col-6">
-        <button type="button" class="btn btn-hero-danger w-100">Cancel Game</button>
+        <form method="post" asp-page-handler="Cancel">
+            <button type="submit" class="btn btn-hero-danger w-100">Cancel Game</button>
+        </form>
     </div>
 </div>
 

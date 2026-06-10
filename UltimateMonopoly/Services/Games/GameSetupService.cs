@@ -378,7 +378,9 @@ public class GameSetupService
         if(players.Any(p => p.Dice1 == null || p.Dice2 == null))
             return false;
         
-        game.StartGame();
+        var result =  game.StartGame();
+        if(!result) return false;
+        
         var gameDto = new GameDTO(game.Id, game.Name, game.BoardId, game.RoundingRule, game.UserId, 
             game.State, game.Outcome);
         var playerDtos = players.Select(p => new PlayerDTO(p.UserId, p.OrderId, 
@@ -414,6 +416,17 @@ public class GameSetupService
         await _setupHub.Clients.Group(GameSetupHub.GroupName(gameId))
             .SendAsync("GameStarted");
         return true;
+    }
+
+    public async Task<bool> TryCancelGame(string gameId)
+    {
+        var cancelled = await _gameService.TryCancelGame(gameId);
+        if (cancelled)
+            // Tell the lobby (host setup page + players' lobbies) the game's gone, so they go home.
+            await _setupHub.Clients.Group(GameSetupHub.GroupName(gameId))
+                .SendAsync("GameCancelled");
+
+        return cancelled;
     }
 
     #endregion

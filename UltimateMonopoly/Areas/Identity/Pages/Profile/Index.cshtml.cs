@@ -1,10 +1,12 @@
 using JC.Core.Models.Pagination;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using MP.GameEngine.Models.Statistics;
 using UltimateMonopoly.Data;
 using UltimateMonopoly.Models.ViewModels.Social;
 using UltimateMonopoly.Services;
 using UltimateMonopoly.Services.Friends;
+using UltimateMonopoly.Services.Statistics;
 
 namespace UltimateMonopoly.Areas.Identity.Pages.Profile;
 
@@ -14,13 +16,16 @@ public class IndexModel : PageModel
 
     private readonly ProfileService _profile;
     private readonly BlockAndReportService _blockAndReport;
+    private readonly GameStatsService _gameStats;
 
     public IndexModel(
         ProfileService profile,
-        BlockAndReportService blockAndReport)
+        BlockAndReportService blockAndReport,
+        GameStatsService gameStats)
     {
         _profile = profile;
         _blockAndReport = blockAndReport;
+        _gameStats = gameStats;
     }
 
     [BindProperty]
@@ -37,6 +42,12 @@ public class IndexModel : PageModel
     public PagedList<UserProfileViewModel>? BlockedUsers { get; private set; }
 
     public UserProfileViewModel? CurrentUser { get; private set; }
+    
+    public (PlayerStatRecord Stats, PlayerStatRecord? Comparission)? AvgStats { get; private set; }
+    public (PlayerStatRecord Stats, PlayerStatRecord? Comparission)? MinStats { get; private set; }
+    public (PlayerStatRecord Stats, PlayerStatRecord? Comparission)? MaxStats { get; private set; }
+    public (PlayerStatRecord Stats, PlayerStatRecord? Comparission)? TotalStats { get; private set; }
+    
 
     [TempData] public string? StatusMessage { get; set; }
     [TempData] public string? StatusKind { get; set; }
@@ -49,6 +60,14 @@ public class IndexModel : PageModel
         Input.AvatarImageName = profile.AvatarImageName;
         AvailableImageNames = _profile.GetAvailableAvatarImageNames();
         CurrentUser = await _profile.GetCurrentUserProfileViewModelAsync();
+        
+        if(CurrentUser is not null)
+        {
+            AvgStats = await _gameStats.GetPlayerAvgStatistics(CurrentUser.UserId);
+            MinStats = await _gameStats.GetPlayerMinStatistics(CurrentUser.UserId);
+            MaxStats = await _gameStats.GetPlayerMaxStatistics(CurrentUser.UserId);
+            TotalStats = await _gameStats.GetPlayerTotalStatistics(CurrentUser.UserId);
+        }
 
         if (PageNumber < 1) PageNumber = 1;
         BlockedUsers = await _blockAndReport.GetBlockedUsers(PageNumber, BlockedPageSize);

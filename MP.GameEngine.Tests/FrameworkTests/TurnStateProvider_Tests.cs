@@ -134,6 +134,8 @@ public class TurnStateProvider_Tests
         public void GameCompleted(string gameId)
         {
         }
+        public void ForceRefresh(string gameId) { }
+        public void GameCancelled(string gameId) { }
     }
 
     /// <summary>Drops a prompt into the cache so IsEngineIdle returns false.</summary>

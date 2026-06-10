@@ -14,7 +14,9 @@
 /* Player list cards. Every card sits on the secondary surface; the host card
    uses the regular (darker) body background to stand apart. Right padding keeps
    content clear of the colour chevron. */
-.play-page .play-player-card { position: relative; overflow: hidden; }
+/* flex-shrink: 0 — the player list is a flex column, so without this the cards squash to
+   fit the pane height instead of keeping their height and letting the pane scroll. */
+.play-page .play-player-card { position: relative; overflow: hidden; flex-shrink: 0; }
 .play-page .play-player-card[data-view-player] { cursor: pointer; }
 .play-page .play-player-card .card-body { background: var(--bs-secondary-bg); padding-right: 2.25rem; }
 .play-page .play-player-card--host .card-body { background: var(--bs-body-bg); }

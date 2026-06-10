@@ -157,6 +157,10 @@
             const id = (msg && msg.gameId) || gameId;
             window.location.href = '/Games/Finished/' + encodeURIComponent(id);
         });
+        // Host "Force Refresh": every client hard-reloads and re-fetches the current live state.
+        connection.on('ForceRefresh', () => window.location.reload());
+        // Host "Cancel Game": the game was abandoned — every client returns home.
+        connection.on('GameCancelled', () => { window.location.href = '/Index'; });
         queued.forEach(h => connection.on(h.event, h.callback));
 
         // Re-sync the open prompt after a dropped connection is restored.

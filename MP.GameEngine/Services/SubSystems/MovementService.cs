@@ -16,6 +16,9 @@ public class MovementService
     
     public async Task MovePlayer(Framework.GameEngine engine, PlayerModel player, int amount, CancellationToken ct)
     {
+        if(player.IsInJail)
+            return;
+        
         var (newIndex, goPasses) = IndexHelper.MoveIndex(player.BoardIndex, amount, player.Direction);
         var initial = player.BoardIndex;
         player.BoardIndex = newIndex;
