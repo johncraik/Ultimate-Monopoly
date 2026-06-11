@@ -82,17 +82,18 @@ public class PlayerTurnOrchestrator
                 player.DoublesInRow = 0;
                 player.TriplesInRow = 0;
 
+                if(player.JailTurnCounter == (player.MaxJailTurnsOverride ?? RuleDictionary.MaxJailTurns))
+                {
+                    //Jail counter already increased before role type switch
+                    await _jailService.ForcePlayerToLeaveJail(engine, player, ct);
+                }
+                
                 if (!player.IsInJail)
                 {
                     //Standard roll, move them normally:
                     movement = (ushort)(dice.Die1 + (dice.Die2 ?? throw new InvalidOperationException("Second die cannot be null")));
                     await _movementService.MovePlayer(engine, player, movement, ct);
                     await _boardService.ResolveBoardSpaceForPlayer(engine, player, ct);
-                }
-                else if(player.JailTurnCounter == (player.MaxJailTurnsOverride ?? RuleDictionary.MaxJailTurns))
-                {
-                    //Jail counter already increased before role type switch
-                    await _jailService.ForcePlayerToLeaveJail(engine, player, ct);
                 }
                 
                 break;

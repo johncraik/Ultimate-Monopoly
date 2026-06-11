@@ -80,7 +80,7 @@ public class BankruptcyService
         player.IsBankrupt = true;
         //Moves all properties back to the bank:
         _propertyTransferService.Bankrupt(engine, player);
-        _propertyService.NormaliseRentLevels(engine);
+        _propertyService.NormaliseProperties(engine);
         
         engine.CiteRule(RuleCode.Bankruptcy_Declared);
         engine.CiteRule(RuleCode.Bankruptcy_AssetsToBank);

@@ -285,6 +285,9 @@ public class GameModel
         var validProps = new List<PropertyModel>();
         foreach (var p in properties)
         {
+            if(p.BuiltOn())
+                continue;
+            
             var pSet = PropertySetHelper.ResolveSet(p.BoardIndex);
             if (pSet == null)
                 continue;
@@ -303,6 +306,20 @@ public class GameModel
         }
 
         return validProps;
+    }
+
+    public List<PropertyModel> BuiltOnProperties(string playerId, PropertySet? set = null)
+    {
+        if (set == PropertySet.Station || set == PropertySet.Utility)
+            return [];
+        
+        var properties = GetOwnedProperties(playerId, set);
+        if (set != null)
+            properties = properties
+                .Where(p => PropertySetHelper.ResolveSet(p.BoardIndex) == set)
+                .ToList();
+
+        return properties.Where(p => p.BuiltOn()).ToList();
     }
 
 
@@ -345,8 +362,8 @@ public class GameModel
         var properties = GetOwnedProperties(playerId, includeMortgaged: !absoluteCheck, includeReserved: !absoluteCheck);
         var streetIndexes = PropertySetHelper.GetIndexes(set).Concat(PropertySetHelper.GetIndexes(partner)).ToHashSet();
         
-        return properties.Count(p => (p.StreetRuleQualifier == StreetRuleQualifier.NeverBuiltOn 
-                                      || p.StreetRuleQualifier == StreetRuleQualifier.Qualified) 
+        //HAS street rule when ALL properties in the set are marked as qualified (set in NormaliseProperties)
+        return properties.Count(p => p.StreetRuleQualifier == StreetRuleQualifier.Qualified
                                      && streetIndexes.Contains(p.BoardIndex)) == streetIndexes.Count;
     }
 
@@ -495,7 +512,7 @@ public class GameModel
         //Cant build on this property since other properties in the set are lower than this property's rent level
         if(rentLevelValues.Any(l => l < (int)property.RentLevel))
             return false;
-
+        
         //Passed all the checks, this property's rent level can be increased
         return true;
     }
@@ -505,7 +522,6 @@ public class GameModel
 
     public bool CanIncreaseRentLevelForAllInSet(string playerId, PropertySet set)
     {
-        var canIncreaseAll = true;
         var indexes = PropertySetHelper.GetIndexes(set);
         
         var properties = GetOwnedProperties(playerId, set, includeMortgaged: false, includeReserved: false);
@@ -522,14 +538,15 @@ public class GameModel
         var (housesLeft, hotelsLeft) = GetHousesAndHotelsLeft();
         if (numHouses > (housesLeft + extraHouses) || numHotels > hotelsLeft)
             return false;
-        
+
+        var result = true;
         foreach (var i in indexes)
         {
-            canIncreaseAll = CanIncreaseRentLevel(playerId, i);
-            if(!canIncreaseAll) break;
+            var canIncrease = CanIncreaseRentLevel(playerId, i);
+            if(!canIncrease) result = false;
         }
         
-        if(!canIncreaseAll)
+        if(!result)
             return false;
         
         //Final double hotel check (false when building double hotels)
@@ -596,7 +613,6 @@ public class GameModel
 
     public bool CanDecreaseRentLevelForAllInSet(string playerId, PropertySet set)
     {
-        var canDecreaseAll = true;
         var indexes = PropertySetHelper.GetIndexes(set);
         
         var properties = GetOwnedProperties(playerId, set, includeMortgaged: false, includeReserved: false);
@@ -612,13 +628,14 @@ public class GameModel
         if (housesRequired > (housesLeft + numHouses))
             return false;
         
+        var result = true;
         foreach (var i in indexes)
         {
-            canDecreaseAll = CanDecreaseRentLevel(playerId, i);
-            if(!canDecreaseAll) break;
+            var canDecrease = CanDecreaseRentLevel(playerId, i);
+            if (!canDecrease) result = false;
         }
-        
-        return canDecreaseAll;
+
+        return result;
     }
     
     

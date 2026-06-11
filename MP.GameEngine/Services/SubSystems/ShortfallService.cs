@@ -11,23 +11,23 @@ namespace MP.GameEngine.Services.SubSystems;
 
 public class ShortfallService : IShortfallService
 {
-    private readonly PropertyService _propertyService;
+    private readonly PropertyCommandService _propCommandService;
+    private readonly BuildingService _buildingService;
     private readonly LoanService _loanService;
     private readonly DealService _dealService;
     private readonly BankruptcyService _bankruptcyService;
-    private readonly TransactionService _transactionService;
 
-    public ShortfallService(PropertyService propertyService,
+    public ShortfallService(PropertyCommandService propCommandService,
+        BuildingService buildingService,
         LoanService loanService,
         DealService dealService,
-        BankruptcyService bankruptcyService,
-        TransactionService transactionService)
+        BankruptcyService bankruptcyService)
     {
-        _propertyService = propertyService;
+        _propCommandService = propCommandService;
+        _buildingService = buildingService;
         _loanService = loanService;
         _dealService = dealService;
         _bankruptcyService = bankruptcyService;
-        _transactionService = transactionService;
     }
     
     private async Task<List<ushort>> TargetPropertyPrompt(Framework.GameEngine engine, string playerId, string title, string body, 
@@ -159,7 +159,7 @@ public class ShortfallService : IShortfallService
 
         foreach (var i in selected)
         {
-            await _propertyService.MortgageProperty(engine, i, ct, player.PlayerId);
+            await _propCommandService.MortgageProperty(engine, i, ct, player.PlayerId);
         }
     }
 
@@ -193,7 +193,7 @@ public class ShortfallService : IShortfallService
 
         foreach (var i in selected)
         {
-            await _propertyService.SellOnProperty(engine, i, ct, player.PlayerId);
+            await _buildingService.SellOnProperty(engine, i, ct, player.PlayerId);
         }
     }
 }

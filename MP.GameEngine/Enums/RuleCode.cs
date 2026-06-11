@@ -78,12 +78,12 @@ public enum RuleCode
 
     // ── Mortgaging ──────────────────────────────────────────────────────────
     Mortgage_FeeOnGo,                    // Passing GO charges 20% of purchase cost on each mortgaged property. PropertyService.PayMortgageFee.
-    Mortgage_NoSetRentWhileMortgaged,    // A mortgaged property drops the whole set's rent until unmortgaged. PropertyService.NormaliseRentLevels.
+    Mortgage_NoSetRentWhileMortgaged,    // A mortgaged property drops the whole set's rent until unmortgaged. PropertyService.NormaliseProperties.
 
     // ── Reserved Properties ─────────────────────────────────────────────────
     Reserved_NoSetUntilAllCan,           // Nobody holds a complete set until everyone can — you reserve instead. The reserve mechanic.
     Reserved_ReserveFinalProperty,       // Landing on your set-completer (rule active) → reserve at 50%. PropertyService.ReserveProperty.
-    Reserved_PropertyInert,              // A reserved property earns no rent and can't be bought by others. NormaliseRentLevels / PayRent.
+    Reserved_PropertyInert,              // A reserved property earns no rent and can't be bought by others. NormaliseProperties / PayRent.
     Reserved_MechanicEnds,               // Once a player breaks through to a full set, the reserve rule ends for all. CheckReservationRule[SetObtained].
 
     // ── Auctions ────────────────────────────────────────────────────────────
@@ -99,7 +99,7 @@ public enum RuleCode
     // ── Utilities ───────────────────────────────────────────────────────────
     Utility_RentIsDiceTimesMultiplier,   // Utility rent is the multiplier × the dice that moved you there. PropertyService.PropertyRent.
     Utility_DiceDependsOnArrival,        // Own roll → both main dice; third-die move → the third die alone. PropertyService.PropertyRent.
-    Utility_PairMultiplier,              // Owning one utility vs both changes the multiplier. NormaliseRentLevels.
+    Utility_PairMultiplier,              // Owning one utility vs both changes the multiplier. NormaliseProperties.
 
     // ── Bankruptcy ── (pending BankruptcyService + the game-conclusion seam) ──
     Bankruptcy_Declared,                 // Can't pay with nothing left to raise — or voluntary "I quit". BankruptcyService (unbuilt).

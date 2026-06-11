@@ -18,15 +18,18 @@ public static class ServiceRegistration
         services.TryAddScoped<DiceService>();
         services.TryAddScoped<MovementService>();
         services.TryAddScoped<BoardService>();
-        services.TryAddScoped<PropertyService>();
         services.TryAddScoped<AuctionService>();
+        services.TryAddScoped<PropertyService>();
+        services.TryAddScoped<PropertyCommandService>();
+        services.TryAddScoped<BuildingService>();
+        services.TryAddScoped<PurgingService>();
         services.TryAddScoped<GoService>();
         services.TryAddScoped<FreeParkingService>();
         services.TryAddScoped<JailService>();
         services.TryAddScoped<TaxService>();
         services.TryAddScoped<LoanService>();
-        services.TryAddScoped<GlobalEventService>();
         services.TryAddScoped<DealService>();
+        services.TryAddScoped<GlobalEventService>();
         services.TryAddScoped<BankruptcyService>();
         
         //Main Services and Orchestrators

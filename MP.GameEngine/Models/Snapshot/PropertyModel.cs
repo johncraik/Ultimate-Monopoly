@@ -15,6 +15,7 @@ public class PropertyModel
     public StreetRuleQualifier StreetRuleQualifier { get; set; }
 
     public bool IsPurged { get; set; }
+    public bool HasBeenPurged { get; set; }
     
     public bool HasBeenBuiltOnThisTurn { get; set; }
     
@@ -36,6 +37,7 @@ public class PropertyModel
         RentLevel = model.RentLevel;
         
         IsPurged = model.IsPurged;
+        HasBeenPurged = model.HasBeenPurged;
         HasBeenBuiltOnThisTurn = model.HasBeenBuiltOnThisTurn;
         
         StreetRuleQualifier = model.StreetRuleQualifier;
@@ -73,10 +75,13 @@ public class PropertyModel
         var transferBetweenPlayers = OwnerPlayerId != null;
         
         OwnerPlayerId = playerId;
+        HasBeenPurged = false;
         StreetRuleQualifier = StreetRuleQualifier.NeverBuiltOn;
 
-        if (!transferBetweenPlayers)
-            State = PropertyState.Owned;
+        if (transferBetweenPlayers) return;
+        
+        State = PropertyState.Owned;
+        IsPurged = false;
     }
 
     public void MortgageProperty()

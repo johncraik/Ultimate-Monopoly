@@ -1,47 +1,54 @@
-/* Host control panel — a "top sheet" of host-only game controls on the Play page.
-   Opened by the thin trigger bar below the navbar or a swipe down from the top.
+/* Host control panel — a "bottom sheet" of host-only game controls on the Play page.
+   Opened by the trigger bar at the bottom of the screen or a swipe up from the bottom.
    Theme-variable driven (no hex). See _HostPanel.cshtml / host-panel.js. */
 
-/* ── Thin, almost-invisible trigger bar (sits at the top of the play page, below the nav) ── */
+/* ── Trigger bar pinned to the bottom of the screen (swipe up / tap to open) ── */
 .host-panel-trigger {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    /* Above page content; below the panel (1040) + its backdrop (1039) when open. */
+    z-index: 1031;
     display: flex;
     align-items: center;
     justify-content: center;
     width: 100%;
-    height: 1.1rem;
+    height: 1.5rem;
     padding: 0;
     border: 0;
-    border-bottom: 1px solid var(--bs-border-color);
-    color: var(--bs-secondary-color);
-    background-color: rgba(var(--bs-body-bg-rgb), 0.5);
+    border-top: 1px solid var(--bs-border-color);
+    color: var(--bs-body-color);
+    background-color: var(--bs-body-tertiary);
     cursor: pointer;
-    opacity: 0.6;
+    opacity: 0.9;
+    box-shadow: 0 -0.25rem 0.75rem rgba(0, 0, 0, 0.15);
     transition: opacity 0.15s ease, color 0.15s ease, background-color 0.15s ease;
 }
 .host-panel-trigger:hover {
     opacity: 1;
     color: var(--bs-body-color);
-    background-color: var(--bs-body-tertiary);
+    background-color: var(--bs-secondary-bg);
 }
 .host-panel-trigger i {
-    font-size: 0.8rem;
+    font-size: 0.9rem;
     line-height: 1;
 }
 
-/* ── The panel itself — fixed at the top, slides down over everything ── */
+/* ── The panel itself — fixed at the bottom, slides up over everything ── */
 .host-panel {
     position: fixed;
-    top: 0;
+    bottom: 0;
     left: 0;
     right: 0;
     /* Above the navbar (1030); below Bootstrap's modal layers (backdrop 1050 / modal 1055)
        so the confirm modals overlay the panel cleanly. */
     z-index: 1040;
-    transform: translateY(-100%);
+    transform: translateY(100%);
     transition: transform 0.25s ease;
     background-color: var(--bs-body-bg);
-    border-bottom: 1px solid var(--bs-border-color);
-    box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.4);
+    border-top: 1px solid var(--bs-border-color);
+    box-shadow: 0 -0.5rem 1.5rem rgba(0, 0, 0, 0.4);
 }
 .host-panel.open {
     transform: translateY(0);

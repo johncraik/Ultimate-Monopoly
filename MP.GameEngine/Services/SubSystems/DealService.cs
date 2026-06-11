@@ -143,7 +143,7 @@ public class DealService
         engine.Cache.Game.CheckReservationRuleSetObtained(playerId);
         engine.Cache.Game.CheckReservationRuleSetObtained(counterpartyPlayerId);
         
-        _propertyService.NormaliseRentLevels(engine);
+        _propertyService.NormaliseProperties(engine);
         return true;
     }
 }

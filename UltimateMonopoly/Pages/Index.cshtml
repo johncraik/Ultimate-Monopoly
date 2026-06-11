@@ -10,7 +10,7 @@
 @if (Model.TestGame != null)
 {
     <div style="height: 800px">
-        <partial name="/Areas/Game/Pages/Shared/Play/_BoardView.cshtml" model="new BoardViewModel(Model.TestGame.Board, Model.TestGame.Game.Properties, [])"/>
+        <partial name="/Areas/Game/Pages/Shared/Play/_BoardView.cshtml" model="new BoardViewModel(Model.TestGame.Board, Model.TestGame.Game.Properties, [], Model.TestGame.Game.FreeParkingAmount)"/>
     </div>
 }
 

@@ -13,14 +13,17 @@ public class FreeParkingService
     private readonly TransactionService _transactionService;
     private readonly PropertyTransferService _propertyTransferService;
     private readonly PropertyService _propertyService;
+    private readonly PurgingService _purgingService;
 
     public FreeParkingService(TransactionService transactionService,
         PropertyTransferService propertyTransferService,
-        PropertyService propertyService)
+        PropertyService propertyService,
+        PurgingService purgingService)
     {
         _transactionService = transactionService;
         _propertyTransferService = propertyTransferService;
         _propertyService = propertyService;
+        _purgingService = purgingService;
     }
 
     public async Task PayPropertyFee(Framework.GameEngine engine, PlayerModel player, BoardSpace propSpace, CancellationToken ct)
@@ -91,10 +94,11 @@ public class FreeParkingService
             //C) Purge a property, take money, and take property from FP (already taken)
             engine.CiteRule(RuleCode.FreeParking_PurgeWhenNoneEligible);
             
-            //TODO Send to PurgeService
+            //Purge ONE property
+            await _purgingService.PurgeOwnProperty(engine, player, 1, ct);
             
             engine.Cache.Game.CheckReservationRuleSetObtained(player.PlayerId);
-            _propertyService.NormaliseRentLevels(engine);
+            _propertyService.NormaliseProperties(engine);
             return;
         }
         
@@ -127,7 +131,7 @@ public class FreeParkingService
         player.FPHandedInSets.Add((PropertySet)set);
         
         engine.Cache.Game.CheckReservationRuleSetObtained(player.PlayerId);
-        _propertyService.NormaliseRentLevels(engine);
+        _propertyService.NormaliseProperties(engine);
     }
 
 

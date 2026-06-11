@@ -1,6 +1,6 @@
-// Host control panel (top sheet) — open/close + the confirm-then-invoke wiring for the
-// host-only game controls. Opened by the thin trigger bar below the navbar, a swipe down
-// from the top edge, and closed by the close button, the backdrop, Escape, or a swipe up.
+// Host control panel (bottom sheet) — open/close + the confirm-then-invoke wiring for the
+// host-only game controls. Opened by the trigger bar at the bottom of the screen, a swipe up
+// from the bottom edge, and closed by the close button, the backdrop, Escape, or a swipe down.
 //
 // Each action confirms via its own Bootstrap modal; the modal's confirm button invokes the
 // matching GamePlayHub method (host-gated server-side). Draw Game enqueues the draw — the
@@ -33,19 +33,19 @@
     panel.querySelectorAll('[data-host-panel-close]').forEach(b => b.addEventListener('click', close));
     document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
 
-    // ── Swipe gestures: down from the very top edge opens; up on the panel closes. ──
-    const TOP_ZONE = 40;      // px from the top edge that starts an opening swipe
+    // ── Swipe gestures: up from the very bottom edge opens; down on the panel closes. ──
+    const BOTTOM_ZONE = 40;   // px from the bottom edge that starts an opening swipe
     const THRESHOLD = 60;     // px of travel to trigger
 
     let openStartY = null;
     document.addEventListener('touchstart', e => {
         const t = e.touches[0];
-        openStartY = (t && t.clientY <= TOP_ZONE && !panel.classList.contains('open')) ? t.clientY : null;
+        openStartY = (t && t.clientY >= window.innerHeight - BOTTOM_ZONE && !panel.classList.contains('open')) ? t.clientY : null;
     }, { passive: true });
     document.addEventListener('touchmove', e => {
         if (openStartY === null) return;
         const t = e.touches[0];
-        if (t && t.clientY - openStartY > THRESHOLD) { open(); openStartY = null; }
+        if (t && openStartY - t.clientY > THRESHOLD) { open(); openStartY = null; }
     }, { passive: true });
 
     let closeStartY = null;
@@ -53,7 +53,7 @@
     panel.addEventListener('touchmove', e => {
         if (closeStartY === null) return;
         const y = e.touches[0] ? e.touches[0].clientY : closeStartY;
-        if (closeStartY - y > THRESHOLD) { close(); closeStartY = null; }
+        if (y - closeStartY > THRESHOLD) { close(); closeStartY = null; }
     }, { passive: true });
 
     // ── Confirm → hub invoke ──

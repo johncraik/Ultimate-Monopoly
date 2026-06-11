@@ -172,7 +172,7 @@ public class PlayerProfileService
         });
 
     private void EnqueuePortfolioCommand(string gameId, string submittingUserId,
-        Func<PropertyService, EngineRuntime, CancellationToken, Task> command)
+        Func<PropertyCommandService, EngineRuntime, CancellationToken, Task> command)
     {
         _executor.Enqueue(gameId, async (engine, sp, ct) =>
         {
@@ -184,7 +184,25 @@ public class PlayerProfileService
             if (current is null || !engine.TurnStateProvider.CanPortfolioCommand(current.PlayerId, submittingUserId))
                 return;
 
-            var properties = sp.GetRequiredService<PropertyService>();
+            var properties = sp.GetRequiredService<PropertyCommandService>();
+            await command(properties, engine, ct);
+        });
+    }
+    
+    private void EnqueuePortfolioCommand(string gameId, string submittingUserId,
+        Func<BuildingService, EngineRuntime, CancellationToken, Task> command)
+    {
+        _executor.Enqueue(gameId, async (engine, sp, ct) =>
+        {
+            // Authoritative gate re-check on the writer thread (web-orchestration.md §5):
+            // the hub's pre-check can go stale before this item runs, so a no-longer-valid
+            // command no-ops here rather than running into the engine. Portfolio commands
+            // act on the current player; CanPortfolioCommand is host-bypass aware.
+            var current = engine.Cache.Game.CurrentPlayer();
+            if (current is null || !engine.TurnStateProvider.CanPortfolioCommand(current.PlayerId, submittingUserId))
+                return;
+
+            var properties = sp.GetRequiredService<BuildingService>();
             await command(properties, engine, ct);
         });
     }

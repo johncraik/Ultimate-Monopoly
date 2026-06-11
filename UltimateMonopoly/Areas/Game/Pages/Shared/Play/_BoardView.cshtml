@@ -18,6 +18,12 @@
     var playersByIndex = Model.Players
         .GroupBy(pl => pl.Model.BoardIndex)
         .ToDictionary(g => g.Key, g => g.ToList());
+
+    var c = RuleDictionary.Currency;
+
+    // One property sitting in Free Parking, shown as a card in the centre. Usually
+    // there's exactly one; first-or-default covers the none / rare >1 cases.
+    var fpProp = Model.Properties.FirstOrDefault(p => p.State == PropertyState.FreeParking);
 }
 
 @* ─── Board ───────────────────────────────────────────────────────────────
@@ -169,12 +175,31 @@
             </div>
         }
 
-        @* Centre — Free Parking pot + last property handed in. Structure only;
-           figures populated live from StateChanged (cache). *@
+        @* Centre — a state-colour key (top), the Free Parking pot, and a card for one
+           property held in Free Parking (hidden when there are none). *@
         <div class="board-centre" style="grid-column: 3 / span 9; grid-row: 3 / span 9;">
-            <div class="fp-label">Free Parking</div>
-            <div class="fp-pot" data-fp-pot></div>
-            <div class="fp-last-property" data-fp-last-prop></div>
+            @* Key — what the rectangle tints mean (mirrors StateClass). *@
+            <div class="board-key">
+                <span class="board-key__item"><span class="board-key__dot bg-success"></span>Available</span>
+                <span class="board-key__item"><span class="board-key__dot bg-danger"></span>Owned</span>
+                <span class="board-key__item"><span class="board-key__dot bg-warning"></span>Mortgaged</span>
+                <span class="board-key__item"><span class="board-key__dot bg-primary"></span>Reserved</span>
+                <span class="board-key__item"><span class="board-key__dot bg-info"></span>Free Parking</span>
+            </div>
+
+            <div class="fp-centre">
+                <div class="fp-label">Free Parking</div>
+                <div class="fp-pot">@c@Model.FreeParkingAmount</div>
+
+                @if (fpProp is not null)
+                {
+                    var fpSpace = Model.Board.GetBoardSpace(fpProp.BoardIndex);
+                    <div class="fp-prop-card">
+                        <div class="fp-prop-card__banner @PropClass(fpSpace.PropertySet)"></div>
+                        <div class="fp-prop-card__name">@fpSpace.Name</div>
+                    </div>
+                }
+            </div>
         </div>
     </div>
 </div>
@@ -406,6 +431,12 @@
         gap: 2px;
         width: 64%;                       /* fits exactly two squares per row */
     }
+    /* Left/right edge spaces are landscape (~2:1) where top/bottom are portrait, so a
+       width-based square is ~2× too big on them and overflows the short (height) axis.
+       Halve the inner width on the wide sides: 32% of a 2:1 cell ≈ 64% of its short
+       side, matching the square size on top/bottom. */
+    .side-left .space-buildings-inner,
+    .side-right .space-buildings-inner { width: 32%; }
     .building {
         width: calc(50% - 2px);
         aspect-ratio: 1 / 1;
@@ -507,13 +538,68 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        justify-content: center;
-        gap: 0.25rem;
+        justify-content: flex-start;   /* key pinned top; .fp-centre fills + centres the rest */
+        gap: 0.4rem;
         padding: 0.5rem;
         text-align: center;
     }
     .board-centre .fp-label { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.7; }
     .board-centre .fp-pot { font-size: 1.5rem; font-weight: 700; }
+
+    /* Key — legend for the board's ownership-state tints (matches StateClass). */
+    .board-key {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.2rem 0.55rem;
+        width: 100%;
+    }
+    .board-key__item {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        font-size: 0.58rem;
+        font-weight: 600;
+        line-height: 1;
+        color: #333;
+        white-space: nowrap;
+    }
+    .board-key__dot {
+        width: 0.7rem;
+        height: 0.7rem;
+        border-radius: 50%;
+        border: 1px solid rgba(0, 0, 0, 0.25);
+        flex: 0 0 auto;
+    }
+
+    /* Free Parking block — pot + one optional held-property card, centred below the key. */
+    .fp-centre {
+        flex: 1 1 auto;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4rem;
+    }
+    .fp-prop-card {
+        width: 42%;
+        max-width: 10rem;
+        background: #f5f5f5;
+        border: 1px solid #2b2b2b;
+        border-radius: 4px;
+        overflow: hidden;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+    }
+    .fp-prop-card__banner { height: 1.2rem; }
+    .fp-prop-card__name {
+        padding: 0.4rem 0.3rem;
+        font-size: 0.7rem;
+        font-weight: 700;
+        line-height: 1.1;
+        text-align: center;
+        color: #222;
+    }
 
     /* Multi-line popover content (plain text + pre-line — no HTML, so a
        user-authored board-skin name can't inject markup). */

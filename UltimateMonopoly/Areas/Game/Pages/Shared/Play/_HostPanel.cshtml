@@ -1,18 +1,18 @@
 @*
-    HOST CONTROL PANEL — a "top sheet" of host-only game controls, opened by the thin
-    trigger bar below the navbar or by swiping down from the top edge (host-panel.js).
-    Lives in stable page DOM (included OUTSIDE the live-swapped .play-page), so a
-    StateChanged re-render can't strand the panel or an open modal — same reasoning as
-    the bankruptcy modal / the move off Bootstrap modals for prompts.
+    HOST CONTROL PANEL — a "bottom sheet" of host-only game controls, opened by the
+    trigger bar at the bottom of the screen or by swiping up from the bottom edge
+    (host-panel.js). Lives in stable page DOM (included OUTSIDE the live-swapped
+    .play-page), so a StateChanged re-render can't strand the panel or an open modal —
+    same reasoning as the bankruptcy modal / the move off Bootstrap modals for prompts.
 
     Each action confirms via its own modal, then invokes the matching GamePlayHub method
     (host-gated server-side). Draw Game is live; Force Refresh and Cancel Game are
     scaffolded (buttons + modals wired) with their hub methods still TODO.
 *@
 
-@* Thin, almost-invisible trigger just below the navbar. *@
+@* Trigger bar pinned to the bottom of the screen (swipe up / tap to open). *@
 <button type="button" class="host-panel-trigger" data-host-panel-open aria-label="Open host controls">
-    <i class="bi bi-chevron-down"></i>
+    <i class="bi bi-chevron-up"></i>
 </button>
 
 <div class="host-panel-backdrop" data-host-panel-backdrop></div>
