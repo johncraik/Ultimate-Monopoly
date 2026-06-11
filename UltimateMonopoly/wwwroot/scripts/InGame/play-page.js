@@ -24,6 +24,7 @@
     bindCommand('[data-start-turn]', 'StartTurn');   // Roll Dice
     bindCommand('[data-end-turn]', 'EndTurn');
     bindCommand('[data-leave-jail-pay]', 'LeaveJailPay');   // pay the fee to leave jail
+    bindCommand('[data-leave-jail-card]', 'LeaveJailCard'); // play a Get Out of Jail Free card
 
     // Property portfolio commands inside the host's player-profile drawer — the
     // button carries data-cmd + data-board-index. Invokes the matching GamePlayHub

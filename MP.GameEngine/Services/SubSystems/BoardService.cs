@@ -1,5 +1,6 @@
 using MP.GameEngine.Enums;
 using MP.GameEngine.Enums.Cards;
+using MP.GameEngine.Enums.Players;
 using MP.GameEngine.Enums.Properties;
 using MP.GameEngine.Models.Snapshot;
 
@@ -66,17 +67,26 @@ public class BoardService
                     break;
                 case BoardSpaceType.Chance:
                     await engine.CardService.DrawCard(engine, player, CardType.Chance, ct);
-                    //TODO: take percent + third when going backwards
+                    if (player.Direction == PlayerDirection.Backward)
+                    {
+                        await engine.CardService.DrawCard(engine, player, CardType.PercentageChance, ct);
+                        await engine.CardService.DrawCard(engine, player, CardType.Third, ct);
+                    }
                     break;
                 case BoardSpaceType.ComChest:
                     await engine.CardService.DrawCard(engine, player, CardType.CommunityChest, ct);
-                    //TODO take percent + third when going backwards
+                    if (player.Direction == PlayerDirection.Backward)
+                    {
+                        await engine.CardService.DrawCard(engine, player, CardType.PercentageComChest, ct);
+                        await engine.CardService.DrawCard(engine, player, CardType.Third, ct);
+                    }
                     break;
                 case BoardSpaceType.Go:
                     await _goService.LandOnGo(engine, player, ct);
                     break;
                 case BoardSpaceType.JustVisiting:
-                    await HandleJustVisiting(engine, player, ct);
+                    //All just visiting does is draw a card (then its a no-op space)
+                    await engine.CardService.DrawCard(engine, player, CardType.JustVisiting, ct);
                     break;
                 case BoardSpaceType.FreeParking:
                     await _fpService.ProcessFreeParking(engine, player, ct);
@@ -95,12 +105,5 @@ public class BoardService
                     break;
             }
         }
-    }
-
-
-    private async Task HandleJustVisiting(Framework.GameEngine engine, PlayerModel player, CancellationToken ct)
-    {
-        //TODO get a just visiting card:
-        //Then do what the card says
     }
 }

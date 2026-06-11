@@ -149,6 +149,31 @@ public class GamePlayHub : GameBaseHub
     }
 
     /// <summary>
+    /// Leaves jail by playing a held Get Out of Jail Free card — the current player's turn-start
+    /// jail-exit command (gated by <c>CanLeaveJail</c>, host-bypass aware). Optimistic pre-check,
+    /// then enqueues on the single-writer executor; the engine plays the card (moving the player to
+    /// Just Visiting) and consumes it. Returns false when not allowed or no card is held.
+    /// </summary>
+    public async Task<bool> LeaveJailCard()
+    {
+        var gameId = GetGameId();
+        if (string.IsNullOrEmpty(gameId) || string.IsNullOrEmpty(Context.UserIdentifier))
+            return false;
+
+        var engine = await _engineFactory.GetAsync(gameId);
+        var current = engine.Cache.Game.CurrentPlayer();
+        if (current is null) return false;
+
+        if (!engine.TurnStateProvider.CanLeaveJail(current.PlayerId, Context.UserIdentifier))
+            return false;
+
+        if (current.GetOutOfJailCard() is null) return false;
+
+        _playerProfiles.EnqueueLeaveJailCard(gameId, Context.UserIdentifier);
+        return true;
+    }
+
+    /// <summary>
     /// Proposes a turn-boundary deal from <paramref name="proposerId"/> to
     /// <paramref name="counterPartyId"/> with the built <paramref name="contents"/>. Unlike a
     /// portfolio command the proposer need not be the current player (deals fire at any turn

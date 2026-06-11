@@ -80,14 +80,14 @@ public static class TEMP_CARDS
         new CardModel
         {
             CardType = CardType.Chance, CardText = "Speeding fine £15",
-            Groups = [new CardGroup { Actions = [new MoneyAction { Amount = 15, Direction = MoneyDirection.Pay, Counterparty = MoneyCounterparty.Bank }] }]
+            Groups = [new CardGroup { Actions = [new MoneyAction { Amount = 15, Direction = MoneyDirection.Pay, Counterparty = MoneyCounterparty.FreeParking }] }]
         },
         new CardModel
         {
             CardType = CardType.Chance, CardText = "Make general repairs on all your property. For each house pay £25, for each hotel pay £100",
             Groups = [new CardGroup { Actions = [
-                new MoneyAction { Amount = 25, Direction = MoneyDirection.Pay, Counterparty = MoneyCounterparty.Bank, PerUnit = MoneyPerUnit.PerHouse },
-                new MoneyAction { Amount = 100, Direction = MoneyDirection.Pay, Counterparty = MoneyCounterparty.Bank, PerUnit = MoneyPerUnit.PerHotel }
+                new MoneyAction { Amount = 25, Direction = MoneyDirection.Pay, Counterparty = MoneyCounterparty.FreeParking, PerUnit = MoneyPerUnit.PerHouse },
+                new MoneyAction { Amount = 100, Direction = MoneyDirection.Pay, Counterparty = MoneyCounterparty.FreeParking, PerUnit = MoneyPerUnit.PerHotel }
             ] }]
         },
         new CardModel
@@ -157,24 +157,24 @@ public static class TEMP_CARDS
         new CardModel
         {
             CardType = CardType.ComChest, CardText = "Doctor's fee. Pay £50",
-            Groups = [new CardGroup { Actions = [new MoneyAction { Amount = 50, Direction = MoneyDirection.Pay, Counterparty = MoneyCounterparty.Bank }] }]
+            Groups = [new CardGroup { Actions = [new MoneyAction { Amount = 50, Direction = MoneyDirection.Pay, Counterparty = MoneyCounterparty.FreeParking }] }]
         },
         new CardModel
         {
             CardType = CardType.ComChest, CardText = "Pay hospital fees of £100",
-            Groups = [new CardGroup { Actions = [new MoneyAction { Amount = 100, Direction = MoneyDirection.Pay, Counterparty = MoneyCounterparty.Bank }] }]
+            Groups = [new CardGroup { Actions = [new MoneyAction { Amount = 100, Direction = MoneyDirection.Pay, Counterparty = MoneyCounterparty.FreeParking }] }]
         },
         new CardModel
         {
             CardType = CardType.ComChest, CardText = "Pay school fees of £50",
-            Groups = [new CardGroup { Actions = [new MoneyAction { Amount = 50, Direction = MoneyDirection.Pay, Counterparty = MoneyCounterparty.Bank }] }]
+            Groups = [new CardGroup { Actions = [new MoneyAction { Amount = 50, Direction = MoneyDirection.Pay, Counterparty = MoneyCounterparty.FreeParking }] }]
         },
         new CardModel
         {
             CardType = CardType.ComChest, CardText = "You are assessed for street repairs. £40 per house, £115 per hotel",
             Groups = [new CardGroup { Actions = [
-                new MoneyAction { Amount = 40, Direction = MoneyDirection.Pay, Counterparty = MoneyCounterparty.Bank, PerUnit = MoneyPerUnit.PerHouse },
-                new MoneyAction { Amount = 115, Direction = MoneyDirection.Pay, Counterparty = MoneyCounterparty.Bank, PerUnit = MoneyPerUnit.PerHotel }
+                new MoneyAction { Amount = 40, Direction = MoneyDirection.Pay, Counterparty = MoneyCounterparty.FreeParking, PerUnit = MoneyPerUnit.PerHouse },
+                new MoneyAction { Amount = 115, Direction = MoneyDirection.Pay, Counterparty = MoneyCounterparty.FreeParking, PerUnit = MoneyPerUnit.PerHotel }
             ] }]
         },
         new CardModel

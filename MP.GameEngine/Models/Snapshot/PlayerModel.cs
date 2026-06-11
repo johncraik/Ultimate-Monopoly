@@ -1,9 +1,11 @@
 using System.Text.Json.Serialization;
 using MP.GameEngine.Enums;
+using MP.GameEngine.Enums.Cards;
 using MP.GameEngine.Enums.Players;
 using MP.GameEngine.Enums.Properties;
 using MP.GameEngine.Helpers;
 using MP.GameEngine.Helpers.RuleSet;
+using MP.GameEngine.Models.Cards.Actions;
 using MP.GameEngine.Models.EventReceipts;
 using MP.GameEngine.Models.Snapshot.Cards;
 
@@ -161,6 +163,19 @@ public class PlayerModel
         return loans.MinBy(l => l.DateTaken) 
                ?? throw new InvalidOperationException("No outstanding loans found.");
     }
+
+    #endregion
+
+
+    #region Cards
+
+    public CardModel? GetOutOfJailCard()
+        => Cards.FirstOrDefault(c => c.Groups.Any(g => 
+            g.Actions.Any(a =>
+            {
+                if(a is not JailAction j) return false;
+                return j.Kind == JailKind.Release;
+            })));
 
     #endregion
 

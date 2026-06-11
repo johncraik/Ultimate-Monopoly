@@ -1,4 +1,5 @@
 using MP.GameEngine.Enums;
+using MP.GameEngine.Enums.Cards;
 using MP.GameEngine.Enums.Players;
 using MP.GameEngine.Helpers.RuleSet;
 using MP.GameEngine.Models.Snapshot;
@@ -47,7 +48,8 @@ public class GoService
 
     public async Task LandOnGo(Framework.GameEngine engine, PlayerModel player, CancellationToken ct)
     {
-        //TODO: Get a GO card
+        var suppressDefault = await engine.CardService.DrawCard(engine, player, CardType.Go, ct);
+        if(suppressDefault) return;
         
         //Cite rule and notify user:
         engine.CiteRule(RuleCode.Go_LandOn);

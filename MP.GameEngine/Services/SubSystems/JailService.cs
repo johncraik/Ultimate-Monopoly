@@ -1,4 +1,5 @@
 using MP.GameEngine.Enums;
+using MP.GameEngine.Enums.Cards;
 using MP.GameEngine.Enums.Games;
 using MP.GameEngine.Enums.Players;
 using MP.GameEngine.Helpers;
@@ -7,6 +8,7 @@ using MP.GameEngine.Models.EventReceipts;
 using MP.GameEngine.Models.Prompts.PromptTypes;
 using MP.GameEngine.Models.Prompts.PromptTypes.Responses;
 using MP.GameEngine.Models.Snapshot;
+using MP.GameEngine.Models.Snapshot.Cards;
 
 namespace MP.GameEngine.Services.SubSystems;
 
@@ -58,20 +60,27 @@ public class JailService
         
         //Round the cost for front-end prompt:
         var jailCost = MoneyHelper.NormaliseAmount(player.JailCost, engine.Cache.RoundingRule, FinancialReason.JailFee);
-        
+
+        var getOutOfJailCard = player.GetOutOfJailCard();
         var response = await engine.PromptProvider.RequestAsync(new LeaveJailPrompt
         {
             PlayerId = player.PlayerId,
             Title = "Leave Jail",
             Body = "You have stayed in jail for too long. You must leave jail by choosing from the options below",
             Cost = jailCost,
-            HasCard = player.Cards.Count > 0 //TODO - when cards are implemented, this needs to check if get out of jail card exists
+            HasCard = getOutOfJailCard != null
         }, ct);
 
         if (response.Action == LeaveJailAction.PayFee)
             await LeaveJailByPaying(engine, player, ct);
+        else if(getOutOfJailCard != null)
+            //Play the held Get Out of Jail Free card — PlayCard resolves it (releasing the
+            //player) then removes it from hand and returns it to its deck (§9.4).
+            await engine.CardService.PlayCard(engine, player, getOutOfJailCard, ct);
         else
-            await LeaveJailByCard(engine, player, ct);
+            //Unreachable: the LeaveJailPrompt only offers PlayCard when HasCard is true and the
+            //validator rejects it otherwise — so a null card here means a forged client response.
+            throw new InvalidOperationException("Leave-jail-by-card chosen but the player holds no Get Out of Jail Free card.");
     }
 
     public async Task LeaveJailByPaying(Framework.GameEngine engine, PlayerModel player, CancellationToken ct)
@@ -95,17 +104,15 @@ public class JailService
 
     public async Task LeaveJailByCard(Framework.GameEngine engine, PlayerModel player, CancellationToken ct)
     {
-        //TODO: Handle the card logic
-        
-        await _movementService.AdvancePlayer(engine, player, IndexHelper.JustVisitingSpace, 
+        await _movementService.AdvancePlayer(engine, player, IndexHelper.JustVisitingSpace,
             PlayerMovementDirection.CounterDirectionOfTravel, ct);
     }
 
 
     public async Task GoToJail(Framework.GameEngine engine, PlayerModel player, CancellationToken ct)
     {
-        //TODO: Take a Go To Jail Card:
-        //This card may not send player to jail, but fallback logic/default logic is to go to jail
+        var suppressDefault =  await engine.CardService.DrawCard(engine, player, CardType.GoToJail, ct);
+        if(suppressDefault) return;
         
         engine.CiteRule(RuleCode.GoToJail_SendToJail);
         await SendPlayerToJail(engine, player, ct);

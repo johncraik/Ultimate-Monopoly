@@ -1,4 +1,5 @@
 using MP.GameEngine.Enums;
+using MP.GameEngine.Enums.Cards;
 using MP.GameEngine.Helpers;
 using MP.GameEngine.Helpers.RuleSet;
 using MP.GameEngine.Models.Snapshot;
@@ -25,7 +26,8 @@ public class TaxService
         if(!space.IsTaxable || space.Tax == null)
             return;
         
-        //TODO get a tax card (changes outcome)
+        var suppressDefault = await engine.CardService.DrawCard(engine, player, CardType.Tax, ct);
+        if(suppressDefault) return;
         
         //Default outcome (normal tax payment):
         var tax = MoneyHelper.NormaliseAmountToPositive((long)space.Tax, engine.Cache.RoundingRule, FinancialReason.Tax);

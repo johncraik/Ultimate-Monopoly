@@ -1,8 +1,11 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using MP.GameEngine.Abstractions;
+using MP.GameEngine.Abstractions.Cards;
+using MP.GameEngine.Models.Cards.Actions;
 using MP.GameEngine.Services;
 using MP.GameEngine.Services.Cards;
+using MP.GameEngine.Services.Cards.Actions;
 using MP.GameEngine.Services.Statistics;
 using MP.GameEngine.Services.SubSystems;
 
@@ -43,6 +46,9 @@ public static class ServiceRegistration
         
         //Cards
         services.TryAddScoped<CardService>();
+        services.TryAddScoped<ICardActionService<MoneyAction>, MoneyActionService>();
+        services.TryAddScoped<ICardActionService<MovementAction>, MovementActionService>();
+        services.TryAddScoped<ICardActionService<JailAction>, JailActionService>();
 
         return services;
     }

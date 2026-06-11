@@ -7,7 +7,7 @@ public enum CardType
     Chance,
     ComChest,
     CommunityChest = ComChest,
-    PercentChance,
+    PercentageChance,
     PercentageComChest,
     PercentageCommunityChest = PercentageComChest,
     Third,
@@ -31,8 +31,8 @@ public static class CardTypeExtensions
         => cardType switch
         {
             //Always returns 'ComChest' as 'Community Chest'
-            CardType.ComChest => EnumExtensions.ToDisplayName(CardType.CommunityChest),
-            CardType.PercentageComChest => EnumExtensions.ToDisplayName(CardType.PercentageCommunityChest),
+            CardType.ComChest => "Community Chest",
+            CardType.PercentageComChest => "Percentage Community Chest",
             //Converts 'Go' to 'GO'
             CardType.Go => nameof(CardType.Go).ToUpperInvariant(),
             //All other cases use the standard EnumExtensions.ToDisplayName method

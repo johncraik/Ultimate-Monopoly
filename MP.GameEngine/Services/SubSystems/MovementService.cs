@@ -47,7 +47,15 @@ public class MovementService
         if (passGo && direction == PlayerMovementDirection.DirectionOfTravel)
             //Can only collect GO money if moving in direction of travel
             await _goService.CollectGoMoney(engine, player, 1, ct);
-        
+        else if (newIndex == IndexHelper.GoSpace)
+            //A deliberate advance ONTO GO reaches GO, so the initial-GO lock is satisfied
+            //(game-rules.md Movement rule 2 / GO Space rule 4). AdvanceIndex returns
+            //passesGo:false for a GO destination, so CollectGoMoney never runs here — and
+            //it normally owns this assignment. The £200 land bonus is paid separately by the
+            //landed-space resolution (GoService.LandOnGo). This is the advance path only: a
+            //double-3 wobble back to GO uses MovePlayer, so it never releases the lock.
+            player.HasPassedInitialGo = true;
+
         engine.EventEmitter.Emit(new PlayerMovedReceipt
         {
             PlayerId = player.PlayerId,

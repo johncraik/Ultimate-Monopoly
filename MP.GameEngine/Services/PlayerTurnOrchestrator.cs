@@ -1,5 +1,6 @@
 using MP.GameEngine.Abstractions;
 using MP.GameEngine.Enums;
+using MP.GameEngine.Enums.Cards;
 using MP.GameEngine.Enums.Games;
 using MP.GameEngine.Helpers;
 using MP.GameEngine.Helpers.RuleSet;
@@ -104,47 +105,49 @@ public class PlayerTurnOrchestrator
                     //Clear global event (always happens on a double)
                     _globalEventService.ClearCurrentEvent(engine);
                     
-                    //TODO: Take a double card!!!
-                    //TODO: Wire global events
-                    
-                    //Will move player OUT of jail if in jail
-                    await _jailService.CheckAndLeaveJail(engine, player, ct);
-                    
-                    //Get the double effect record, cite rule, and notify player
-                    var effect = DoubleEffects.For(dice.Die1);
-                    engine.CiteRule(effect.RuleCode);
-                    _ = await engine.PromptProvider.Acknowledge(player.PlayerId, effect.Title, effect.Body, ct: ct);
-                    
-                    //Apply snake eyes bonus (if applicable)
-                    if(effect.SnakeEyesBonus)
-                        await _transactionService.ReceiveSnakeEyes(engine, player, ct);
-                    
-                    //Move the player based on the effect steps:
-                    if(effect.RollerSteps.Count > 0)
-                        foreach (var step in effect.RollerSteps)
-                        {
-                            await _movementService.MovePlayer(engine, player, step, ct);
-                            await _boardService.ResolveBoardSpaceForPlayer(engine, player, ct);
-                        }
-                    
-                    //Increment miss turns if effect requires it
-                    if(effect.RollerMissesTurn)
-                        player.TurnsToMiss++;
-                    
-                    foreach (var p in otherPlayers)
+                    //TODO: Work out how to handle double roll with card
+                    var suppressDefault = await engine.CardService.DrawCard(engine, player, CardType.Double, ct);
+                    if (!suppressDefault)
                     {
-                        //Move other players based on the effect steps:
-                        if(effect.OtherPlayerSteps.Count > 0)
-                            foreach (var step in effect.OtherPlayerSteps)
+                        //Will move player OUT of jail if in jail
+                        await _jailService.CheckAndLeaveJail(engine, player, ct);
+                        
+                        //Get the double effect record, cite rule, and notify player
+                        var effect = DoubleEffects.For(dice.Die1);
+                        engine.CiteRule(effect.RuleCode);
+                        _ = await engine.PromptProvider.Acknowledge(player.PlayerId, effect.Title, effect.Body, ct: ct);
+                        
+                        //Apply snake eyes bonus (if applicable)
+                        if(effect.SnakeEyesBonus)
+                            await _transactionService.ReceiveSnakeEyes(engine, player, ct);
+                        
+                        //Move the player based on the effect steps:
+                        if(effect.RollerSteps.Count > 0)
+                            foreach (var step in effect.RollerSteps)
                             {
-                                //Will only be one step (per player), double foreach not a concern
-                                await _movementService.MovePlayer(engine, p, step, ct);
-                                await _boardService.ResolveBoardSpaceForPlayer(engine, p, ct);
+                                await _movementService.MovePlayer(engine, player, step, ct);
+                                await _boardService.ResolveBoardSpaceForPlayer(engine, player, ct);
                             }
                         
-                        //Increment other player's miss turns if effect requires it'
-                        if(effect.OtherPlayerMissesTurn)
-                            p.TurnsToMiss++;
+                        //Increment miss turns if effect requires it
+                        if(effect.RollerMissesTurn)
+                            player.TurnsToMiss++;
+                        
+                        foreach (var p in otherPlayers)
+                        {
+                            //Move other players based on the effect steps:
+                            if(effect.OtherPlayerSteps.Count > 0)
+                                foreach (var step in effect.OtherPlayerSteps)
+                                {
+                                    //Will only be one step (per player), double foreach not a concern
+                                    await _movementService.MovePlayer(engine, p, step, ct);
+                                    await _boardService.ResolveBoardSpaceForPlayer(engine, p, ct);
+                                }
+                            
+                            //Increment other player's miss turns if effect requires it'
+                            if(effect.OtherPlayerMissesTurn)
+                                p.TurnsToMiss++;
+                        }
                     }
                     
                     player.FlipDirection(engine);
@@ -164,20 +167,23 @@ public class PlayerTurnOrchestrator
             case DiceRollType.Triple:
                 if (player.TriplesInRow < RuleDictionary.TriplesBeforeJail)
                 {
-                    //TODO: Take a triple card!!!
-
-                    //Credit the triple bonus, and increase it:
-                    await _playerService.ResolveTripleBonus(engine, player, ct);
-                    
-                    //Will move player OUT of jail if in jail
-                    await _jailService.CheckAndLeaveJail(engine, player, ct);
-                    
-                    _ = await engine.PromptProvider.Acknowledge(player.PlayerId, "Triple!", 
-                        "You rolled a triple, you will move the combined total of all three dice.", ct: ct);
-                    
-                    movement = (ushort)((dice.Die1 + dice.Die2 + dice.ThirdDie) ?? throw new InvalidOperationException("Dice roll result cannot be null"));
-                    await _movementService.MovePlayer(engine, player, movement, ct);
-                    await _boardService.ResolveBoardSpaceForPlayer(engine, player, ct);
+                    //TODO: Work out how to handle triple roll with card
+                    var suppressDefault = await engine.CardService.DrawCard(engine, player, CardType.Triple, ct);
+                    if (!suppressDefault)
+                    {
+                        //Credit the triple bonus, and increase it:
+                        await _playerService.ResolveTripleBonus(engine, player, ct);
+                        
+                        //Will move player OUT of jail if in jail
+                        await _jailService.CheckAndLeaveJail(engine, player, ct);
+                        
+                        _ = await engine.PromptProvider.Acknowledge(player.PlayerId, "Triple!", 
+                            "You rolled a triple, you will move the combined total of all three dice.", ct: ct);
+                        
+                        movement = (ushort)((dice.Die1 + dice.Die2 + dice.ThirdDie) ?? throw new InvalidOperationException("Dice roll result cannot be null"));
+                        await _movementService.MovePlayer(engine, player, movement, ct);
+                        await _boardService.ResolveBoardSpaceForPlayer(engine, player, ct);
+                    }
                 }
                 else
                 {

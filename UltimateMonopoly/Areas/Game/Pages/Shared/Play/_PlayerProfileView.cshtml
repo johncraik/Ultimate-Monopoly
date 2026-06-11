@@ -1,5 +1,6 @@
 @using JC.Core.Extensions
 @using MP.GameEngine.Enums
+@using MP.GameEngine.Enums.Cards
 @using MP.GameEngine.Enums.Properties
 @using MP.GameEngine.Helpers
 @using MP.GameEngine.Helpers.RuleSet
@@ -41,6 +42,24 @@
     // cost-context value always reads positive). Exact ledger amounts (a player's
     // Money, a loan's Amount/PaidBack) are shown raw.
     string Cost(long raw, FinancialReason reason) => $"{cur}{MoneyHelper.NormaliseAmountToPositive(raw, rule, reason)}";
+
+    // Bootstrap-icon class for a card type — drives the held-card list on the Cards tab.
+    string CardIcon(CardType t) => t switch
+    {
+        CardType.Chance => "bi-question-circle",
+        CardType.ComChest => "bi-box2-heart",
+        CardType.PercentageChance => "bi-patch-question",
+        CardType.PercentageComChest => "bi-patch-question",
+        CardType.Third => "bi-dice-3",
+        CardType.Double => "bi-dice-2",
+        CardType.Triple => "bi-dice-6",
+        CardType.Tax => "bi-cash-stack",
+        CardType.Go => "bi-flag",
+        CardType.JustVisiting => "bi-eye",
+        CardType.FreeParking => "bi-p-circle",
+        CardType.GoToJail => "bi-lock",
+        _ => "bi-card-text"
+    };
 
     // Ownership-state tint for the current-space tile (Block 2), mirroring the board
     // view's .space-body tint (softened via --bs-bg-opacity in the CSS).
@@ -240,10 +259,15 @@
                             <button type="button" class="btn btn-outline-warning" data-leave-jail-pay>
                                 <i class="bi bi-cash-coin me-1"></i> Leave jail — pay @Cost(player.JailCost, FinancialReason.JailFee)
                             </button>
-                            @* TODO(mock): always shown while jailed per Game-UI.md (no Get-Out-of-Jail card model yet). *@
-                            <button type="button" class="btn btn-outline-secondary" data-noop>
-                                <i class="bi bi-ticket-perforated me-1"></i> Leave jail — use card
-                            </button>
+                            @* Only when the player holds a Get Out of Jail Free card
+                               (LeaveJailCard → CardService.PlayCard). Same CanLeaveJail gate;
+                               holding the card is the extra condition. *@
+                            @if (player.GetOutOfJailCard() is not null)
+                            {
+                                <button type="button" class="btn btn-outline-secondary" data-leave-jail-card>
+                                    <i class="bi bi-ticket-perforated me-1"></i> Leave jail — use card
+                                </button>
+                            }
                         </div>
                     }
 
@@ -560,13 +584,45 @@
                     }
                 </div>
 
-                @* ===================== Cards (deferred) ===================== *@
+                @* ===================== Cards ===================== *@
                 <div class="tab-pane fade" id="pp-cards" role="tabpanel">
-                    <div class="card">
-                        <div class="card-body text-center text-body-secondary py-4">
-                            <i class="bi bi-card-text fs-3 d-block mb-2"></i> You have no cards.
+                    @{
+                        // Held keep-until-needed cards, grouped by card type (enum order).
+                        var heldCards = player.Cards.OrderBy(c => c.CardType).ToList();
+                    }
+                    @if (heldCards.Count == 0)
+                    {
+                        <div class="card">
+                            <div class="card-body text-center text-body-secondary py-4">
+                                <i class="bi bi-card-text fs-3 d-block mb-2"></i> You have no cards.
+                            </div>
                         </div>
-                    </div>
+                    }
+                    else
+                    {
+                        @foreach (var card in heldCards)
+                        {
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-start gap-3">
+                                        <i class="bi @CardIcon(card.CardType) fs-3 text-body-secondary"></i>
+                                        <div class="flex-grow-1">
+                                            <p class="mb-2">@card.CardText</p>
+                                            <span class="badge text-bg-secondary">@card.CardType.ToDisplayName()</span>
+                                        </div>
+                                    </div>
+                                    @* TODO: wire Play — no-op for now. Held-card play goes through
+                                       CardService.PlayCard (resolve → remove from hand → return to deck),
+                                       which needs a hub command + enqueue gated on the holder's turn. *@
+                                    <div class="d-grid mt-3">
+                                        <button type="button" class="btn btn-outline-primary btn-sm" data-noop>
+                                            <i class="bi bi-play-circle me-1"></i> Play
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
                 </div>
 
                 @* ===================== Loans ===================== *@

@@ -1,4 +1,5 @@
 using MP.GameEngine.Enums;
+using MP.GameEngine.Enums.Cards;
 using MP.GameEngine.Enums.Properties;
 using MP.GameEngine.Helpers;
 using MP.GameEngine.Helpers.RuleSet;
@@ -42,8 +43,8 @@ public class FreeParkingService
     
     public async Task ProcessFreeParking(Framework.GameEngine engine, PlayerModel player, CancellationToken ct)
     {
-        //TODO: grab a free parking card:
-        //Then do what the card says; fall back to default logic (game-rules.md)
+        var suppressDefault = await engine.CardService.DrawCard(engine, player, CardType.FreeParking, ct);
+        if(suppressDefault) return;
 
         //Default Outcomes for Free Parking:
         //- A) No money in FP, OR the player has NO properties: pay fee

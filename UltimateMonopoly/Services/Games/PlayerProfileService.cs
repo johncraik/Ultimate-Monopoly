@@ -140,6 +140,24 @@ public class PlayerProfileService
             await sp.GetRequiredService<JailService>().LeaveJailByPaying(engine, current, ct);
         });
 
+    // Leave jail by playing a held Get Out of Jail Free card — the card sibling of
+    // EnqueueLeaveJailPay (same CanLeaveJail gate, host-bypass aware). CardService.PlayCard
+    // resolves the card (its Release action moves the player to Just Visiting) then consumes it
+    // (removed from hand, returned to its deck). No-ops if the player holds no such card.
+    public void EnqueueLeaveJailCard(string gameId, string submittingUserId)
+        => _executor.Enqueue(gameId, async (engine, _, ct) =>
+        {
+            var current = engine.Cache.Game.CurrentPlayer();
+            if (current is null || !engine.TurnStateProvider.CanLeaveJail(current.PlayerId, submittingUserId))
+                return;
+
+            var card = current.GetOutOfJailCard();
+            if (card is null)
+                return;
+
+            await engine.CardService.PlayCard(engine, current, card, ct);
+        });
+
     // Turn-boundary deal command. Unlike portfolio commands the proposer isn't necessarily the
     // current player (deals fire at any turn boundary), so the proposer id is explicit and the
     // gate is CanDeal (host-bypass aware). DealService resolves the players and runs the deal.
