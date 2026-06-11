@@ -65,11 +65,11 @@ public class BoardService
                     await _taxService.PayTax(engine, player, ct);
                     break;
                 case BoardSpaceType.Chance:
-                    //await engine.CardService.DrawCard(engine, player, CardType.Chance, ct);
+                    await engine.CardService.DrawCard(engine, player, CardType.Chance, ct);
                     //TODO: take percent + third when going backwards
                     break;
                 case BoardSpaceType.ComChest:
-                    //await engine.CardService.DrawCard(engine, player, CardType.CommunityChest, ct);
+                    await engine.CardService.DrawCard(engine, player, CardType.CommunityChest, ct);
                     //TODO take percent + third when going backwards
                     break;
                 case BoardSpaceType.Go:

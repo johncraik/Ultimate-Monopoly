@@ -39,7 +39,7 @@ public class GameEngineSetupService
         };
 
         //TODO: Replace TEMP_CARDS with actual imported cards
-        //gameModel.CardDecks = CardDeckHelper.BuildCardDecks(TEMP_CARDS.LIST);
+        gameModel.CardDecks = CardDeckHelper.BuildCardDecks(TEMP_CARDS.LIST);
         
         return SetupGameCache(gameDto, gameModel, board);
     }
