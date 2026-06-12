@@ -124,7 +124,9 @@
         AuctionBidPrompt => "AuctionBid",
         ShortfallPrompt => "Shortfall",
         TargetPropertyPrompt => "TargetProperty",
+        TargetPlayerPrompt => "TargetPlayer",
         LeaveJailPrompt => "LeaveJail",
+        CardOptionPrompt => "CardOption",
         DealPrompt => "Deal",
         BuildDealPrompt => "BuildDeal",
         _ => null
@@ -166,8 +168,14 @@
                             case TargetPropertyPrompt p:
                                 <partial name="Play/_TargetPropertyPrompt" model="p" />
                                 break;
+                            case TargetPlayerPrompt p:
+                                <partial name="Play/_TargetPlayerPrompt" model="p" />
+                                break;
                             case LeaveJailPrompt p:
                                 <partial name="Play/_LeaveJailPrompt" model="p" />
+                                break;
+                            case CardOptionPrompt p:
+                                <partial name="Play/_CardOptionPrompt" model="p" />
                                 break;
                             case DealPrompt p:
                                 <partial name="Play/_DealPrompt" model="p" />

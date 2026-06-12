@@ -79,6 +79,21 @@ public class CardService
     public async Task PlayCard(Framework.GameEngine engine, PlayerModel player, CardModel card, CancellationToken ct)
     {
         await ResolveCard(engine, player, card, ct);
+        var chosenGroup = card.Groups.FirstOrDefault(g => g.IsChosenGroup);
+        if(chosenGroup is null)
+            throw new InvalidOperationException("Played a card that doesn't have a chosen group.");
+        
+        if(chosenGroup.TurnsRemaining is > 0)
+            //Still can be played/activated again later
+            return;
+        
+        //Reset chosen group and turns remaining
+        foreach (var g in card.Groups)
+        {
+            g.IsChosenGroup = false;
+            g.TurnsRemaining = g.TurnsActive; 
+        }
+        
         player.Cards.Remove(card);
         ReturnToDeck(engine, card);
     }
@@ -119,6 +134,8 @@ public class CardService
             group = card.Groups.First(g => g.GroupId == response.SelectedKey);
         }
 
+        group.IsChosenGroup = true;
+        
         //Actions within the chosen group are ANDed — applied in order.
         foreach (var action in group.Actions)
             await ApplyAction(engine, player, action, ct);

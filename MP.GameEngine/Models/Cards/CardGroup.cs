@@ -17,6 +17,12 @@ public class CardGroup
     /// <summary>The actions applied (in order, all of them) when this group is chosen — at least one.</summary>
     public IReadOnlyList<CardAction> Actions { get; set; }
     
+    public bool IsChosenGroup { get; set; }
+    
+    //Turns active is default value - DO NOT CHANGE VALUE
+    public ushort? TurnsActive { get; set; }
+    public ushort? TurnsRemaining { get; set; }
+    
     
     public string GroupKey { get; set; }
 

@@ -1,0 +1,50 @@
+@using MP.GameEngine.Models.Prompts.PromptTypes
+@using UltimateMonopoly.Services.Cache
+@model TargetPlayerPrompt
+@inject PlayerCacheService PlayerCache
+@{
+    var count = Model.Count;
+    // Count == 1 → radios (hard single-select, grouped by the shared name); otherwise
+    // checkboxes (multi-select up to Count, enforced by the client count-check).
+    var inputType = count == 1 ? "radio" : "checkbox";
+}
+@*
+    TARGET-PLAYER PROMPT — server-rendered fragment. Pick exactly Count players from
+    EligiblePlayerIds (the engine sets Title/Body to the intent — card target, purge victim, …).
+    Each candidate is a btn-check toggle carrying data-target-player-id; ingame-prompts.js collects
+    the checked ids, validates the count client-side, and submits
+    TargetPlayerResponse { selectedPlayerIds }. Intent-agnostic, so neutral primary styling.
+    The same select-then-confirm shape as TargetProperty.
+*@
+<div class="pp-prompt-card border border-2 border-primary">
+    <div class="pp-prompt-head text-bg-primary">
+        @(string.IsNullOrEmpty(Model.Title) ? "Choose a player" : Model.Title)
+    </div>
+    <div class="pp-prompt-body" data-target-count="@count">
+        @if (!string.IsNullOrEmpty(Model.Body))
+        {
+            <p class="mb-2">@Model.Body</p>
+        }
+        <div class="text-body-secondary small mb-2">
+            Select @(count == 1 ? "a player" : $"{count} players"):
+        </div>
+        <div class="d-grid gap-2">
+            @foreach (var pid in Model.EligiblePlayerIds)
+            {
+                var profile = await PlayerCache.GetPlayerProfile(pid);
+                var id = $"tpl-{Model.PromptId}-{pid}";
+                <input type="@inputType" name="tpl-@Model.PromptId" class="btn-check" id="@id" data-target-player-id="@pid" autocomplete="off" />
+                <label class="btn btn-outline-secondary d-flex align-items-center gap-2 text-start" for="@id">
+                    <profile-circle user="profile" size="Sm" />
+                    <span class="text-truncate">@profile.DisplayName</span>
+                </label>
+            }
+        </div>
+        <div class="text-danger small d-none mt-2" data-prompt-error></div>
+    </div>
+    <div class="pp-prompt-foot">
+        <button type="button" class="btn btn-primary w-100" data-prompt-submit>
+            <i class="bi bi-check2 me-1"></i> Confirm
+        </button>
+    </div>
+</div>

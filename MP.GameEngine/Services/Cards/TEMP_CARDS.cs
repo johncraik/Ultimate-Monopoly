@@ -147,11 +147,14 @@ public static class TEMP_CARDS
             // Two groups = an OR-choice (opens CardOptionPrompt). Option labels render from each
             // group's text; the body renders from the card text — both dynamic.
             CardType = CardType.ComChest, CardText = "Council fine. Pay {G0__0} into Free Parking, or go back 3 spaces",
+            // GroupId is normally stamped by the import (and persisted) — hand-set here since this is
+            // the one multi-group TEMP card that opens the option prompt (the key round-tripped in the
+            // response). Single-group TEMP cards never open the prompt, so they leave GroupId unset.
             Groups =
             [
-                new CardGroup { GroupKey = "G0", GroupText = "Pay {0} into Free Parking",
+                new CardGroup { GroupId = "temp-council-pay", GroupKey = "G0", GroupText = "Pay {0} into Free Parking",
                     Actions = [new MoneyAction { Amount = 100, Direction = MoneyDirection.Pay, Counterparty = MoneyCounterparty.FreeParking }] },
-                new CardGroup { GroupKey = "G1", GroupText = "Go back 3 spaces",
+                new CardGroup { GroupId = "temp-council-back", GroupKey = "G1", GroupText = "Go back 3 spaces",
                     Actions = [new MovementAction { Kind = MovementKind.MoveSpaces, Spaces = -3 }] }
             ]
         },

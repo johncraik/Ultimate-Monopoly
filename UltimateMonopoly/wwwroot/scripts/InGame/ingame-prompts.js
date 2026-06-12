@@ -89,6 +89,15 @@
                 // LeaveJailAction is numeric over the wire (PayFee 0, PlayCard 1) — each button carries its own value.
                 return { response: { '$type': 'LeaveJail', promptId: promptId, action: Number(btn.dataset.leavejailAction) } };
 
+            case 'CardOption': {
+                // Single-select radio — read the checked option's key (GroupId), the same
+                // select-then-confirm shape as TargetProperty. The validator checks the key matches
+                // one of the prompt's options; labels are pre-resolved server-side.
+                const chosen = promptEl.querySelector('input.btn-check[data-card-option-key]:checked');
+                if (!chosen) return { error: 'Choose an option.' };
+                return { response: { '$type': 'CardOption', promptId: promptId, selectedKey: chosen.dataset.cardOptionKey } };
+            }
+
             case 'TargetProperty': {
                 // Collect the checked toggles; must be exactly Count (carried on [data-target-count]).
                 const selected = Array.from(promptEl.querySelectorAll('input.btn-check[data-target-index]:checked'))
@@ -98,6 +107,17 @@
                 if (selected.length !== count)
                     return { error: count === 1 ? 'Select one property.' : ('Select exactly ' + count + ' properties.') };
                 return { response: { '$type': 'TargetProperty', promptId: promptId, selectedBoardIndexes: selected } };
+            }
+
+            case 'TargetPlayer': {
+                // Collect the checked player toggles; must be exactly Count (carried on [data-target-count]).
+                const selected = Array.from(promptEl.querySelectorAll('input.btn-check[data-target-player-id]:checked'))
+                    .map(i => i.dataset.targetPlayerId);
+                const countEl = promptEl.querySelector('[data-target-count]');
+                const count = countEl ? Number(countEl.dataset.targetCount) : selected.length;
+                if (selected.length !== count)
+                    return { error: count === 1 ? 'Select one player.' : ('Select exactly ' + count + ' players.') };
+                return { response: { '$type': 'TargetPlayer', promptId: promptId, selectedPlayerIds: selected } };
             }
 
             default:
