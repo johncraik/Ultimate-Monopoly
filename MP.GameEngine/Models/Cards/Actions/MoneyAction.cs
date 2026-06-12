@@ -11,7 +11,7 @@ namespace MP.GameEngine.Models.Cards.Actions;
 public sealed class MoneyAction : CardAction
 {
     /// <summary>Base amount before per-unit / dice / percentage scaling.</summary>
-    public int Amount { get; set; }
+    public long Amount { get; set; }
 
     public MoneyDirection Direction { get; set; }
     public MoneyCounterparty Counterparty { get; set; }
@@ -24,4 +24,12 @@ public sealed class MoneyAction : CardAction
 
     /// <summary>Percentage cards: the realised amount scales by the player's %cap (100 / 50 / 10).</summary>
     public bool PercentageApplies { get; set; }
+
+    /// <summary>
+    /// For a <see cref="MoneyCounterparty.HighestRoller"/> / <see cref="MoneyCounterparty.LowestRoller"/>
+    /// dice-off, whether the card holder also rolls (and can win). When the holder wins their own
+    /// dice-off the movement is with themselves — i.e. a no-op. Default false: only the other players
+    /// roll. Ignored for every other counterparty.
+    /// </summary>
+    public bool IncludeHolderInRoll { get; set; }
 }

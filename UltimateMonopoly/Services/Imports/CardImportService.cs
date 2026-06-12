@@ -4,6 +4,7 @@ using JC.Core.Extensions;
 using JC.Core.Models;
 using JC.Core.Services.DataRepositories;
 using Microsoft.EntityFrameworkCore;
+using MP.GameEngine.Helpers.Cards;
 using MP.GameEngine.Models.Snapshot.Cards;
 using UltimateMonopoly.Models.DataModels;
 
@@ -82,6 +83,7 @@ public class CardImportService
 
     private async Task<PersistedCardIds?> GetAndPersistCardIdObj(CardModel card)
     {
+        //Get the persisted card IDs:
         var add = false;
         var persistedIds = await _repos.GetRepository<PersistedCardIds>()
             .AsQueryable().FilterDeleted(DeletedQueryType.OnlyActive)
@@ -95,9 +97,11 @@ public class CardImportService
             add = true;
         }
 
+        //Deserialise the group IDs and their action IDs:
         var persistedGroups = JsonSerializer.Deserialize<List<CardGroupIdJson>>(persistedIds.GroupIdJson)
             ?? throw new Exception("Could not deserialize persisted groups");
         
+        //Set card ID
         card.CardId = persistedIds.CardId;
         var index = 0;
         if(card.Groups.Count != persistedGroups.Count)
@@ -105,15 +109,20 @@ public class CardImportService
         
         foreach (var g in card.Groups)
         {
+            //Foreach group, set group ID, group key and action IDs
             var idObj = persistedGroups[index];
             if (idObj == null)
                 throw new Exception("Group id object is null");
             
+            //Set group ID and group key
             g.GroupId = idObj.GroupId;
+            g.GroupKey = $"{CardDisplayHelper.GroupIdentifier}{index}"; 
+            
             var actionIndex = 0;
             if(g.Actions.Count != idObj.ActionIds.Length)
                 throw new Exception("Action count mismatch");
             
+            //Set action IDs
             foreach (var a in g.Actions)
             {
                 a.ActionId = idObj.ActionIds[actionIndex];
@@ -123,6 +132,7 @@ public class CardImportService
             index++;
         }
         
+        //Deserialise the condition IDs:
         var persistedConditions = JsonSerializer.Deserialize<List<string>>(persistedIds.ConditionIdJson)
             ?? throw new Exception("Could not deserialize persisted conditions");
 
@@ -132,6 +142,7 @@ public class CardImportService
         
         foreach (var c in card.Conditions)
         {
+            //Foreach condition, set condition ID
             var pc = persistedConditions[index];
             c.ConditionId = pc;
             index++;

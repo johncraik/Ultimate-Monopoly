@@ -51,7 +51,7 @@ public class CardService
 
         //Always show card picked up:
         _ = await engine.PromptProvider.Acknowledge(player.PlayerId, $"{card.CardType.ToDisplayName()} Card",
-            card.CardText, timeout: TimeSpan.FromSeconds(30), ct: ct);
+            card.GetDisplayText(engine.Cache, player.PlayerId), timeout: TimeSpan.FromSeconds(30), ct: ct);
         
         if (!card.IsKeepUntilNeeded)
         {
@@ -67,6 +67,21 @@ public class CardService
         engine.EventEmitter.Emit(new CardTakenReceipt { PlayerId = player.PlayerId, CardType = card.CardType });
         return card.SuppressDefault;
     }
+    
+    /// <summary>
+    /// Plays a keep-until-needed card the player already holds (mode (a), cards-design.md §4):
+    /// resolves its effect (which emits the <see cref="CardPlayedReceipt"/>), then removes it from
+    /// the player's hand and returns it to the back of its deck (§9.4). This is the single seam every
+    /// hand-played card funnels through — the forced jail exit, the turn-start "use card" command,
+    /// and (later) the trigger-fired held-card hook and the NOPE/immunity counter window.
+    /// <paramref name="card"/> is the instance held in <see cref="PlayerModel.Cards"/> (matched by reference).
+    /// </summary>
+    public async Task PlayCard(Framework.GameEngine engine, PlayerModel player, CardModel card, CancellationToken ct)
+    {
+        await ResolveCard(engine, player, card, ct);
+        player.Cards.Remove(card);
+        ReturnToDeck(engine, card);
+    }
 
 
     /// <summary>
@@ -75,7 +90,7 @@ public class CardService
     /// group's actions in order (ANDed). Emits a <see cref="CardPlayedReceipt"/> — a resolve-on-draw
     /// card still counts as played even though it never reaches the hand.
     /// </summary>
-    public async Task ResolveCard(Framework.GameEngine engine, PlayerModel player, CardModel card, CancellationToken ct)
+    private async Task ResolveCard(Framework.GameEngine engine, PlayerModel player, CardModel card, CancellationToken ct)
     {
         if (card.Groups.Count == 0)
             //Nothing to apply.
@@ -95,8 +110,10 @@ public class CardService
             {
                 PlayerId = player.PlayerId,
                 Title = "Choose an option",
-                Body = card.CardText,
-                Options = card.Groups.Select(g => new CardOption(g.GroupId, g.GroupText)).ToList()
+                Body = card.GetDisplayText(engine.Cache, player.PlayerId),
+                Options = card.Groups.Select(g => 
+                    new CardOption(g.GroupId, g.GetDisplayText(engine.Cache, player.PlayerId)))
+                    .ToList()
             }, ct);
 
             group = card.Groups.First(g => g.GroupId == response.SelectedKey);
@@ -108,22 +125,7 @@ public class CardService
 
         engine.EventEmitter.Emit(new CardPlayedReceipt { PlayerId = player.PlayerId, CardType = card.CardType });
     }
-
-
-    /// <summary>
-    /// Plays a keep-until-needed card the player already holds (mode (a), cards-design.md §4):
-    /// resolves its effect (which emits the <see cref="CardPlayedReceipt"/>), then removes it from
-    /// the player's hand and returns it to the back of its deck (§9.4). This is the single seam every
-    /// hand-played card funnels through — the forced jail exit, the turn-start "use card" command,
-    /// and (later) the trigger-fired held-card hook and the NOPE/immunity counter window.
-    /// <paramref name="card"/> is the instance held in <see cref="PlayerModel.Cards"/> (matched by reference).
-    /// </summary>
-    public async Task PlayCard(Framework.GameEngine engine, PlayerModel player, CardModel card, CancellationToken ct)
-    {
-        await ResolveCard(engine, player, card, ct);
-        player.Cards.Remove(card);
-        ReturnToDeck(engine, card);
-    }
+    
 
 
     /// <summary>Returns a spent/played card to the back of its type's deck (cards-design.md §9.4).</summary>

@@ -45,6 +45,7 @@ public class JailService
 
         //Reset jail counter to 0
         player.JailTurnCounter = 0;
+        player.MaxJailTurnsOverride = null;
         engine.CiteRule(RuleCode.Jail_LeaveByDouble);
         
         //Direction of travel is no-op (moving from jail -> just visiting);
@@ -56,6 +57,9 @@ public class JailService
     
     public async Task ForcePlayerToLeaveJail(Framework.GameEngine engine, PlayerModel player, CancellationToken ct)
     {
+        //Reset jail counter to 0
+        player.JailTurnCounter = 0;
+        player.MaxJailTurnsOverride = null;
         engine.CiteRule(RuleCode.Jail_ThreeTurnLimit);
         
         //Round the cost for front-end prompt:

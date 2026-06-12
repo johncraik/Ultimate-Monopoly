@@ -14,16 +14,20 @@ public class MovementService
         _goService = goService;
     }
     
-    public async Task MovePlayer(Framework.GameEngine engine, PlayerModel player, int amount, CancellationToken ct)
+    public async Task MovePlayer(Framework.GameEngine engine, PlayerModel player, int amount, CancellationToken ct,
+        bool collectGoBonus = true)
     {
         if(player.IsInJail)
             return;
-        
+
         var (newIndex, goPasses) = IndexHelper.MoveIndex(player.BoardIndex, amount, player.Direction);
         var initial = player.BoardIndex;
         player.BoardIndex = newIndex;
 
-        if (goPasses > 0 && amount > 0 && !player.InitialRoll)
+        // collectGoBonus is false for a "do not pass Go, do not collect £200" card — it suppresses
+        // the whole GO-pass consequence (bonus, mortgage fee, loan instalment). Default true: normal
+        // movement (rolls, third die, doubles) always collects when crossing GO in the travel direction.
+        if (collectGoBonus && goPasses > 0 && amount > 0 && !player.InitialRoll)
             //Can only collect GO money if moving in direction of travel (positive amount)
             await _goService.CollectGoMoney(engine, player, goPasses, ct);
 

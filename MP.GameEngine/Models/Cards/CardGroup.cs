@@ -1,3 +1,5 @@
+using MP.GameEngine.Helpers.Cards;
+
 namespace MP.GameEngine.Models.Cards;
 
 /// <summary>
@@ -14,4 +16,15 @@ public class CardGroup
 
     /// <summary>The actions applied (in order, all of them) when this group is chosen — at least one.</summary>
     public IReadOnlyList<CardAction> Actions { get; set; }
+    
+    
+    public string GroupKey { get; set; }
+
+    public string GetDisplayText(GameCacheModel gameCache, string playerId)
+    {
+        var roundingRule = gameCache.RoundingRule;
+        var playerCap = gameCache.Game.PlayerPercentCap(playerId);
+
+        return GroupText.FormatCardText(this, playerCap, roundingRule, true);
+    }
 }

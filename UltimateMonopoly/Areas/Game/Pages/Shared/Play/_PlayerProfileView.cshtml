@@ -600,14 +600,14 @@
                     }
                     else
                     {
-                        @foreach (var card in heldCards)
+                        foreach (var card in heldCards)
                         {
                             <div class="card mb-3">
                                 <div class="card-body">
                                     <div class="d-flex align-items-start gap-3">
                                         <i class="bi @CardIcon(card.CardType) fs-3 text-body-secondary"></i>
                                         <div class="flex-grow-1">
-                                            <p class="mb-2">@card.CardText</p>
+                                            <p class="mb-2">@card.GetDisplayText(engine.Cache, playerId)</p>
                                             <span class="badge text-bg-secondary">@card.CardType.ToDisplayName()</span>
                                         </div>
                                     </div>

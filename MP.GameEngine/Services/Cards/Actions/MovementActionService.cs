@@ -51,11 +51,12 @@ public class MovementActionService : ICardActionService<MovementAction>
         var targets = await CardActionHelper.ResolveTargets(engine, player, action.Target, ct);
         foreach (var target in targets)
         {
-            //TODO: Respect CollectGoBonus (deferred).
             switch (action.Kind)
             {
                 case MovementKind.MoveSpaces:
-                    await _movementService.MovePlayer(engine, target, action.Spaces, ct);
+                    // Advance/retreat N spaces; CollectGoBonus=false suppresses the GO bonus on a
+                    // "do not pass Go" card. (Advance/AdvanceToNearest carry it via MovementDirection.)
+                    await _movementService.MovePlayer(engine, target, action.Spaces, ct, action.CollectGoBonus);
                     break;
                 case MovementKind.AdvanceToIndex when action.TargetIndex is { } index:
                     await _movementService.AdvancePlayer(engine, target, index, MovementDirection(action), ct);

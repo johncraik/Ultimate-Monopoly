@@ -62,7 +62,11 @@ public class StatisticsOrchestrator
 
             netWorth += BuildingSellValue(property, board);
         }
+        
+        var outstandingLoanDebt = player.Loans.Where(l => l.IsOutstanding)
+            .Sum(l => (long)l.Amount - l.PaidBack);
 
+        netWorth -= outstandingLoanDebt;
         return netWorth;
     }
 

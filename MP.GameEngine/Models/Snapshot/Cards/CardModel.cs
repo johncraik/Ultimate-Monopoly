@@ -1,6 +1,11 @@
 using System.Text.Json.Serialization;
+using MP.GameEngine.Enums;
 using MP.GameEngine.Enums.Cards;
+using MP.GameEngine.Enums.Games;
+using MP.GameEngine.Helpers;
+using MP.GameEngine.Helpers.Cards;
 using MP.GameEngine.Models.Cards;
+using MP.GameEngine.Models.Cards.Actions;
 using MP.GameEngine.Models.Cards.Conditions;
 
 namespace MP.GameEngine.Models.Snapshot.Cards;
@@ -20,14 +25,18 @@ public class CardModel
 
     /// <summary>The deck this card belongs to and the rule by which it is drawn.</summary>
     public CardType CardType { get; set; }
+    
 
     /// <summary>The choosable options on the card — ORed; each group's actions are ANDed (§2).</summary>
     public IReadOnlyList<CardGroup> Groups { get; set; } = [];
+    
+    
     /// <summary>When a held card becomes live — ORed triggers (§5). Empty for resolve-on-draw cards.</summary>
     public IReadOnlyList<CardCondition> Conditions { get; set; } = [];
 
     /// <summary>How the card is engaged (resolve-on-draw vs kept; forced vs choice; whose turn) (§5).</summary>
     public CardConditionType ConditionType { get; set; } = CardConditionType.None;
+    
 
     /// <summary>True when the card is held until a trigger fires, i.e. any non-<see cref="CardConditionType.None"/> condition (§5).</summary>
     [JsonIgnore]
@@ -35,6 +44,8 @@ public class CardModel
     
     /// <summary>Whether the card suppresses the default action of the board space</summary>
     public bool SuppressDefault { get; set; }
+    
+    
 
     /// <summary>Parameterless constructor for serialisation.</summary>
     public CardModel()
@@ -59,5 +70,16 @@ public class CardModel
         // (e.g. a charge counter), deep-copy that field — not this static content.
         Groups = model.Groups;
         Conditions = model.Conditions;
+    }
+
+    
+    
+    public string GetDisplayText(GameCacheModel gameCache, string playerId)
+    {
+        var roundingRule = gameCache.RoundingRule;
+        var playerCap = gameCache.Game.PlayerPercentCap(playerId);
+
+        return Groups.Aggregate(CardText, (current, g) 
+            => current.FormatCardText(g, playerCap, roundingRule, false));
     }
 }
