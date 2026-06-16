@@ -7,6 +7,7 @@ using MP.GameEngine.Models.EventReceipts;
 using MP.GameEngine.Models.Prompts.PromptTypes;
 using MP.GameEngine.Models.Prompts.PromptTypes.Responses;
 using MP.GameEngine.Models.Snapshot;
+using MP.GameEngine.Models.Snapshot.Cards;
 
 namespace MP.GameEngine.Services.SubSystems;
 
