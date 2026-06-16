@@ -1,3 +1,5 @@
+using MP.GameEngine.Enums;
+
 namespace MP.GameEngine.Models.Cards.Actions;
 
 /// <summary>
@@ -14,6 +16,16 @@ namespace MP.GameEngine.Models.Cards.Actions;
 /// </summary>
 public sealed class CardActionContext
 {
-    /// <summary>The amount the firing trigger handed the card (e.g. the £200 tax a "double tax" card triples).</summary>
+    /// <summary>The amount the firing trigger handed the card (e.g. the £200 tax a "double tax" card doubles).</summary>
     public long TriggerAmount { get; set; }
+
+    /// <summary>The financial reason for the trigger amount (tax, go bonus, etc)</summary>
+    public FinancialReason TriggerReason { get; set; } = FinancialReason.CardCharge;
+
+    /// <summary>
+    /// The player a <see cref="Enums.Cards.PlayerTarget.DiceOffPlayer"/> action's dice-off resolved to,
+    /// stashed so a later action in the <i>same group</i> acts on the same winner — e.g. the tax-payer
+    /// redirect resolves the lowest roller and the following Swap reads it back (card 444).
+    /// </summary>
+    public string? DiceOffPlayerId { get; set; }
 }

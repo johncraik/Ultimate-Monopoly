@@ -1,0 +1,657 @@
+[
+    {
+        "RawText": "A player of your choice must accompany you to jail",
+        "CardType": "Third",
+        "ConditionType": "None",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Jail",
+                        "Kind": 0
+                    },
+                    {
+                        "$type": "Jail",
+                        "Kind": 0,
+                        "Target": 1
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Advance 1 space. Keep until needed",
+        "CardType": "Third",
+        "ConditionType": "ChoiceCardholderTurn",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Movement",
+                        "Kind": 0,
+                        "Spaces": 1
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Advance 3 spaces. Keep until needed",
+        "CardType": "Third",
+        "ConditionType": "ChoiceCardholderTurn",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Movement",
+                        "Kind": 0,
+                        "Spaces": 3
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Advance 5 spaces.",
+        "CardType": "Third",
+        "ConditionType": "None",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Movement",
+                        "Kind": 0,
+                        "Spaces": 5
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Advance up to 5 spaces. Keep until needed",
+        "CardType": "Third",
+        "ConditionType": "ChoiceCardholderTurn",
+        "Groups": [
+            {
+                "GroupText": "Advance 1 space",
+                "Actions": [
+                    {
+                        "$type": "Movement",
+                        "Kind": 0,
+                        "Spaces": 1
+                    }
+                ]
+            },
+            {
+                "GroupText": "Advance 2 spaces",
+                "Actions": [
+                    {
+                        "$type": "Movement",
+                        "Kind": 0,
+                        "Spaces": 2
+                    }
+                ]
+            },
+            {
+                "GroupText": "Advance 3 spaces",
+                "Actions": [
+                    {
+                        "$type": "Movement",
+                        "Kind": 0,
+                        "Spaces": 3
+                    }
+                ]
+            },
+            {
+                "GroupText": "Advance 4 spaces",
+                "Actions": [
+                    {
+                        "$type": "Movement",
+                        "Kind": 0,
+                        "Spaces": 4
+                    }
+                ]
+            },
+            {
+                "GroupText": "Advance 5 spaces",
+                "Actions": [
+                    {
+                        "$type": "Movement",
+                        "Kind": 0,
+                        "Spaces": 5
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "All outstanding loans are wiped out for all players. Any player with no loans receives £1000 but must return a property to the bank",
+        "CardType": "Third",
+        "ConditionType": "None",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Loans",
+                        "Kind": 2
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "All players immediately go to jail",
+        "CardType": "Third",
+        "ConditionType": "None",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Jail",
+                        "Kind": 0,
+                        "Target": 3
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Cancel a players triple bonus. Keep until needed",
+        "CardType": "Third",
+        "ConditionType": "ChoiceAnyPlayerTurn",
+        "Conditions": [
+            {
+                "Trigger": 128
+            }
+        ],
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Dice",
+                        "Kind": 0,
+                        "PayoutFactor": 0,
+                        "Target": 1
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Change direction. Keep until needed",
+        "CardType": "Third",
+        "ConditionType": "ChoiceCardholderTurn",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Direction"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Convert a double into a triple. Keep until needed",
+        "CardType": "Third",
+        "ConditionType": "ChoiceCardholderTurn",
+        "Conditions": [
+            {
+                "Trigger": 32
+            }
+        ],
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Dice",
+                        "Kind": 1
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Each player changes direction, including any in jail",
+        "CardType": "Third",
+        "ConditionType": "None",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Direction",
+                        "Target": 3
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Each player receives {G0__0} but must return a property to the bank",
+        "CardType": "Third",
+        "ConditionType": "None",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Money",
+                        "Amount": 1000,
+                        "Direction": 1,
+                        "Counterparty": 0,
+                        "Target": 3
+                    },
+                    {
+                        "$type": "Property",
+                        "Kind": 0,
+                        "Target": 3
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Go back 1 space",
+        "CardType": "Third",
+        "ConditionType": "None",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Movement",
+                        "Kind": 0,
+                        "Spaces": -1,
+                        "CollectGoBonus": false
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Go back to free parking",
+        "CardType": "Third",
+        "ConditionType": "None",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Movement",
+                        "Kind": 1,
+                        "TargetIndex": 20,
+                        "CollectGoBonus": false
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Go to jail for 10 turns. You can roll the dice but cannot leave jail. You can collect all rent due. Keep until needed",
+        "CardType": "Third",
+        "ConditionType": "ChoiceCardholderTurn",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Jail",
+                        "Kind": 0,
+                        "TurnsOverride": 10,
+                        "MinJailTurns": 10,
+                        "CollectRentInJail": true
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Hand in any property into free parking. This does not get recorded and can be from a set you have handed in before",
+        "CardType": "Third",
+        "ConditionType": "None",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Property",
+                        "Kind": 1
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Have an extra 3 turns",
+        "CardType": "Third",
+        "ConditionType": "None",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Turns",
+                        "Kind": 1,
+                        "Turns": 3
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Miss 3 turns",
+        "CardType": "Third",
+        "ConditionType": "None",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Turns",
+                        "Kind": 0,
+                        "Turns": 3
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Have an extra 3 turns or make the player rolling the lowest on one die miss 3 turns",
+        "CardType": "Third",
+        "ConditionType": "None",
+        "Groups": [
+            {
+                "GroupText": "Have an extra 3 turns",
+                "Actions": [
+                    {
+                        "$type": "Turns",
+                        "Kind": 1,
+                        "Turns": 3
+                    }
+                ]
+            },
+            {
+                "GroupText": "The player rolling the lowest on one die misses 3 turns",
+                "Actions": [
+                    {
+                        "$type": "Turns",
+                        "Kind": 0,
+                        "Turns": 3,
+                        "DiceOff": {}
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Hidden treasure. Collect {G0__0} from the bank, or {G1__0} from each player",
+        "CardType": "Third",
+        "ConditionType": "None",
+        "Groups": [
+            {
+                "GroupText": "Collect {0} from the bank",
+                "Actions": [
+                    {
+                        "$type": "Money",
+                        "Amount": 1000,
+                        "Direction": 1,
+                        "Counterparty": 0
+                    }
+                ]
+            },
+            {
+                "GroupText": "Collect {0} from each player",
+                "Actions": [
+                    {
+                        "$type": "Money",
+                        "Amount": 350,
+                        "Direction": 1,
+                        "Counterparty": 2
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Pay each player {G0__0}",
+        "CardType": "Third",
+        "ConditionType": "None",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Money",
+                        "Amount": 200,
+                        "Direction": 0,
+                        "Counterparty": 2
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Pay each player {G0__0} the next time you land on GO",
+        "CardType": "Third",
+        "ConditionType": "MetCardholderTurn",
+        "Conditions": [
+            {
+                "Trigger": 1
+            }
+        ],
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Money",
+                        "Amount": 300,
+                        "Direction": 0,
+                        "Counterparty": 2
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Purge 2 of your properties",
+        "CardType": "Third",
+        "ConditionType": "None",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Building",
+                        "Kind": 0,
+                        "Count": 2
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Purge an opponent's property of your choice",
+        "CardType": "Third",
+        "ConditionType": "None",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Building",
+                        "Kind": 0,
+                        "Target": 1
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Return a property to the bank",
+        "CardType": "Third",
+        "ConditionType": "None",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Property",
+                        "Kind": 0
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Send any player of your choice to jail",
+        "CardType": "Third",
+        "ConditionType": "None",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Jail",
+                        "Kind": 0,
+                        "Target": 1
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Swap all your money with another player",
+        "CardType": "Third",
+        "ConditionType": "None",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Money",
+                        "SwapCash": true
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Your fee to leave jail has been tripled",
+        "CardType": "Third",
+        "ConditionType": "None",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Jail",
+                        "Kind": 2,
+                        "LeaveFeeMultiplier": 3
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Your next triple is downgraded to a double",
+        "CardType": "Third",
+        "ConditionType": "MetCardholderTurn",
+        "Conditions": [
+            {
+                "Trigger": 64
+            }
+        ],
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Dice",
+                        "Kind": 2
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Your next tax payment is tripled",
+        "CardType": "Third",
+        "ConditionType": "MetCardholderTurn",
+        "Conditions": [
+            {
+                "Trigger": 32768
+            }
+        ],
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Money",
+                        "Amount": 3,
+                        "Direction": 0,
+                        "Counterparty": 1,
+                        "AmountSource": 1
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Pay the money you receive for snake eyes to the player who rolls the lowest number",
+        "CardType": "Third",
+        "ConditionType": "MetCardholderTurn",
+        "Conditions": [
+            {
+                "Trigger": 65536
+            }
+        ],
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Money",
+                        "Direction": 0,
+                        "Counterparty": 3,
+                        "Basis": 4,
+                        "DiceOff": {}
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "You receive no cash on your next visit to free parking",
+        "CardType": "Third",
+        "ConditionType": "MetCardholderTurn",
+        "SuppressDefault": {
+            "SuppressFreeParkingMoneyTake": true
+        },
+        "Conditions": [
+            {
+                "Trigger": 8
+            }
+        ],
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "NoOp"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Your money for landing on GO is doubled for the next 5 occasions",
+        "CardType": "Third",
+        "ConditionType": "MetCardholderTurn",
+        "SuppressDefault": {
+            "SuppressGoBonus": true
+        },
+        "Conditions": [
+            {
+                "Trigger": 1
+            }
+        ],
+        "Groups": [
+            {
+                "TurnsActive": 5,
+                "TurnsRemaining": 5,
+                "Actions": [
+                    {
+                        "$type": "Money",
+                        "Amount": 2,
+                        "Direction": 1,
+                        "Counterparty": 0,
+                        "AmountSource": 1
+                    }
+                ]
+            }
+        ]
+    }
+]

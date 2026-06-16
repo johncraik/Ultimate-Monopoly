@@ -109,7 +109,7 @@ public class PlayerTurnOrchestrator
                             break;
                     }
                     
-                    if (!suppressDefault && engine.Cache.Game.ModifiedDiceRollType == null)
+                    if (!suppressDefault.SuppressDirectionChange && engine.Cache.Game.ModifiedDiceRollType == null)
                     {
                         //Suppress default is "do not turn around" or "double upgraded to triple"
                         //TODO: Confirm against double cards actual suppressed defaults and outcomes
@@ -243,7 +243,7 @@ public class PlayerTurnOrchestrator
         DiceRoll dice, CancellationToken ct)
     {
         var suppressDefault = await engine.CardService.DrawCard(engine, player, CardType.Triple, ct);
-        if (!suppressDefault)
+        if (!suppressDefault.SuppressTripleBonus)
         {
             //Credit the triple bonus, and increase it (default triple bonus - card will credit custom if needed):
             await _playerService.ResolveTripleBonus(engine, player, ct);

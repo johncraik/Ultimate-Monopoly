@@ -29,6 +29,7 @@ public class CardService
     private readonly ICardActionService<GlobalEventAction> _globalEventActionService;
     private readonly ICardActionService<DeckDrawAction> _deckDrawActionService;
     private readonly ICardActionService<DiceAction> _diceActionService;
+    private readonly ICardActionService<NoOpAction> _noOpActionService;
 
     /// <summary>
     /// Creates the card interpreter over the per-action handlers it dispatches to
@@ -44,7 +45,8 @@ public class CardService
         ICardActionService<PropertyAction> propertyActionService,
         ICardActionService<GlobalEventAction> globalEventActionService,
         ICardActionService<DeckDrawAction> deckDrawActionService,
-        ICardActionService<DiceAction> diceActionService)
+        ICardActionService<DiceAction> diceActionService,
+        ICardActionService<NoOpAction> noOpActionService)
     {
         _moneyActionService = moneyActionService;
         _movementActionService = movementActionService;
@@ -57,6 +59,7 @@ public class CardService
         _globalEventActionService = globalEventActionService;
         _deckDrawActionService = deckDrawActionService;
         _diceActionService = diceActionService;
+        _noOpActionService = noOpActionService;
     }
 
 
@@ -65,13 +68,16 @@ public class CardService
     /// either resolves it immediately (resolve-on-draw, <see cref="CardConditionType.None"/>)
     /// or adds it to the player's hand (keep-until-needed). Resolved cards return to the back
     /// of the deck. No-op on an empty deck. See cards-design.md §4 (interaction modes), §9 (decks).
+    /// <paramref name="context"/> is the optional override-on-draw context (e.g. a Tax space threading
+    /// the assessed tax as the trigger amount) — read by a resolve-on-draw card's <c>TriggerAmount</c>
+    /// money source; null for every draw that supplies no such figure.
     /// </summary>
-    public async Task<bool> DrawCard(Framework.GameEngine engine, PlayerModel player, CardType type, CancellationToken ct)
+    public async Task<SuppressDefault> DrawCard(Framework.GameEngine engine, PlayerModel player, CardType type, CancellationToken ct, CardActionContext? context = null)
     {
         var card = engine.Cache.Game.CardDecks.Take(type);
         if (card is null)
             //Empty deck — nothing to draw.
-            return false;
+            return new SuppressDefault(SuppressDefaultType.None);
 
         //Always show card picked up — carry the CardType so the front end can flavour the
         //acknowledge by deck (every other acknowledge passes null → default secondary styling).
@@ -82,7 +88,7 @@ public class CardService
         {
             //Resolve-on-draw (override-on-draw, §4b): apply now, then return to the deck. A
             //resolve-on-draw card always cycles back regardless of the apply result.
-            _ = await ResolveCard(engine, player, card, ct);
+            _ = await ResolveCard(engine, player, card, ct, context);
             ReturnToDeck(engine, card);
             return card.SuppressDefault;
         }
@@ -216,6 +222,7 @@ public class CardService
             GlobalEventAction g => _globalEventActionService.ResolveActionAsync(engine, player, g, ct, context),
             DeckDrawAction dd => _deckDrawActionService.ResolveActionAsync(engine, player, dd, ct, context),
             DiceAction di => _diceActionService.ResolveActionAsync(engine, player, di, ct, context),
+            NoOpAction n => _noOpActionService.ResolveActionAsync(engine, player, n, ct, context),
             _ => throw new ArgumentOutOfRangeException(nameof(action), action, "Unhandled card action type.")
         };
     

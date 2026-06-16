@@ -1,7 +1,7 @@
 namespace MP.GameEngine.Enums.Cards;
 
 /// <summary>Filters a <c>MovementAction</c>'s resolved targets by jail state.</summary>
-public enum MovementJailFilter
+public enum JailFilter
 {
     /// <summary>No filter — every resolved target moves.</summary>
     None,

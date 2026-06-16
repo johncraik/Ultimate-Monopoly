@@ -183,11 +183,14 @@ public class TransactionService
     /// Card-driven debit. <paramref name="counterparty"/> + optional
     /// <paramref name="counterpartyPlayer"/> describe where the money goes
     /// (Bank, Free Parking, or a named player). Shortfall allowed by default —
-    /// the card may pre-gate where required.
+    /// the card may pre-gate where required. <paramref name="reason"/> overrides the
+    /// default <see cref="FinancialReason.CardCharge"/> so a context-amount card (e.g.
+    /// "triple tax") records the true reason on the receipt and notification.
     /// </summary>
     public Task PayCardCharge(Framework.GameEngine engine, PlayerModel player, uint amount,
-        TransactionCounterparty counterparty, PlayerModel? counterpartyPlayer, CancellationToken ct)
-        => Move(engine, player, -amount, FinancialReason.CardCharge,
+        TransactionCounterparty counterparty, PlayerModel? counterpartyPlayer, CancellationToken ct,
+        FinancialReason reason = FinancialReason.CardCharge)
+        => Move(engine, player, -amount, reason,
             counterparty: counterparty,
             counterpartyPlayer: counterpartyPlayer,
             allowShortfall: true,
@@ -255,8 +258,9 @@ public class TransactionService
     /// <paramref name="counterpartyPlayer"/> describe where the money comes from.
     /// </summary>
     public Task ReceiveCardPayout(Framework.GameEngine engine, PlayerModel player, uint amount,
-        TransactionCounterparty counterparty, PlayerModel? counterpartyPlayer, CancellationToken ct)
-        => Move(engine, player, amount, FinancialReason.CardPayout,
+        TransactionCounterparty counterparty, PlayerModel? counterpartyPlayer, CancellationToken ct,
+        FinancialReason reason = FinancialReason.CardPayout)
+        => Move(engine, player, amount, reason,
             counterparty: counterparty,
             counterpartyPlayer: counterpartyPlayer,
             ct: ct);

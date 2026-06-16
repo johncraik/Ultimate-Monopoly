@@ -10,5 +10,11 @@ public enum PlayerTarget
     /// <summary>Every other (non-bankrupt) player.</summary>
     AllOthers,
     /// <summary>Every (non-bankrupt) player, the holder included.</summary>
-    Everyone
+    Everyone,                                                                                                                           
+    /// <summary>                                                                                                                       
+    /// The winner of the action's dice-off — resolved by <c>MoneyActionService</c> via <c>DiceService</c>                              
+    /// (e.g. "the lowest roller pays the tax"). The resolved player is stashed on the shared                                           
+    /// <c>CardActionContext</c> so a later action in the group (a Swap) can act on the same one.                                       
+    /// </summary>                                                                                                                      
+    DiceOffPlayer 
 }

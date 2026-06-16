@@ -1,0 +1,199 @@
+[
+    {
+        "RawText": "Choose any available property from the bank",
+        "CardType": "Triple",
+        "ConditionType": "None",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Property",
+                        "Kind": 2
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Each player rolls one die. The player with the lowest roll receives your triple bonus",
+        "CardType": "Triple",
+        "ConditionType": "None",
+        "SuppressDefault": {
+            "SuppressTripleBonus": true
+        },
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Dice",
+                        "Kind": 0,
+                        "PayoutRedirectToLowestRoller": true
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Roll one die. Multiply your triple bonus by the number rolled",
+        "CardType": "Triple",
+        "ConditionType": "None",
+        "SuppressDefault": {
+            "SuppressTripleBonus": true
+        },
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Dice",
+                        "Kind": 0,
+                        "PayoutMultiplyByDie": true
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "You do not receive your triple bonus",
+        "CardType": "Triple",
+        "ConditionType": "None",
+        "SuppressDefault": {
+            "SuppressTripleBonus": true
+        },
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Dice",
+                        "Kind": 0,
+                        "PayoutFactor": 0
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Hand back half of your money or return a set to the bank",
+        "CardType": "Triple",
+        "ConditionType": "None",
+        "Groups": [
+            {
+                "GroupText": "Hand back half of your money",
+                "Actions": [
+                    {
+                        "$type": "Money",
+                        "Amount": 50,
+                        "Direction": 0,
+                        "Counterparty": 0,
+                        "Basis": 1
+                    }
+                ]
+            },
+            {
+                "GroupText": "Return a set to the bank",
+                "Actions": [
+                    {
+                        "$type": "Property",
+                        "Kind": 0,
+                        "Set": true
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Your cost to leave jail is reset to £50",
+        "CardType": "Triple",
+        "ConditionType": "None",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Jail",
+                        "Kind": 2,
+                        "LeaveFeeSetTo": 50
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Your triple bonus is doubled",
+        "CardType": "Triple",
+        "ConditionType": "None",
+        "SuppressDefault": {
+            "SuppressTripleBonus": true
+        },
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Dice",
+                        "Kind": 0,
+                        "PayoutFactor": 2
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Return a set to the bank or pay {G1__0} times the number of properties you own",
+        "CardType": "Triple",
+        "ConditionType": "None",
+        "Groups": [
+            {
+                "GroupText": "Return a set to the bank",
+                "Actions": [
+                    {
+                        "$type": "Property",
+                        "Kind": 0,
+                        "Set": true
+                    }
+                ]
+            },
+            {
+                "GroupText": "Pay {0} times the number of properties you own",
+                "Actions": [
+                    {
+                        "$type": "Money",
+                        "Amount": 250,
+                        "Direction": 0,
+                        "Counterparty": 1,
+                        "PerUnit": 3
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Energy Crisis! Rent on utilities is multiplied by 10 until another double is rolled",
+        "CardType": "Triple",
+        "ConditionType": "None",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "GlobalEvent",
+                        "Event": 1,
+                        "Multiplier": 10
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Rail Strike! There is no rent on any stations until another double is rolled",
+        "CardType": "Triple",
+        "ConditionType": "None",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "GlobalEvent",
+                        "Event": 0,
+                        "Multiplier": 0
+                    }
+                ]
+            }
+        ]
+    }
+]

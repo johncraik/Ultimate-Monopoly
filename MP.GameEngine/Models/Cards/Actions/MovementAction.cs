@@ -31,9 +31,9 @@ public sealed class MovementAction : CardAction
 
     /// <summary>
     /// Filters the resolved <see cref="Target"/> players by jail state — e.g. mass breakout
-    /// (<see cref="MovementJailFilter.OnlyJailed"/>) or "call a meeting" (<see cref="MovementJailFilter.OnlyNotJailed"/>).
+    /// (<see cref="Enums.Cards.JailFilter.OnlyJailed"/>) or "call a meeting" (<see cref="Enums.Cards.JailFilter.OnlyNotJailed"/>).
     /// </summary>
-    public MovementJailFilter JailFilter { get; set; }
+    public JailFilter JailFilter { get; set; }
 
     /// <summary>"Do not pass GO" cards set this false to suppress the GO bonus when crossing.</summary>
     public bool CollectGoBonus { get; set; } = true;

@@ -2,6 +2,7 @@ using MP.GameEngine.Enums;
 using MP.GameEngine.Enums.Cards;
 using MP.GameEngine.Helpers;
 using MP.GameEngine.Helpers.RuleSet;
+using MP.GameEngine.Models.Cards.Actions;
 using MP.GameEngine.Models.Snapshot;
 
 namespace MP.GameEngine.Services.SubSystems;
@@ -26,11 +27,11 @@ public class TaxService
         if(!space.IsTaxable || space.Tax == null)
             return;
         
-        var suppressDefault = await engine.CardService.DrawCard(engine, player, CardType.Tax, ct);
-        if(suppressDefault) return;
-
-        //Default outcome (normal tax payment), normalised first so the event multiplier scales the
-        //grid-rounded figure (and a ×0 "no tax" event floors to 0 → Move's zero short-circuit skips it).
+        //Assess the tax due up front — normalised first so the event multiplier scales the grid-rounded
+        //figure (and a ×0 "no tax" event floors to 0 → Move's zero short-circuit skips it). The assessed
+        //tax is threaded into the card draw as the trigger amount, so an override-on-draw Tax card
+        //(AmountSource=TriggerAmount — "triple tax", "pay half") reads the tax due; the same figure is the
+        //default if no card supersedes it.
         var tax = MoneyHelper.NormaliseAmountToPositive((long)space.Tax, engine.Cache.RoundingRule, FinancialReason.Tax);
         if (engine.Cache.Game.GlobalEventInfo.TaxEvent)
         {
@@ -38,9 +39,12 @@ public class TaxService
             tax *= engine.Cache.Game.GlobalEventInfo.TaxMultiplier ?? 1;
             engine.CiteRule(RuleCode.Event_Tax);
         }
-        _ = await engine.PromptProvider.Acknowledge(player.PlayerId, space.Name, 
-            $"You will pay {RuleDictionary.Currency}{tax} in tax.", ct: ct);
-        
+
+        var suppressDefault = await engine.CardService.DrawCard(engine, player, CardType.Tax, ct,
+            new CardActionContext { TriggerAmount = tax, TriggerReason = FinancialReason.Tax });
+        if(suppressDefault.SuppressTaxPayment) return;
+
+        //Default outcome — pay the assessed tax.
         await _transactionService.PayTax(engine, player, tax, ct);
     }
 }

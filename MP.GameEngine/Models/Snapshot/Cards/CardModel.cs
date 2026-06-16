@@ -46,7 +46,7 @@ public class CardModel
     public bool IsKeepUntilNeeded => ConditionType != CardConditionType.None;
     
     /// <summary>Whether the card suppresses the default action of the board space</summary>
-    public bool SuppressDefault { get; set; }
+    public SuppressDefault SuppressDefault { get; set; } = new(SuppressDefaultType.None);
     
     
 

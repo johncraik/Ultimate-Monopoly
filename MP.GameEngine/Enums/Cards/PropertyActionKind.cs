@@ -12,5 +12,7 @@ public enum PropertyActionKind
     /// <summary>Receive every property currently held in the Free Parking pot.</summary>
     ReceiveAllFreeParking,
     /// <summary>Return every property (and the money) in the Free Parking pot to the bank.</summary>
-    ClearFreeParkingToBank
+    ClearFreeParkingToBank,
+    /// <summary>Swap one of the holder's complete sets for a chosen player's complete set, then purge both swapped sets.</summary>
+    SwapSet
 }

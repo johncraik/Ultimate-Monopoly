@@ -34,7 +34,14 @@ public class JailActionService : ICardActionService<JailAction>
     /// <param name="ct">Cancellation token.</param>
     public async Task<bool> ResolveActionAsync(Framework.GameEngine engine, PlayerModel player, JailAction action, CancellationToken ct, CardActionContext? context = null)
     {
-        var targets = await CardActionHelper.ResolveTargets(engine, player, action.Target, ct);
+        var filter = action.Kind switch
+        {
+            JailKind.SendToJail => JailFilter.OnlyNotJailed,
+            JailKind.Release => JailFilter.OnlyJailed,
+            _ => JailFilter.None
+        };
+        
+        var targets = await CardActionHelper.ResolveTargets(engine, player, action.Target, ct, filter);
         foreach (var target in targets)
         {
             switch (action.Kind)

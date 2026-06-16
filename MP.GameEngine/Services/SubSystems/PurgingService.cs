@@ -65,7 +65,17 @@ public class PurgingService
         if(response.SelectedBoardIndexes.Any(i => !eligibleProps.Select(p => p.BoardIndex).Contains(i)))
             throw new InvalidOperationException("Invalid property selected");
         
-        foreach (var index in response.SelectedBoardIndexes)
+        PurgeProperties(engine, purgingPlayer, response.SelectedBoardIndexes.ToList());
+        
+        _ = await engine.PromptProvider.Acknowledge(purgingPlayer.PlayerId, 
+             propCount == 1 ? "Property Purged" : "Properties Purged", 
+             propCount == 1 ? "Property has been purged" : "Properties have been purged", ct: ct);
+    }
+
+    
+    public void PurgeProperties(Framework.GameEngine engine, PlayerModel player, List<ushort> boardIndexes)
+    {
+        foreach (var index in boardIndexes)
         {
             var property = engine.Cache.Game.GetPropertySpace(index);
             if(property is null)
@@ -77,13 +87,9 @@ public class PurgingService
             
             engine.EventEmitter.Emit(new PropertyPurgedReceipt
             {
-                PlayerId = purgingPlayer.PlayerId,
+                PlayerId = player.PlayerId,
                 PropertyBoardIndex = index
             });
         }
-        
-        _ = await engine.PromptProvider.Acknowledge(purgingPlayer.PlayerId, 
-             propCount == 1 ? "Property Purged" : "Properties Purged", 
-             propCount == 1 ? "Property has been purged" : "Properties have been purged", ct: ct);
     }
 }

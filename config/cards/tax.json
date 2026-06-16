@@ -1,0 +1,237 @@
+[
+    {
+        "RawText": "Pay triple tax or pay half and go to jail",
+        "CardType": "Tax",
+        "ConditionType": "None",
+        "SuppressDefault": {
+            "SuppressTaxPayment": true
+        },
+        "Groups": [
+            {
+                "GroupText": "Pay triple tax",
+                "Actions": [
+                    {
+                        "$type": "Money",
+                        "Amount": 3,
+                        "Direction": 0,
+                        "Counterparty": 1,
+                        "AmountSource": 1
+                    }
+                ]
+            },
+            {
+                "GroupText": "Pay half and go to jail",
+                "Actions": [
+                    {
+                        "$type": "Money",
+                        "Amount": 0.5,
+                        "Direction": 0,
+                        "Counterparty": 1,
+                        "AmountSource": 1
+                    },
+                    {
+                        "$type": "Jail",
+                        "Kind": 0
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Tax payment is tripled",
+        "CardType": "Tax",
+        "ConditionType": "None",
+        "SuppressDefault": {
+            "SuppressTaxPayment": true
+        },
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Money",
+                        "Amount": 3,
+                        "Direction": 0,
+                        "Counterparty": 1,
+                        "AmountSource": 1
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Tax payment is doubled and every player pays",
+        "CardType": "Tax",
+        "ConditionType": "None",
+        "SuppressDefault": {
+            "SuppressTaxPayment": true
+        },
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Money",
+                        "Amount": 2,
+                        "Direction": 0,
+                        "Counterparty": 1,
+                        "AmountSource": 1,
+                        "Target": 3
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Pay the tax due, but receive a free hotel (if there are hotels available)",
+        "CardType": "Tax",
+        "ConditionType": "None",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Building",
+                        "Kind": 1
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Tax payment is paid by the player rolling the lowest number",
+        "CardType": "Tax",
+        "ConditionType": "None",
+        "SuppressDefault": {
+            "SuppressTaxPayment": true
+        },
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Money",
+                        "Amount": 1,
+                        "Direction": 0,
+                        "Counterparty": 1,
+                        "AmountSource": 1,
+                        "Target": 4,
+                        "DiceOff": {}
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Tax error. Receive what you have to pay",
+        "CardType": "Tax",
+        "ConditionType": "None",
+        "SuppressDefault": {
+            "SuppressTaxPayment": true
+        },
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Money",
+                        "Amount": 1,
+                        "Direction": 1,
+                        "Counterparty": 0,
+                        "AmountSource": 1
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Tax payment is halved",
+        "CardType": "Tax",
+        "ConditionType": "None",
+        "SuppressDefault": {
+            "SuppressTaxPayment": true
+        },
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Money",
+                        "Amount": 0.5,
+                        "Direction": 0,
+                        "Counterparty": 1,
+                        "AmountSource": 1
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Tax refund multiplied by one die.",
+        "CardType": "Tax",
+        "ConditionType": "None",
+        "SuppressDefault": {
+            "SuppressTaxPayment": true
+        },
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Money",
+                        "Amount": 1,
+                        "Direction": 1,
+                        "Counterparty": 0,
+                        "AmountSource": 1,
+                        "DiceMultiplier": 1
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "The player rolling the lowest number pays the tax, and swaps places with you",
+        "CardType": "Tax",
+        "ConditionType": "None",
+        "SuppressDefault": {
+            "SuppressTaxPayment": true
+        },
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Money",
+                        "Amount": 1,
+                        "Direction": 0,
+                        "Counterparty": 1,
+                        "AmountSource": 1,
+                        "Target": 4,
+                        "DiceOff": {}
+                    },
+                    {
+                        "$type": "Movement",
+                        "Kind": 3,
+                        "Target": 4
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Tax evasion! Pay a {G0__0} fine and go to jail",
+        "CardType": "Tax",
+        "ConditionType": "None",
+        "SuppressDefault": {
+            "SuppressTaxPayment": true
+        },
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Money",
+                        "Amount": 500,
+                        "Direction": 0,
+                        "Counterparty": 1
+                    },
+                    {
+                        "$type": "Jail",
+                        "Kind": 0
+                    }
+                ]
+            }
+        ]
+    }
+]

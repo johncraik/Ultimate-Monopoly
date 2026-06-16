@@ -4,6 +4,7 @@ using MP.GameEngine.Enums.Properties;
 using MP.GameEngine.Helpers;
 using MP.GameEngine.Helpers.RuleSet;
 using MP.GameEngine.Models.Boards;
+using MP.GameEngine.Models.Cards;
 using MP.GameEngine.Models.Prompts.PromptTypes;
 using MP.GameEngine.Models.Snapshot;
 
@@ -52,8 +53,10 @@ public class FreeParkingService
         }
         
         var suppressDefault = await engine.CardService.DrawCard(engine, player, CardType.FreeParking, ct);
-        if(suppressDefault) return;
-
+        if(suppressDefault.SuppressAllFreeParking)
+            return;
+        
+        
         //Default Outcomes for Free Parking:
         //- A) No money in FP, OR the player has NO properties: pay fee
         //- B) Has money in FP, and the player has a property they can hand in: take money and FP property, and hand in property
@@ -62,6 +65,9 @@ public class FreeParkingService
         if (engine.Cache.Game.FreeParkingAmount == 0 
             || engine.Cache.Game.GetOwnedProperties(player.PlayerId).Count == 0)
         {
+            if(suppressDefault.SuppressFreeParkingFine)
+                return;
+            
             //A) No money, so pay fee based on dice roll
             var roll = engine.Cache.TurnDiceRoll;
             if(roll?.Die2 == null)
@@ -96,10 +102,13 @@ public class FreeParkingService
         }).ToList();
 
         //Take from FP (money and any properties)
-        await TakeFromFreeParking(engine, player, ct);
+        await TakeFromFreeParking(engine, player, suppressDefault, ct);
         
         if (eligibleProperties.Count == 0)
         {
+            if(suppressDefault.SuppressFreeParkingPurge)
+                return;
+            
             //C) Purge a property, take money, and take property from FP (already taken)
             engine.CiteRule(RuleCode.FreeParking_PurgeWhenNoneEligible);
             
@@ -110,6 +119,9 @@ public class FreeParkingService
             _propertyService.NormaliseProperties(engine);
             return;
         }
+        
+        if(suppressDefault.SuppressFreeParkingPropertyHandIn)
+            return;
         
         //B) Hand in an eligible property
         engine.CiteRule(RuleCode.FreeParking_HandInEligibility);
@@ -144,7 +156,7 @@ public class FreeParkingService
     }
 
 
-    private async Task TakeFromFreeParking(Framework.GameEngine engine, PlayerModel player, CancellationToken ct)
+    private async Task TakeFromFreeParking(Framework.GameEngine engine, PlayerModel player, SuppressDefault suppressDefault, CancellationToken ct)
     {
         var percentCap = engine.Cache.Game.PlayerPercentCap(player.PlayerId);
         var cap = percentCap switch
@@ -160,20 +172,36 @@ public class FreeParkingService
         var fpProperties = engine.Cache.Game.Properties
             .Where(p => p.State == PropertyState.FreeParking)
             .ToList();
-        
-        //Free parking take rules:
-        engine.CiteRule(RuleCode.FreeParking_TakeCap);
-        engine.CiteRule(RuleCode.FreeParking_TakeProperties);
-        
-        _ = await engine.PromptProvider.Acknowledge(player.PlayerId, "Take from Free Parking",
-            $"You will take {RuleDictionary.Currency}{amount} from free parking, " +
-            $"and {fpProperties.Count} property(s) from free parking.", ct: ct);
-        
-        await _transactionService.TakeFromFreeParking(engine, player, amount, ct);
 
-        foreach (var p in fpProperties)
+        var body = "You will take ";
+        body += !suppressDefault.SuppressFreeParkingMoneyTake
+            ? $"{RuleDictionary.Currency}{amount} from free parking"
+            : string.Empty;
+        body += !suppressDefault.SuppressFreeParkingMoneyTake && !suppressDefault.SuppressFreeParkingPropertyTake
+            ? ", and "
+            : string.Empty;
+        body += !suppressDefault.SuppressFreeParkingPropertyTake
+            ? $"{fpProperties.Count} property(s) from free parking"
+            : string.Empty;
+
+        if (suppressDefault is { SuppressFreeParkingPropertyTake: true, SuppressFreeParkingMoneyTake: true })
+            return;
+        
+        _ = await engine.PromptProvider.Acknowledge(player.PlayerId, "Take from Free Parking", body, ct: ct);
+        
+        if(!suppressDefault.SuppressFreeParkingMoneyTake)
         {
-            _propertyTransferService.TakeFromFreeParking(engine, player, p);
+            engine.CiteRule(RuleCode.FreeParking_TakeCap);
+            await _transactionService.TakeFromFreeParking(engine, player, amount, ct);
+        }
+
+        if(!suppressDefault.SuppressFreeParkingPropertyTake)
+        {
+            engine.CiteRule(RuleCode.FreeParking_TakeProperties);
+            foreach (var p in fpProperties)
+            {
+                _propertyTransferService.TakeFromFreeParking(engine, player, p);
+            }
         }
     }
 }

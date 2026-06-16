@@ -49,6 +49,15 @@ public class MoneyActionService : ICardActionService<MoneyAction>
             return true;
         }
 
+        // The dice-off winner is the subject ("the lowest roller pays the tax"). Resolved here via the
+        // dice service and stashed on the context, so a later action in the group (a Swap) can target the
+        // same player. No winner (empty pool) → no-op.
+        if (action.Target == PlayerTarget.DiceOffPlayer)
+        {
+            await ApplyToDiceOffSubject(engine, player, action, context, ct);
+            return true;
+        }
+
         // Self (default): the holder is the subject, with the counterparty driving where it flows.
         if (action.Target == PlayerTarget.Self)
         {
@@ -57,7 +66,7 @@ public class MoneyActionService : ICardActionService<MoneyAction>
             var amount = RealiseAmount(engine, player, action, diceMultiplier, context);
             if (amount == 0)
                 return true;
-            await ApplyByCounterparty(engine, player, action, amount, ct);
+            await ApplyByCounterparty(engine, player, action, amount, ResolveReason(action, context), ct);
             return true;
         }
 
@@ -72,20 +81,59 @@ public class MoneyActionService : ICardActionService<MoneyAction>
             var amount = RealiseAmount(engine, subject, action, diceMultiplier, context);
             if (amount == 0)
                 continue;
-            await ApplyToBankOrFreeParking(engine, subject, action.Direction, action.Counterparty, amount, ct);
+            await ApplyToBankOrFreeParking(engine, subject, action.Direction, action.Counterparty, amount, ResolveReason(action, context), ct);
         }
 
         return true;
     }
 
     /// <summary>Applies a realised amount for the holder per the action's counterparty (the original Self-path routing).</summary>
-    private Task ApplyByCounterparty(Framework.GameEngine engine, PlayerModel holder, MoneyAction action, uint amount, CancellationToken ct)
+    private Task ApplyByCounterparty(Framework.GameEngine engine, PlayerModel holder, MoneyAction action, uint amount, FinancialReason reason, CancellationToken ct)
         => action.Counterparty switch
         {
             MoneyCounterparty.EachPlayer => ApplyToEachPlayer(engine, holder, action.Direction, amount, ct),
             MoneyCounterparty.DiceOffPlayer => ApplyToDiceOffWinner(engine, holder, action.Direction, action.DiceOff, amount, ct),
-            _ => ApplyToBankOrFreeParking(engine, holder, action.Direction, action.Counterparty, amount, ct)
+            _ => ApplyToBankOrFreeParking(engine, holder, action.Direction, action.Counterparty, amount, reason, ct)
         };
+
+    /// <summary>
+    /// The financial reason a Bank / Free Parking card move records: a <see cref="AmountSource.TriggerAmount"/>
+    /// action carries the firing trigger's reason (tax, GO bonus, …) so the receipt and toast read correctly;
+    /// every other action is a plain card payout / charge.
+    /// </summary>
+    private static FinancialReason ResolveReason(MoneyAction action, CardActionContext? context)
+        => action.AmountSource == AmountSource.TriggerAmount && context is not null
+            ? context.TriggerReason
+            : action.Direction == MoneyDirection.Receive ? FinancialReason.CardPayout : FinancialReason.CardCharge;
+
+    /// <summary>
+    /// Resolves the action's dice-off to a single subject (the lowest/highest roller), records them on the
+    /// context so a later action in the group acts on the same player (card 444's Swap), and applies the
+    /// realised amount as that subject's Bank / Free Parking move ("the lowest roller pays the tax"). No-op
+    /// when the dice-off has no winner (empty pool).
+    /// </summary>
+    private async Task ApplyToDiceOffSubject(Framework.GameEngine engine, PlayerModel holder, MoneyAction action,
+        CardActionContext? context, CancellationToken ct)
+    {
+        if (action.DiceOff is null)
+            return;
+
+        var subject = await _diceService.ResolveDiceOffTarget(engine, holder, action.DiceOff, ct);
+        if (subject is null)
+            return;
+
+        // Share the resolved player so a following action (the Swap in card 444) acts on the same one.
+        if (context is not null)
+            context.DiceOffPlayerId = subject.PlayerId;
+
+        var diceMultiplier = await RollDiceMultiplier(engine, subject, action.DiceMultiplier, ct);
+        var amount = RealiseAmount(engine, subject, action, diceMultiplier, context);
+        if (amount == 0)
+            return;
+
+        await ApplyToBankOrFreeParking(engine, subject, action.Direction, action.Counterparty, amount,
+            ResolveReason(action, context), ct);
+    }
 
     /// <summary>
     /// Swaps the holder's entire cash with a counterparty player — a chosen player, or the
@@ -114,16 +162,16 @@ public class MoneyActionService : ICardActionService<MoneyAction>
 
     /// <summary>Bank / Free Parking — the holder simply pays or receives the amount (no shortfall on a receive).</summary>
     private async Task ApplyToBankOrFreeParking(Framework.GameEngine engine, PlayerModel holder,
-        MoneyDirection direction, MoneyCounterparty counterparty, uint amount, CancellationToken ct)
+        MoneyDirection direction, MoneyCounterparty counterparty, uint amount, FinancialReason reason, CancellationToken ct)
     {
         var target = counterparty == MoneyCounterparty.FreeParking
             ? TransactionCounterparty.FreeParking
             : TransactionCounterparty.Bank;
 
         if (direction == MoneyDirection.Receive)
-            await _transactionService.ReceiveCardPayout(engine, holder, amount, target, null, ct);
+            await _transactionService.ReceiveCardPayout(engine, holder, amount, target, null, ct, reason);
         else
-            await _transactionService.PayCardCharge(engine, holder, amount, target, null, ct);
+            await _transactionService.PayCardCharge(engine, holder, amount, target, null, ct, reason);
     }
 
 
@@ -198,7 +246,7 @@ public class MoneyActionService : ICardActionService<MoneyAction>
         // trigger amount — floors to 0, a silent no-op. Otherwise it's a fixed amount, a fraction of
         // cash / the FP pot, the triple bonus, or the snake-eyes bonus (Amount is the percent for the
         // percentage bases).
-        long amount = action.AmountSource == AmountSource.TriggerAmount
+        decimal amount = action.AmountSource == AmountSource.TriggerAmount
             ? (context?.TriggerAmount ?? 0) * action.Amount
             : action.Basis switch
             {
@@ -231,7 +279,7 @@ public class MoneyActionService : ICardActionService<MoneyAction>
         if (amount <= 0)
             return 0;
 
-        return (uint)MoneyHelper.NormaliseAmount(amount, engine.Cache.RoundingRule,
+        return (uint)MoneyHelper.NormaliseAmount((long)Math.Round(amount, MidpointRounding.AwayFromZero), engine.Cache.RoundingRule,
             action.Direction == MoneyDirection.Receive
                 ? FinancialReason.CardPayout
                 : FinancialReason.CardCharge);

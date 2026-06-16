@@ -294,7 +294,7 @@ You also get a third card from you or anyone else rolling your dice number.
   - ✅ Buildable now.
 - Your next tax payment is tripled
   - Held `MoneyAction{Direction=Pay, Counterparty=FreeParking, AmountSource=TriggerAmount, Amount=3}` (Amount reused as the ×3 factor). `ConditionType=MetCardholderTurn`, `Trigger=OnTaxLanded`, duration once.
-  - 🟢 Functionally complete (action) — `AmountSource{Fixed, TriggerAmount}` on `MoneyAction` + an optional `CardActionContext` threaded through `CardService.PlayCard → ResolveCard → ApplyAction →` the handlers; `MoneyActionService.RealiseAmount` resolves `TriggerAmount` as `context.TriggerAmount × Amount` (no context → 0, a silent no-op). The seam is shared by every `AmountSource=TriggerAmount` card (steal-FP, next-payment-doubled, GO-bonus, the Tax deck). Remaining (trigger layer): an `OnTaxLanded` `CardTrigger` flag (the enum stops at `OnRentDue`/`OnNextRoll`/…), the held firing that supplies the assessed tax as the context, and duration "next" (§3.6).
+  - 🟢 Functionally complete (action) — `AmountSource{Fixed, TriggerAmount}` on `MoneyAction` + an optional `CardActionContext` threaded through `CardService.PlayCard → ResolveCard → ApplyAction →` the handlers; `MoneyActionService.RealiseAmount` resolves `TriggerAmount` as `context.TriggerAmount × Amount` (no context → 0, a silent no-op). The seam is shared by every `AmountSource=TriggerAmount` card. **`OnTaxLanded` added to `CardTrigger` (1<<15); written to `third.json`** (`Money{Pay, FreeParking, AmountSource=TriggerAmount, Amount=3}`, `MetCardholderTurn`, `Trigger=OnTaxLanded`). Remaining (trigger layer): the held firing supplying the assessed tax as context + duration "next" (§3.6).
 - Pay each player £200
   - `MoneyAction{Direction=Pay, Amount=200, Counterparty=EachPlayer}`. `ConditionType=None`.
   - ✅ Buildable now.
@@ -303,7 +303,7 @@ You also get a third card from you or anyone else rolling your dice number.
   - 🟢 Functionally complete — `MoneyAction{Direction=Pay, Amount=300, Counterparty=EachPlayer}` is fully built (each other player paid from the holder, payer-POV). Remaining (trigger layer): the held firing on `OnLandGo` and duration "next time" (once, `TurnsRemaining=1`, §3.6).
 - Pay the money you receive for snake eyes to the player who rolls the lowest number
   - Held: redirect the snake-eyes (double-1) £500 bonus → `MoneyAction{Pay, Counterparty=LowestRoller, AmountSource=TriggerAmount}`. `ConditionType=MetCardholderTurn`, `Trigger=OnRollDouble` (refined to snake eyes).
-  - ✅ Action built — `MoneyAction{Pay, Counterparty=LowestRoller, Basis=SnakeEyesBonus}`. (Held; fires on snake-eyes via the trigger layer.)
+  - ✅ Action built + **`OnSnakeEyes` trigger added (1<<16); written to `third.json`** (`Money{Pay, DiceOffPlayer, Basis=SnakeEyesBonus, DiceOff{}}`, `MetCardholderTurn`, `Trigger=OnSnakeEyes`). The "pay" models the redirect — the holder receives the £500 by default, then pays it to the lowest roller (net correct, no suppress needed). Held firing via the trigger layer.
 - Purge 2 of your properties
   - **Building** purge action: purge 2 of the holder's own properties (chosen). `ConditionType=None`.
   - ✅ Built — `BuildingActionService` (`Kind=Purge, Target=Self, Count=2`).
@@ -315,7 +315,7 @@ You also get a third card from you or anyone else rolling your dice number.
   - ✅ Built — `PropertyActionService` (`Kind=ReturnToBank`).
 - Receive the money from free parking that another player would have received. Keep until needed
   - Held `MoneyAction{Receive, Counterparty=FreeParking, AmountSource=TriggerAmount, Amount=1}` (Amount=1 → exactly the FP-take amount). `ConditionType=ChoiceAnyPlayerTurn`, `Trigger=OnOtherTakesFreeParking`; result suppresses the other player's money-take only.
-  - 🟢 Functionally complete — the receive action is built via the `AmountSource=TriggerAmount` seam (the FP take is realised from `CardActionContext.TriggerAmount` when the trigger fires). Remaining (trigger layer): the `ChoiceAnyPlayerTurn` firing on `OnOtherTakesFreeParking` and the granular suppress of just the other player's money-take (§3.3, the trigger result — §11).
+  - 📝 **REVIEW LATER — deliberately NOT in `third.json`.** The receive action rides the `AmountSource=TriggerAmount` seam, but this card must suppress **another** player's FP money-take — the granular, group-scoped suppress / trigger-result (§3.3, ⬜ not built; distinct from the card-level `SuppressDefault`). Revisit in the trigger-layer pass: firing on `OnOtherTakesFreeParking` (`ChoiceAnyPlayerTurn`) + the other-player suppress.
 - Send any player of your choice to jail
   - `JailAction{Kind=SendToJail, Target=ChosenPlayer}`. `ConditionType=None`.
   - ✅ Buildable now.
@@ -324,19 +324,19 @@ You also get a third card from you or anyone else rolling your dice number.
   - ✅ Built — `MoneyAction{SwapCash=true}` (chosen player; or a dice-off roller via `Counterparty`).
 - You receive no cash on your next visit to free parking
   - Held: suppress the holder's FP money take on the next visit. `ConditionType=MetCardholderTurn`, `Trigger=OnLandFreeParking`, duration once.
-  - 🟡 `OnLandFreeParking` exists; ⬜ FP-money suppress (§2.8) + duration once (§3.6).
+  - 🟢 Functionally complete — written to `third.json` as a **`NoOpAction`** (the new suppress-only action seam) carrying card-level `SuppressDefault{SuppressFreeParkingMoneyTake}` (honoured by `FreeParkingService.TakeFromFreeParking`), `MetCardholderTurn`/`OnLandFreeParking`. Remaining (trigger layer): the held `OnLandFreeParking` firing applying the suppress + duration-once (§3.6).
 - Your fee to leave jail has been tripled
-  - **Jail** leave-fee modifier: `PlayerModel.JailCost ×3` (applies to the holder's next jail exit). `ConditionType=None` (immediate self-modify) or held `OnInJail`.
-  - 🟡 `JailCost` exists; ⬜ NEW: leave-fee multiply modifier (§2.5).
+  - `JailAction{Kind=ModifyLeaveFee, LeaveFeeMultiplier=3, Target=Self}` (applies to the holder's next jail exit). `ConditionType=None` — a pure downside, so it resolves on draw, not a held choice.
+  - ✅ Built — `JailActionService` `ModifyLeaveFee` multiplies `PlayerModel.JailCost`.
 - Your next payment to another player is doubled
   - Held `MoneyAction{AmountSource=TriggerAmount, factor ×2}`. `ConditionType=MetCardholderTurn`, `Trigger=OnPayPlayer`, duration once.
-  - 🟡 `OnPayPlayer` exists; ⬜ `AmountSource` (§3.2) + duration once (§3.6).
+  - 📝 **REVIEW LATER — deliberately NOT in `third.json`.** The `AmountSource=TriggerAmount` seam is built, but the **counterparty (the player being paid) is trigger-context** — no `MoneyCounterparty` value expresses "the player from the trigger". Needs a trigger-player counterparty (or a trigger-layer override of the counterparty). Revisit in the trigger-layer pass (firing on `OnPayPlayer` + duration-once).
 - Your next triple is downgraded to a double
   - Held **Dice** action: downgrade the holder's triple → double. `ConditionType=MetCardholderTurn`, `Trigger=OnRollTriple`.
   - 🟢 Functionally complete — `DiceActionService` (`DiceKind.DowngradeTripleToDouble`) sets `GameModel.ModifiedDiceRollType=Double`; `PlayerTurnOrchestrator.TripleRoll` re-routes the roll through `HandleDoubleRoll` (two-dice move, direction flip) *before* the `Doubles/TriplesInRow` counters update (§4). Remaining: the held firing on the holder's triple (`OnRollTriple`) — the trigger layer.
 - Your money for landing on GO is doubled for the next 5 occasions
   - Held: modify the GO bonus `×2`. `ConditionType=MetCardholderTurn`, `Trigger=OnLandGo`, duration 5 (`TurnsActive=5`/`TurnsRemaining`).
-  - 🟡 `OnLandGo` + `TurnsActive`/`TurnsRemaining` exist; ⬜ GO-bonus modifier via `AmountSource` (§3.2); duration 5 (§3.6).
+- 🟢 Functionally complete — written to `third.json` (`Money{Receive, Bank, AmountSource=TriggerAmount, Amount=2}` + card `SuppressDefault{SuppressGoBonus}` + group `TurnsActive=5`, `MetCardholderTurn`/`OnLandGo`): pays ×2 the GO bonus and suppresses the default. Remaining (trigger layer): the held `OnLandGo` firing + the duration-5 multi-use consumption (`TurnsRemaining` initialised from `TurnsActive`, §3.6).
 
 
 ## Double
@@ -344,11 +344,11 @@ You get a double card for rolling a double (or a triple downgraded to a double)
 
 **10 cards**: (resolve-on-draw, `ConditionType=None`, unless noted. Global events map onto `GameModel.GlobalEventInfo` (`EventInfo`) + `GlobalEvent`; store/read-hooks + clear-on-double are built — only the card-action that *sets* them is new, §3a)
 - Advance to the nearest buildable property owned by another player
-  - `MovementAction{Kind=AdvanceToNearest, Nearest=ColourProperty}` + an "owned by another" filter.
-  - ⬜ NEW: ownership filter on `AdvanceToNearest` (§2.6).
+  - `MovementAction{Kind=AdvanceToNearest, Nearest=ColourProperty, NearestOwnedByOther=true}`. No buildable property owned by another → no move (fallback to current index).
+  - ✅ Built — `MovementActionService.FindNearest` (`ColourProperty` → `BuildablePropertyIndexes`) + the `NearestOwnedByOther` filter; same path as the %ComChest nearest-station card.
 - Collect £500 and do not turn around
-  - `MoneyAction{Receive, 500, Bank}` + suppress the default double direction-change (`FlipDirection`).
-  - ⬜ NEW: "do not turn around" direction-suppress (§2.7). Money part ✅.
+  - `MoneyAction{Receive, 500, Bank}` + card `SuppressDefault{SuppressDirectionChange}` (suppresses the double's `FlipDirection`).
+  - ✅ Built — money via `MoneyActionService`; `PlayerTurnOrchestrator:112` gates the double's `FlipDirection` on `!suppressDefault.SuppressDirectionChange` (the SuppressDefault refactor).
 - Tax Rise! All taxes are doubled until another double is rolled [GLOBAL EVENT]
   - Set `EventInfo.TaxMultiplier = 2`.
   - ✅ Built — `GlobalEventActionService` (maps the named event via `GlobalEventService`); clear-on-double built.
@@ -365,11 +365,11 @@ You get a double card for rolling a double (or a triple downgraded to a double)
   - Held: receive the whole FP pot (`GameModel.FreeParkingAmount`), uncapped. `ConditionType=ChoiceCardholderTurn`, `Trigger=OnLandFreeParking` (play on landing FP).
   - ✅ Action built — `MoneyAction{Receive, Counterparty=FreeParking, Basis=PercentOfFreeParkingPot, Amount=100}`. (Held; fires via the trigger layer.)
 - Your double is converted into a triple
-  - **Dice** action: convert the rolled double → triple. `ConditionType=None`.
-  - ⬜ NEW: **Dice** action (§1); applies before the `Doubles/TriplesInRow` counters (§4, §2.13).
+  - `DiceAction{Kind=ConvertDoubleToTriple}`, resolve-on-draw. `ConditionType=None`.
+  - ✅ Built — `DiceActionService` sets `GameModel.ModifiedDiceRollType=Triple`; `PlayerTurnOrchestrator` double branch re-routes through `ResolveTripleBonus`+`HandleTripleRoll` *before* the `Doubles/TriplesInRow` counters bump at `TransitionToExtraTurn` (§4).
 - Swap a set with another player. Both sets get purged
-  - **Property** set-swap with a `ChosenPlayer` + **Building** purge of both swapped sets.
-  - ⬜ NEW: set-level swap (§2.12) + set-purge (§1 Building).
+  - `PropertyAction{Kind=SwapSet}`, resolve-on-draw. `ConditionType=None`.
+  - ✅ Built — `PropertyActionService.SwapSet`: holder picks one of their complete buildable sets, a target player who holds a complete set, and which of the target's sets to take; every title in each set is exchanged (`PropertyTransferService.Transfer`), then both swapped sets are purged (`PurgingService.PurgeProperties`, attributed to each set's new owner). No-op if the holder — or every opponent — lacks a complete set. Modelled as one action since the purge needs the swapped-set identity (§2.12).
 - Your credit rating plummets! Repay all your loans in full
   - **Loans** action: repay all the holder's outstanding loans in full (`GetOutstandingLoans`).
   - ✅ Built — `LoansActionService` (`Kind=RepayAll`; shortfall allowed via `TransactionService.RepayLoan`).
@@ -383,23 +383,23 @@ You get a triple card for rolling a triple (or a double upgraded to a triple)
   - **Property** action: acquire a chosen bank-owned property (TargetProperty over the bank pool).
   - ✅ Built — `PropertyAction{Kind=TakeFromBank}` (free acquisition via `PropertyTransferService.Buy`).
 - Each player rolls one die. The player with the lowest roll receives your triple bonus
-  - Dice-off lowest → transfer the holder's `TripleBonus` to that player.
-  - ⬜ NEW: **Dice** triple-bonus redirect via dice-off (§2.13); dice-off as a non-money target picker (§3.7).
+  - `DiceAction{Kind=ModifyTripleBonus, PayoutRedirectToLowestRoller=true}` + card `SuppressDefault{SuppressTripleBonus}`. `ConditionType=None`.
+  - ✅ Built — `DiceActionService.ModifyTripleBonus` rolls a one-die dice-off (`IncludeHolder=true`, lowest) and credits the holder's bonus to that roller via `PlayerService.ApplyTripleBonus(factor:1)` (accumulator still +£500; holder-wins → keeps it). **Requires** the card's `SuppressTripleBonus` so `PlayerTurnOrchestrator.TripleRoll` skips the default credit — else double-credit.
 - Roll one die. Multiple your triple bonus by the number rolled
-  - Scale the holder's `TripleBonus` by a one-die roll.
-  - ⬜ NEW: **Dice** triple-bonus scale (§2.13) — `DiceMultiplier=OneDie` applied to the bonus.
+  - `DiceAction{Kind=ModifyTripleBonus, PayoutMultiplyByDie=true}` + card `SuppressDefault{SuppressTripleBonus}`. `ConditionType=None`.
+  - ✅ Built — `DiceActionService.ModifyTripleBonus` rolls one die (`RollCardDice`) and applies `ApplyTripleBonus(factor: die)` to the holder (accumulator still +£500). **Requires** the card's `SuppressTripleBonus` (else the default credit + the card both fire).
 - You do not receive your triple bonus
-  - Suppress the default triple-bonus credit for the holder.
-  - ⬜ NEW: **Dice** triple-bonus suppress (§2.13); replaces the default triple credit.
+  - `DiceAction{Kind=ModifyTripleBonus, PayoutFactor=0}` + card `SuppressDefault{SuppressTripleBonus}`. `ConditionType=None`.
+  - ✅ Built — `ApplyTripleBonus(factor:0)` pays nothing (`payout=0`) but still bumps the accumulator +£500 ("You do not receive a triple bonus this time"). The card's `SuppressTripleBonus` skips the default credit. Note: suppress *alone* would wrongly skip the accumulator — the `factor:0` action is what keeps it growing.
 - Hand back half of your money or return a set to the bank
-  - 2 groups (OR): [`MoneyAction{Pay, Bank}` = 50% of the holder's current `Money`] OR [**Property** return a whole **set** to the bank]. `CardOptionPrompt`.
-  - 🟡 Partial — return-a-set (`PropertyAction{Kind=ReturnToBank, Set=true}`) ✅; ⬜ still: "half your money" amount basis (fraction of own cash).
+  - 2 groups (OR): [`MoneyAction{Pay, Bank, Basis=PercentOfOwnCash, Amount=50}`] OR [`PropertyAction{Kind=ReturnToBank, Set=true}`]. `CardOptionPrompt`. `ConditionType=None`.
+  - ✅ Built — half-money via `MoneyAmountBasis.PercentOfOwnCash` (`RealiseAmount`: `player.Money × 50 / 100`); return-a-set via `PropertyAction{Set=true}`. The triple-bonus default still fires (not suppressed — this is a penalty, not a bonus modifier).
 - Your cost to leave jail is reset to £50
-  - **Jail** leave-fee set: `PlayerModel.JailCost = 50`.
-  - 🟡 `JailCost` exists; ⬜ NEW: leave-fee **set** modifier (§2.5).
+  - `JailAction{Kind=ModifyLeaveFee, LeaveFeeSetTo=50, Target=Self}`. `ConditionType=None`.
+  - ✅ Built — `JailActionService` `ModifyLeaveFee` sets `PlayerModel.JailCost` to the exact amount.
 - Your triple bonus is doubled
-  - Scale the holder's `TripleBonus` ×2.
-  - ⬜ NEW: **Dice** triple-bonus ×2 (§2.13).
+  - `DiceAction{Kind=ModifyTripleBonus, PayoutFactor=2}` + card `SuppressDefault{SuppressTripleBonus}`. `ConditionType=None`.
+  - ✅ Built — `ApplyTripleBonus(factor:2)` pays `base × 2` (accumulator still +£500). **Requires** the card's `SuppressTripleBonus` (else the default credit + the doubled card both fire).
 - Return a set to the bank or pay £250 times the number of properties you own
   - 2 groups (OR): [**Property** return a whole set to the bank] OR [`MoneyAction{Pay, 250, FreeParking, PerUnit=PerProperty}`]. `CardOptionPrompt`.
   - ✅ Built — `PropertyAction{Kind=ReturnToBank, Set=true}` OR `MoneyAction{Pay, 250, FreeParking, PerUnit=PerProperty}`.
@@ -416,32 +416,32 @@ You get a tax card from landing on a tax space.
 
 **10 cards**: (all resolve-on-draw at the tax space, `ConditionType=None`, `SuppressDefault=true` unless they pay the normal tax. The "tax amount" is read via `AmountSource=TriggerAmount` — which must work in the **override-on-draw** path, §3.2)
 - Pay triple tax or pay half and go to jail
-  - 2 groups (OR): [`MoneyAction{Pay, FreeParking, AmountSource=TriggerAmount, ×3}`] OR [`MoneyAction{Pay, AmountSource=TriggerAmount, ×0.5}` + `MovementAction{AdvanceToIndex=100}`]. `CardOptionPrompt`.
-  - ⬜ NEW: `AmountSource` (§3.2); the ×0.5 factor.
+  - 2 groups (OR): [`MoneyAction{Pay, FreeParking, AmountSource=TriggerAmount, Amount=3}`] OR [`MoneyAction{Pay, FreeParking, AmountSource=TriggerAmount, Amount=0.5}` + `MovementAction{AdvanceToIndex=100}`]. `CardOptionPrompt`. Card `SuppressDefault{SuppressTaxPayment}`.
+  - ✅ Built — `TaxService.PayTax` assesses the tax up front and threads it as `CardActionContext.TriggerAmount` into `DrawCard` (override-on-draw context, §3.8); `MoneyAction.Amount` is now `decimal`, so the factor is `3` (triple) / `0.5` (half) directly (`RealiseAmount`: `TriggerAmount × Amount`). `SuppressTaxPayment` replaces the default tax.
 - Tax payment is tripled
-  - `MoneyAction{Pay, FreeParking, AmountSource=TriggerAmount, ×3}`.
-  - ⬜ NEW: `AmountSource` (§3.2).
+  - `MoneyAction{Pay, FreeParking, AmountSource=TriggerAmount, Amount=3}` + card `SuppressDefault{SuppressTaxPayment}`. `ConditionType=None`.
+  - ✅ Built — Tax-amount threading (§3.8) + decimal factor; pays `tax × 3` to Free Parking, `FinancialReason.Tax` on the receipt/toast.
 - Tax payment is doubled and every player pays
-  - The doubled tax applied to **every** player (each pays ×2).
-  - ⬜ NEW: `AmountSource` ×2 (§3.2) + apply-to-all-players.
+  - `MoneyAction{Pay, FreeParking, AmountSource=TriggerAmount, Amount=2, Target=Everyone}` + card `SuppressDefault{SuppressTaxPayment}`. `ConditionType=None`.
+  - ✅ Built — the multi-target path realises `tax × 2` per player from the threaded trigger amount (holder included); `FinancialReason.Tax` on each receipt.
 - Pay the tax due, but receive a free hotel (if there are hotels available)
   - Pay the normal tax (default runs) + **Building** grant a free hotel, no-op if none left.
   - ✅ Built — `BuildingAction{Kind=GrantHotel}` (bumps a chosen 4-house property → hotel; no-op if no hotel/eligible). Tax payment = the default.
 - Tax payment is paid by the player rolling the lowest number
-  - Dice-off lowest pays the (trigger-amount) tax; holder's tax suppressed.
-  - ⬜ NEW: tax-payer redirect via dice-off (§3.7) + `AmountSource` (§3.2).
+  - `MoneyAction{Pay, FreeParking, AmountSource=TriggerAmount, Amount=1, Target=DiceOffPlayer, DiceOff={Highest=false, IncludeHolder=false}}` + card `SuppressDefault{SuppressTaxPayment}`. `ConditionType=None`.
+  - ✅ Built — `PlayerTarget.DiceOffPlayer`: `MoneyActionService.ApplyToDiceOffSubject` rolls the dice-off (lowest of the *other* players) and that player pays the threaded tax to Free Parking (`FinancialReason.Tax`). No opponent → no-op.
 - Tax error. Receive what you have to pay
-  - `MoneyAction{Receive, Bank, AmountSource=TriggerAmount}` (receive the tax amount instead of paying).
-  - ⬜ NEW: `AmountSource` (§3.2).
+  - `MoneyAction{Receive, Bank, AmountSource=TriggerAmount, Amount=1}` + card `SuppressDefault{SuppressTaxPayment}`. `ConditionType=None`.
+  - ✅ Built — receives `tax × 1` from the bank via the threaded trigger amount (`FinancialReason.Tax`).
 - Tax payment is halved
-  - `MoneyAction{Pay, FreeParking, AmountSource=TriggerAmount, ×0.5}`.
-  - ⬜ NEW: `AmountSource` + ×0.5 (§3.2).
+  - `MoneyAction{Pay, FreeParking, AmountSource=TriggerAmount, Amount=0.5}` + card `SuppressDefault{SuppressTaxPayment}`. `ConditionType=None`.
+  - ✅ Built — decimal factor `0.5` over the threaded tax amount (`FinancialReason.Tax`).
 - Tax refund multiplied by one die.
-  - `MoneyAction{Receive, Bank, AmountSource=TriggerAmount, DiceMultiplier=OneDie}` (the tax refund × a die).
-  - ⬜ NEW: `AmountSource` with `DiceMultiplier` over the trigger amount (§3.2).
+  - `MoneyAction{Receive, Bank, AmountSource=TriggerAmount, Amount=1, DiceMultiplier=OneDie}` + card `SuppressDefault{SuppressTaxPayment}`. `ConditionType=None`.
+  - ✅ Built — `RealiseAmount` applies the one-die multiplier after the trigger-amount base (`tax × die`); receive from bank (`FinancialReason.Tax`).
 - The player rolling the lowest number pays the tax, and swaps places with you
-  - Dice-off lowest pays the tax + `MovementAction{Kind=Swap}` with that same (dice-off-selected) player.
-  - ⬜ NEW: tax-payer redirect + `AmountSource` (§3.2); `Swap` target = dice-off-selected (§3.7).
+  - Group of two (ordered): `MoneyAction{Pay, FreeParking, AmountSource=TriggerAmount, Amount=1, Target=DiceOffPlayer, DiceOff={Highest=false, IncludeHolder=false}}` then `MovementAction{Kind=Swap, Target=DiceOffPlayer}`. Card `SuppressDefault{SuppressTaxPayment}`. `ConditionType=None`.
+  - ✅ Built — the money action resolves the dice-off (lowest *other* roller) and stashes it on `CardActionContext.DiceOffPlayerId`; the following Swap reads the same player back (so the money action must be authored first). Lowest pays the tax, then swaps places with the holder.
 - Tax evasion! Pay a £500 fine and go to jail
   - `MoneyAction{Pay, 500, FreeParking}` + `MovementAction{AdvanceToIndex=100}`; suppress default tax.
   - ✅ Buildable now (fixed £500; `SuppressDefault` exists).

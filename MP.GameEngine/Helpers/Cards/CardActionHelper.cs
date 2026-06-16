@@ -19,27 +19,30 @@ public static class CardActionHelper
     /// <param name="engine">The game engine bundle (for the player list and the prompt).</param>
     /// <param name="holder">The card holder choosing/being targeted.</param>
     /// <param name="target">Which players the action targets.</param>
+    /// <param name="jailFilter">Whether to filter players based on jail status</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>
     /// The resolved players. Empty when a <see cref="PlayerTarget.ChosenPlayer"/> has no eligible
     /// candidates (e.g. the holder is the only active player).
     /// </returns>
     public static async Task<List<PlayerModel>> ResolveTargets(Services.Framework.GameEngine engine, PlayerModel holder,
-        PlayerTarget target, CancellationToken ct)
+        PlayerTarget target, CancellationToken ct, JailFilter jailFilter = JailFilter.None)
     {
         switch (target)
         {
             case PlayerTarget.Self:
                 return [holder];
             case PlayerTarget.AllOthers:
-                return engine.Cache.Game.GetPlayers(holder.PlayerId);
+                var players = engine.Cache.Game.GetPlayers(holder.PlayerId);
+                return FilterJailed(players, jailFilter); 
             case PlayerTarget.Everyone:
                 // The holder first, then every other active player (clockwise from the holder).
-                var everyone = new List<PlayerModel> { holder };
-                everyone.AddRange(engine.Cache.Game.GetPlayers(holder.PlayerId));
-                return everyone;
+                var everyone = engine.Cache.Game.GetPlayers(holder.PlayerId, excludePovPlayer: false);
+                return FilterJailed(everyone, jailFilter);
             case PlayerTarget.ChosenPlayer:
                 var others = engine.Cache.Game.GetPlayers(holder.PlayerId);
+                others = FilterJailed(others, jailFilter);
+                
                 if (others.Count == 0)
                     return [];
 
@@ -60,4 +63,12 @@ public static class CardActionHelper
                 throw new ArgumentOutOfRangeException(nameof(target), target, null);
         }
     }
+    
+    private static List<PlayerModel> FilterJailed(List<PlayerModel> players, JailFilter filter)
+        => filter switch
+        {
+            JailFilter.OnlyJailed => players.Where(p => p.IsInJail).ToList(),
+            JailFilter.OnlyNotJailed => players.Where(p => !p.IsInJail).ToList(),
+            _ => players
+        };
 }

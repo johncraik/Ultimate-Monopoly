@@ -61,7 +61,7 @@ public static class CardDisplayHelper
                 if(moneyAction.PercentageApplies)
                     cost = (cost * playerCap) / 100;
                 
-                displayCost = MoneyHelper.NormaliseAmountToPositive(cost, roundingRule, 
+                displayCost = MoneyHelper.NormaliseAmountToPositive((long)Math.Round(cost, MidpointRounding.AwayFromZero), roundingRule,
                     cost < 0 ? FinancialReason.CardCharge : FinancialReason.CardPayout);
             }
                 

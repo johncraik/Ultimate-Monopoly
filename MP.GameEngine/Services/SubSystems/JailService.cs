@@ -7,7 +7,6 @@ using MP.GameEngine.Models.EventReceipts;
 using MP.GameEngine.Models.Prompts.PromptTypes;
 using MP.GameEngine.Models.Prompts.PromptTypes.Responses;
 using MP.GameEngine.Models.Snapshot;
-using MP.GameEngine.Models.Snapshot.Cards;
 
 namespace MP.GameEngine.Services.SubSystems;
 
@@ -170,7 +169,7 @@ public class JailService
     public async Task GoToJail(Framework.GameEngine engine, PlayerModel player, CancellationToken ct)
     {
         var suppressDefault =  await engine.CardService.DrawCard(engine, player, CardType.GoToJail, ct);
-        if(suppressDefault) return;
+        if(suppressDefault.SuppressGoToJail) return;
         
         engine.CiteRule(RuleCode.GoToJail_SendToJail);
         await SendPlayerToJail(engine, player, ct);

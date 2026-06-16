@@ -47,7 +47,7 @@ public class MovementActionService : ICardActionService<MovementAction>
     {
         if (action.Kind == MovementKind.Swap)
         {
-            await ApplySwap(engine, player, action, ct);
+            await ApplySwap(engine, player, action, context, ct);
             return true;
         }
 
@@ -94,10 +94,20 @@ public class MovementActionService : ICardActionService<MovementAction>
     /// A swap exchanges the holder's and one chosen player's board positions — no GO bonus, and no
     /// landed-space action (game-rules.md Movement rule 4).
     /// </summary>
-    private async Task ApplySwap(Framework.GameEngine engine, PlayerModel player, MovementAction action, CancellationToken ct)
+    private async Task ApplySwap(Framework.GameEngine engine, PlayerModel player, MovementAction action, CardActionContext? context, CancellationToken ct)
     {
-        var pick = action.Target == PlayerTarget.Self ? PlayerTarget.ChosenPlayer : action.Target;
-        var target = (await CardActionHelper.ResolveTargets(engine, player, pick, ct)).FirstOrDefault();
+        PlayerModel? target;
+        if (action.Target == PlayerTarget.DiceOffPlayer)
+        {
+            // The dice-off winner an earlier action in this group resolved (e.g. the tax-payer redirect, card 444).
+            target = context?.DiceOffPlayerId is { } id ? engine.Cache.Game.GetPlayer(id) : null;
+        }
+        else
+        {
+            var pick = action.Target == PlayerTarget.Self ? PlayerTarget.ChosenPlayer : action.Target;
+            target = (await CardActionHelper.ResolveTargets(engine, player, pick, ct)).FirstOrDefault();
+        }
+
         if (target is null || target.PlayerId == player.PlayerId)
             return;
 
@@ -160,11 +170,11 @@ public class MovementActionService : ICardActionService<MovementAction>
     }
 
     /// <summary>Whether a target passes the action's jail filter (only-jailed / only-not-jailed / no filter).</summary>
-    private static bool MatchesJailFilter(PlayerModel player, MovementJailFilter filter)
+    private static bool MatchesJailFilter(PlayerModel player, JailFilter filter)
         => filter switch
         {
-            MovementJailFilter.OnlyJailed => player.IsInJail,
-            MovementJailFilter.OnlyNotJailed => !player.IsInJail,
+            JailFilter.OnlyJailed => player.IsInJail,
+            JailFilter.OnlyNotJailed => !player.IsInJail,
             _ => true
         };
 }

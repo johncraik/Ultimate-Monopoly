@@ -6,6 +6,7 @@ using MP.GameEngine.Helpers.Cards;
 using MP.GameEngine.Models.Cards.Actions;
 using MP.GameEngine.Models.Prompts.PromptTypes;
 using MP.GameEngine.Models.Snapshot;
+using MP.GameEngine.Services.SubSystems;
 
 namespace MP.GameEngine.Services.Cards.Actions;
 
@@ -19,11 +20,17 @@ namespace MP.GameEngine.Services.Cards.Actions;
 public class PropertyActionService : ICardActionService<PropertyAction>
 {
     private readonly PropertyTransferService _propertyTransferService;
+    private readonly PurgingService _purgingService;
+    private readonly PropertyService _propertyService;
 
-    /// <summary>Creates the property-action handler over the title-transfer seam it routes through.</summary>
-    public PropertyActionService(PropertyTransferService propertyTransferService)
+    /// <summary>Creates the property-action handler over the title-transfer, purge and normalisation seams it routes through.</summary>
+    public PropertyActionService(PropertyTransferService propertyTransferService,
+        PurgingService purgingService,
+        PropertyService propertyService)
     {
         _propertyTransferService = propertyTransferService;
+        _purgingService = purgingService;
+        _propertyService = propertyService;
     }
 
     /// <summary>Dispatches by kind.</summary>
@@ -47,6 +54,10 @@ public class PropertyActionService : ICardActionService<PropertyAction>
 
             case PropertyActionKind.ClearFreeParkingToBank:
                 ClearFreeParkingToBank(engine);
+                break;
+
+            case PropertyActionKind.SwapSet:
+                await SwapSet(engine, player, ct);
                 break;
         }
 
@@ -186,5 +197,110 @@ public class PropertyActionService : ICardActionService<PropertyAction>
             property.ReturnToBank();
 
         engine.Cache.Game.FreeParkingAmount = 0;
+    }
+
+    /// <summary>
+    /// Swaps one of the holder's complete buildable sets for one of a chosen player's complete sets —
+    /// every title in each set changes hands — then purges both swapped sets (now under their new
+    /// owners). Silent no-op when the holder holds no complete set, or no other player does.
+    /// </summary>
+    private async Task SwapSet(Framework.GameEngine engine, PlayerModel holder, CancellationToken ct)
+    {
+        // A player who holds a complete buildable set — the holder picks who to swap with.
+        var candidates = engine.Cache.Game.GetPlayers(holder.PlayerId)
+            .Where(p => CompleteSets(engine, p.PlayerId).Count > 0)
+            .ToList();
+        if (candidates.Count == 0)
+            return;
+        
+        // The holder's set to give up.
+        var holderSet = await ChooseCompleteSet(engine, holder.PlayerId, holder.PlayerId,
+            "Swap a Set", "Choose one of your sets to swap away.", ct);
+        if (holderSet is null)
+            return;
+        
+        //Prompt to choose a player
+        var targetResponse = await engine.PromptProvider.RequestAsync(new TargetPlayerPrompt
+        {
+            PlayerId = holder.PlayerId,
+            Title = "Swap a Set",
+            Body = "Choose a player to swap a set with.",
+            EligiblePlayerIds = candidates.Select(p => p.PlayerId).ToList(),
+            Count = 1
+        }, ct);
+
+        var target = engine.Cache.Game.GetPlayer(targetResponse.SelectedPlayerIds.FirstOrDefault() ?? string.Empty);
+        if (target is null)
+            return;
+
+        // The target's set the holder takes.
+        var targetSet = await ChooseCompleteSet(engine, holder.PlayerId, target.PlayerId,
+            "Choose a Set", "Choose a set to take from this player.", ct);
+        if (targetSet is null)
+            return;
+
+        // Snapshot both sets' indexes before any title moves (the two sets are distinct colours, so
+        // they never overlap — snapshot regardless to keep the two transfers independent).
+        var holderIndexes = PropertySetHelper.GetIndexes(holderSet.Value);
+        var targetIndexes = PropertySetHelper.GetIndexes(targetSet.Value);
+
+        TransferSet(engine, holder, target, holderIndexes);   // holder's set → target
+        TransferSet(engine, target, holder, targetIndexes);   // target's set → holder
+
+        // Both swapped sets are purged, attributed to their new owners.
+        _purgingService.PurgeProperties(engine, target, holderIndexes);
+        _purgingService.PurgeProperties(engine, holder, targetIndexes);
+
+        engine.Cache.Game.CheckReservationRuleSetObtained(holder.PlayerId);
+        engine.Cache.Game.CheckReservationRuleSetObtained(target.PlayerId);
+        _propertyService.NormaliseProperties(engine);
+    }
+
+    /// <summary>The complete buildable sets <paramref name="playerId"/> owns (reserved properties excluded).</summary>
+    private static List<PropertySet> CompleteSets(Framework.GameEngine engine, string playerId)
+        => PropertySetHelper.GetOwnedSets(playerId,
+            engine.Cache.Game.GetOwnedProperties(playerId, includeReserved: false));
+
+    /// <summary>
+    /// Prompts <paramref name="chooserId"/> to pick one of <paramref name="ownerId"/>'s complete buildable
+    /// sets (no prompt when they hold exactly one; null when they hold none), via a representative property
+    /// of each set. Returns the chosen set.
+    /// </summary>
+    private async Task<PropertySet?> ChooseCompleteSet(Framework.GameEngine engine, string chooserId, string ownerId,
+        string title, string body, CancellationToken ct)
+    {
+        var sets = CompleteSets(engine, ownerId);
+        if (sets.Count == 0)
+            return null;
+        if (sets.Count == 1)
+            return sets[0];
+
+        var representatives = sets
+            .Select(s => engine.Cache.Game.GetOwnedProperties(ownerId, s).First().BoardIndex)
+            .ToList();
+
+        var response = await engine.PromptProvider.RequestAsync(new TargetPropertyPrompt
+        {
+            PlayerId = chooserId,
+            Title = title,
+            Body = body,
+            EligibleBoardIndexes = representatives,
+            Count = 1
+        }, ct);
+
+        return response.SelectedBoardIndexes.Count == 0
+            ? null
+            : PropertySetHelper.ResolveSet(response.SelectedBoardIndexes[0]);
+    }
+
+    /// <summary>Moves every title at <paramref name="indexes"/> from one player to another.</summary>
+    private void TransferSet(Framework.GameEngine engine, PlayerModel from, PlayerModel to, List<ushort> indexes)
+    {
+        foreach (var index in indexes)
+        {
+            var property = engine.Cache.Game.GetPropertySpace(index);
+            if (property is not null)
+                _propertyTransferService.Transfer(engine, from, to, property);
+        }
     }
 }

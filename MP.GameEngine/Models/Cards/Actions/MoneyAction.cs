@@ -10,8 +10,12 @@ namespace MP.GameEngine.Models.Cards.Actions;
 /// </summary>
 public sealed class MoneyAction : CardAction
 {
-    /// <summary>Base amount before per-unit / dice / percentage scaling. Read as a <i>percent</i> for the percentage <see cref="Basis"/> values.</summary>
-    public long Amount { get; set; }
+    /// <summary>
+    /// Base amount before per-unit / dice / percentage scaling. Read as a <i>percent</i> for the percentage
+    /// <see cref="Basis"/> values, and as the <i>factor</i> for <see cref="AmountSource.TriggerAmount"/> —
+    /// decimal so fractional factors are expressible (e.g. ×0.5 "pay half the tax" = <c>Amount = 0.5</c>).
+    /// </summary>
+    public decimal Amount { get; set; }
 
     public MoneyDirection Direction { get; set; }
     public MoneyCounterparty Counterparty { get; set; }

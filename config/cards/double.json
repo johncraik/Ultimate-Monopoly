@@ -1,0 +1,169 @@
+[
+    {
+        "RawText": "Advance to the nearest buildable property owned by another player",
+        "CardType": "Double",
+        "ConditionType": "None",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Movement",
+                        "Kind": 2,
+                        "Nearest": 2,
+                        "NearestOwnedByOther": true
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Collect {G0__0} and do not turn around",
+        "CardType": "Double",
+        "ConditionType": "None",
+        "SuppressDefault": {
+            "SuppressDirectionChange": true
+        },
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Money",
+                        "Amount": 500,
+                        "Direction": 1,
+                        "Counterparty": 0
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Tax Rise! All taxes are doubled until another double is rolled",
+        "CardType": "Double",
+        "ConditionType": "None",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "GlobalEvent",
+                        "Event": 2,
+                        "Multiplier": 2
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "FREE Free Parking! Free parking is disabled until another double is rolled",
+        "CardType": "Double",
+        "ConditionType": "None",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "GlobalEvent",
+                        "Event": 3
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Prisons at max capacity! No player can go to jail, instead they must pay their jail fee when sent to jail. This happens until another double is rolled",
+        "CardType": "Double",
+        "ConditionType": "None",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "GlobalEvent",
+                        "Event": 4
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Send any player of your choice to jail. Keep until needed",
+        "CardType": "Double",
+        "ConditionType": "ChoiceCardholderTurn",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Jail",
+                        "Kind": 0,
+                        "Target": 1
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Receive ALL the money from free parking (uncapped). Keep until needed",
+        "CardType": "Double",
+        "ConditionType": "ChoiceCardholderTurn",
+        "Conditions": [
+            {
+                "Trigger": 8
+            }
+        ],
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Money",
+                        "Amount": 100,
+                        "Direction": 1,
+                        "Counterparty": 1,
+                        "Basis": 2
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Your double is converted into a triple",
+        "CardType": "Double",
+        "ConditionType": "None",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Dice",
+                        "Kind": 1
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Swap a set with another player. Both sets get purged",
+        "CardType": "Double",
+        "ConditionType": "None",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Property",
+                        "Kind": 5
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Your credit rating plummets! Repay all your loans in full",
+        "CardType": "Double",
+        "ConditionType": "None",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Loans",
+                        "Kind": 1
+                    }
+                ]
+            }
+        ]
+    }
+]

@@ -30,5 +30,7 @@ public enum CardTrigger
     OnRentDue               = 1 << 11,  // rent is due / paid (112)
     OnNextRoll              = 1 << 12,  // after the holder's next roll (26)
     OnNextMove              = 1 << 13,  // after the holder's next move (70)
-    OnCompleteSet           = 1 << 14   // completing a colour set (79)
+    OnCompleteSet           = 1 << 14,  // completing a colour set (79)
+    OnTaxLanded             = 1 << 15,  // land on a tax space — the assessed tax is threaded as the trigger amount ("your next tax is tripled")
+    OnSnakeEyes             = 1 << 16   // roll snake eyes (double 1) — the £500 bonus moment ("pay your snake-eyes money to the lowest roller")
 }

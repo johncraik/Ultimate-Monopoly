@@ -57,6 +57,7 @@ public static class ServiceRegistration
         services.TryAddScoped<ICardActionService<GlobalEventAction>, GlobalEventActionService>();
         services.TryAddScoped<ICardActionService<DeckDrawAction>, DeckDrawActionService>();
         services.TryAddScoped<ICardActionService<DiceAction>, DiceActionService>();
+        services.TryAddScoped<ICardActionService<NoOpAction>, NoOpActionService>();
 
         return services;
     }

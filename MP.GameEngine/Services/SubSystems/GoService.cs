@@ -49,7 +49,7 @@ public class GoService
     public async Task LandOnGo(Framework.GameEngine engine, PlayerModel player, CancellationToken ct)
     {
         var suppressDefault = await engine.CardService.DrawCard(engine, player, CardType.Go, ct);
-        if(suppressDefault) return;
+        if(suppressDefault.SuppressGoBonus) return;
         
         //Cite rule and notify user:
         engine.CiteRule(RuleCode.Go_LandOn);
