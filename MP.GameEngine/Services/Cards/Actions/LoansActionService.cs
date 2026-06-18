@@ -47,10 +47,13 @@ public class LoansActionService : ICardActionService<LoansAction>
                 if (outstanding == 0)
                     continue;
 
-                // Mark the loan settled either way; only RepayAll moves money (the bank is paid).
-                loan.PaidBack += outstanding;
+                // Debit BEFORE marking the loan settled (RepayAll only): a shortfall during repayment must
+                // see this loan still outstanding, so it counts toward the max-3 gate and the player can't
+                // take a 4th loan to clear it — they pay from genuine funds or go bankrupt. WipeAll just
+                // forgives the debt (no money moves).
                 if (action.Kind == LoanCardKind.RepayAll)
                     await _transactionService.RepayLoan(engine, target, outstanding, ct);
+                loan.PaidBack += outstanding;
             }
         }
         

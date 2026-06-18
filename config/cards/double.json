@@ -107,6 +107,9 @@
         "RawText": "Receive ALL the money from free parking (uncapped). Keep until needed",
         "CardType": "Double",
         "ConditionType": "ChoiceCardholderTurn",
+        "SuppressDefault": {
+            "SuppressFreeParkingMoneyTake": true
+        },
         "Conditions": [
             {
                 "Trigger": 8

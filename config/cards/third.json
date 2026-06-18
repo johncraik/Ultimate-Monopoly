@@ -183,6 +183,9 @@
         "RawText": "Cancel a players triple bonus. Keep until needed",
         "CardType": "Third",
         "ConditionType": "ChoiceAnyPlayerTurn",
+        "SuppressDefault": {
+            "SuppressTripleBonus": true
+        },
         "Conditions": [
             {
                 "Trigger": 128
@@ -625,6 +628,9 @@
         "RawText": "Pay the money you receive for snake eyes to the player who rolls the lowest number",
         "CardType": "Third",
         "ConditionType": "MetCardholderTurn",
+        "SuppressDefault": {
+            "SuppressSnakeEyes": true
+        },
         "Conditions": [
             {
                 "Trigger": 65536
@@ -635,8 +641,9 @@
                 "Actions": [
                     {
                         "$type": "Money",
-                        "Direction": 0,
-                        "Counterparty": 3,
+                        "Direction": 1,
+                        "Counterparty": 0,
+                        "Target": 4,
                         "Basis": 4,
                         "DiceOff": {}
                     }

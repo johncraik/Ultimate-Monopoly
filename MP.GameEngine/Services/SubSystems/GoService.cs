@@ -37,9 +37,12 @@ public class GoService
         
         bonus *= goPasses;
         
-        _ = await _triggerService.OnPassGo(engine, player, bonus, ct);
-        var suppressDefault = await _triggerService.OnOtherPassGo(engine, player, bonus, ct);
-        if(!suppressDefault.SuppressGoBonus)
+        var passGoSuppress = await _triggerService.OnPassGo(engine, player, bonus, ct);
+        var otherPassGoSuppress = await _triggerService.OnOtherPassGo(engine, player, bonus, ct);
+        
+        var sd = new SuppressDefault(passGoSuppress.Type());
+        sd.Aggregate(otherPassGoSuppress);
+        if(!sd.SuppressGoBonus)
         {
             //Cite rule and give GO bonus:
             engine.CiteRule(player.Direction == PlayerDirection.Forward ? RuleCode.Go_PassClockwise : RuleCode.Go_PassAntiClockwise);

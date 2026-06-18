@@ -74,7 +74,7 @@ public class FreeParkingService
         if (!sd.SuppressFreeParkingMoneyTake && (engine.Cache.Game.FreeParkingAmount == 0 
             || engine.Cache.Game.GetOwnedProperties(player.PlayerId).Count == 0))
         {
-            if(suppressDefault.SuppressFreeParkingFine)
+            if(sd.SuppressFreeParkingFine)
                 return;
             
             //A) No money, so pay fee based on dice roll
@@ -117,7 +117,7 @@ public class FreeParkingService
         
         if (eligibleProperties.Count == 0)
         {
-            if(suppressDefault.SuppressFreeParkingPurge)
+            if(sd.SuppressFreeParkingPurge)
                 return;
             
             //C) Purge a property, take money, and take property from FP (already taken)
@@ -131,7 +131,7 @@ public class FreeParkingService
             return;
         }
         
-        if(suppressDefault.SuppressFreeParkingPropertyHandIn)
+        if(sd.SuppressFreeParkingPropertyHandIn)
             return;
         
         //B) Hand in an eligible property

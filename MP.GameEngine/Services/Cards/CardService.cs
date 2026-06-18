@@ -132,7 +132,8 @@ public class CardService
             //to the player's hand, untouched, so they can try again. Undo the chosen-group mark.
             if (chosenGroup is not null)
                 chosenGroup.IsChosenGroup = false;
-            player.Cards.Add(card);
+            //Re-add at index 0: cards are drawn from the front, so a returned card goes back to the front.
+            player.Cards.Insert(0, card);
             return new SuppressDefault(SuppressDefaultType.None);
         }
 
@@ -141,9 +142,11 @@ public class CardService
 
         if(chosenGroup.TurnsRemaining is > 1)
         {
-            //Still can be played/activated again later — decrement and return it to the hand.
+            //Still can be played/activated again later — decrement and return it to the hand at index 0, so it
+            //stays the first match on the next trigger (keeps firing until spent, rather than flip-flopping with
+            //a sibling multi-use card that was appended after it).
             chosenGroup.TurnsRemaining--;
-            player.Cards.Add(card);
+            player.Cards.Insert(0, card);
             return card.SuppressDefault;
         }
 
@@ -241,6 +244,7 @@ public class CardService
             DiceAction di => _diceActionService.ResolveActionAsync(engine, player, di, ct, context),
             NoOpAction n => _noOpActionService.ResolveActionAsync(engine, player, n, ct, context),
             CardTransferAction ctr => _cardTransferActionService.ResolveActionAsync(engine, player, ctr, ct, context),
+            ImmunityAction i => Task.FromResult(true),  //Immunity cards (immunity action) always resolve - handled separately in CardImmunityService
             _ => throw new ArgumentOutOfRangeException(nameof(action), action, "Unhandled card action type.")
         };
     

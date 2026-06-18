@@ -14,8 +14,8 @@ public class PurgingService
 
 
     public async Task PurgeOwnProperty(Framework.GameEngine engine, PlayerModel player, ushort propCount, CancellationToken ct)
-        => await PurgeProperty(engine, player, propCount, ct);
-    
+        => await PurgeProperty(engine, player, player, propCount, ct);
+
     public async Task PurgeOthersProperty(Framework.GameEngine engine, PlayerModel player, ushort propCount, CancellationToken ct)
     {
         var players = engine.Cache.Game.GetPlayers(player.PlayerId);
@@ -27,48 +27,53 @@ public class PurgingService
             EligiblePlayerIds = players.Select(p => p.PlayerId).ToList(),
             Count = 1
         }, ct: ct);
-        
+
         if(response.SelectedPlayerIds.Count == 0)
             throw new InvalidOperationException("No player selected");
-        
+
         var purgingPlayer = engine.Cache.Game.GetPlayer(response.SelectedPlayerIds[0]);
         if(purgingPlayer is null)
             throw new InvalidOperationException("Player not found");
-        
-        await PurgeProperty(engine, purgingPlayer, propCount, ct);
+
+        //The HOLDER chooses which of the opponent's properties to purge: chooser = player, owner = opponent.
+        await PurgeProperty(engine, player, purgingPlayer, propCount, ct);
     }
 
-    private async Task PurgeProperty(Framework.GameEngine engine, PlayerModel purgingPlayer, ushort propCount, CancellationToken ct)
+    private async Task PurgeProperty(Framework.GameEngine engine, PlayerModel chooser, PlayerModel owner, ushort propCount, CancellationToken ct)
     {
-        //Prompt player to purge property
-        var eligibleProps = engine.Cache.Game.BuiltOnProperties(purgingPlayer.PlayerId);
+        //The OWNER's built-on properties are the eligible set; the CHOOSER (the holder, or the owner for a
+        //self-purge) is the one prompted to pick — never the opponent whose property is being purged.
+        var eligibleProps = engine.Cache.Game.BuiltOnProperties(owner.PlayerId);
         eligibleProps = eligibleProps.Where(p => !p.HasBeenPurged).ToList();
         if (eligibleProps.Count == 0)
         {
-            _ = await engine.PromptProvider.Acknowledge(purgingPlayer.PlayerId, "No Properties to Purge", 
-                "You have no eligible properties to purge. Lucky you!", ct: ct);
+            _ = await engine.PromptProvider.Acknowledge(chooser.PlayerId, "No Properties to Purge",
+                chooser.PlayerId == owner.PlayerId
+                    ? "You have no eligible properties to purge. Lucky you!"
+                    : "The selected player has no eligible properties to purge.", ct: ct);
             return;
         }
-        
+
         var response = await engine.PromptProvider.RequestAsync(new TargetPropertyPrompt
         {
-            PlayerId = purgingPlayer.PlayerId,
+            PlayerId = chooser.PlayerId,
             Title = propCount == 1 ? "Purge a Property" : "Purge Properties",
             Body = propCount == 1 ? "Which property would you like to purge?" : $"Which {propCount} properties would you like to purge?",
             EligibleBoardIndexes = eligibleProps.Select(p => p.BoardIndex).ToList(),
             Count = propCount
         }, ct: ct);
-        
+
         if(response.SelectedBoardIndexes.Count == 0)
             throw new InvalidOperationException("No property selected");
 
         if(response.SelectedBoardIndexes.Any(i => !eligibleProps.Select(p => p.BoardIndex).Contains(i)))
             throw new InvalidOperationException("Invalid property selected");
-        
-        PurgeProperties(engine, purgingPlayer, response.SelectedBoardIndexes.ToList());
-        
-        _ = await engine.PromptProvider.Acknowledge(purgingPlayer.PlayerId, 
-             propCount == 1 ? "Property Purged" : "Properties Purged", 
+
+        //Receipt attributes the purge to the OWNER (their property lost its buildings), not the chooser.
+        PurgeProperties(engine, owner, response.SelectedBoardIndexes.ToList());
+
+        _ = await engine.PromptProvider.Acknowledge(chooser.PlayerId,
+             propCount == 1 ? "Property Purged" : "Properties Purged",
              propCount == 1 ? "Property has been purged" : "Properties have been purged", ct: ct);
     }
 

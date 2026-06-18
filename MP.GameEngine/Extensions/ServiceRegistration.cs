@@ -47,6 +47,7 @@ public static class ServiceRegistration
         //Cards
         services.TryAddScoped<CardService>();
         services.TryAddScoped<CardTriggerService>();
+        services.TryAddScoped<CardImmunityService>();
         services.TryAddScoped<ICardActionService<MoneyAction>, MoneyActionService>();
         services.TryAddScoped<ICardActionService<MovementAction>, MovementActionService>();
         services.TryAddScoped<ICardActionService<JailAction>, JailActionService>();

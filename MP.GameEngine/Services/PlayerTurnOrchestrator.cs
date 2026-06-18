@@ -103,6 +103,10 @@ public class PlayerTurnOrchestrator
                     var suppressCard = await engine.CardService.DrawCard(engine, player, CardType.Double, ct);
                     suppressDefault.Aggregate(suppressCard);
                     
+                    //Re-get dice roll (double card may have changed roll type):
+                    dice = engine.Cache.GetTurnDiceRoll() 
+                           ?? throw new InvalidOperationException("Dice roll cannot be null");
+                    
                     //Switch roll type again IF card has changed roll type:
                     switch (dice.RollType)
                     {
@@ -272,6 +276,10 @@ public class PlayerTurnOrchestrator
             //Credit the triple bonus, and increase it (default triple bonus - card will credit custom if needed):
             await _playerService.ResolveTripleBonus(engine, player, ct);
         }
+        
+        //Re-get dice roll (triple card may have changed roll type):
+        dice = engine.Cache.GetTurnDiceRoll() 
+               ?? throw new InvalidOperationException("Dice roll cannot be null");
                     
         //Switch roll type again IF card has changed roll type:
         switch (dice.RollType)

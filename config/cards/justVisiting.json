@@ -186,7 +186,8 @@
                         "$type": "Movement",
                         "Kind": 4,
                         "Target": 2,
-                        "JailFilter": 2
+                        "JailFilter": 2,
+                        "CollectGoBonus": true
                     }
                 ]
             }

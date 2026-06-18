@@ -61,10 +61,11 @@ public class LoanService
         _ = await engine.PromptProvider.Acknowledge(player.PlayerId, "Loan Repayment Made",
             $"You have just paid {RuleDictionary.Currency}{amount} off your oldest loan.", ct: ct);
         
-        //Forced payment does not transfer overpay to next loan
-        firstLoan.PaidBack += amount;
+        //Forced payment does not transfer overpay to next loan. Debit BEFORE marking the loan settled so a
+        //shortfall sees it still outstanding — the player can't borrow a 4th loan to clear it (max-3 gate).
         engine.CiteRule(RuleCode.Loan_RepaidOldestOverpaymentLost);
         await _transactionService.RepayLoan(engine, player, amount, ct);
+        firstLoan.PaidBack += amount;
     }
 
     public async Task RepayLoansCustom(Framework.GameEngine engine, uint amount, CancellationToken ct)
@@ -111,8 +112,8 @@ public class LoanService
                     $"You have just paid {RuleDictionary.Currency}{loanPayBack} off your oldest loan.", ct: ct);
             }
             
-            loan.PaidBack += loanPayBack;
             await _transactionService.RepayLoan(engine, player, loanPayBack, ct);
+            loan.PaidBack += loanPayBack;
             
             if(!oldestPaidOff)
                 //Oldest not paid off yet, so break

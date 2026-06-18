@@ -170,8 +170,10 @@ public class CardTriggerService
         //Filter cards to remove already played cards
         //(cant play the same card twice, such as recurring cards: e.g., valid for 5 turns etc)
         if(playedCards != null)
+            //Cant play 2 cards from same player
             matchingCards = matchingCards
-                .Where(c => !playedCards.Select(pc => pc.Card.CardId).Contains(c.Card.CardId))
+                .Where(c => !playedCards.Select(pc => pc.Card.CardId).Contains(c.Card.CardId) 
+                            && !playedCards.Select(pc => pc.Player.PlayerId).Contains(c.Player.PlayerId))
                 .ToList();
         
         //Filter the cards based on the subject context:
@@ -205,6 +207,10 @@ public class CardTriggerService
     {
         var matchingCards = new List<HeldCard>();
         foreach (var held in from player in engine.Cache.Game.GetPlayers(subject.PlayerId, excludePovPlayer: false)
+                 //Jailed players can't play cards through the trigger pipeline — the only in-jail play is the
+                 //OnInJail trigger (get-out-of-jail-free / befriend a guard, on their own jailed subject).
+                 //Exclude jailed holders from every other trigger (anytime cards, bystander reactions).
+                 where !player.IsInJail || trigger == CardTrigger.OnInJail
                  let mc = player.Cards
                      .Where(c =>
                      {
@@ -267,7 +273,7 @@ public class CardTriggerService
                 or CardConditionType.MetAnyPlayerTurn);
             if (forcedCard != null)
             {
-                _ = await engine.PromptProvider.Acknowledge(p.PlayerId, $"{forcedCard.Card.CardType.ToDisplayName()} Card",
+                _ = await engine.PromptProvider.Acknowledge(p.PlayerId, $"Playing Held {forcedCard.Card.CardType.ToDisplayName()} Card",
                     forcedCard.Card.GetDisplayText(engine.Cache, p.PlayerId), timeout: TimeSpan.FromSeconds(30), 
                     cardType: forcedCard.Card.CardType, ct: ct);
                 return forcedCard;

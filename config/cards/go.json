@@ -87,6 +87,9 @@
         "RawText": "Receive {G0__0} when passing 'GO' anti-clockwise. Valid for {OC__0} occasions",
         "CardType": "Go",
         "ConditionType": "MetCardholderTurn",
+        "SuppressDefault": {
+            "SuppressGoBonus": true
+        },
         "Conditions": [
             {
                 "Trigger": 2,
@@ -190,6 +193,9 @@
         "RawText": "When moving anti-clockwise, receive {G0__0} for passing GO. Valid for {OC__0} occasions",
         "CardType": "Go",
         "ConditionType": "MetCardholderTurn",
+        "SuppressDefault": {
+            "SuppressGoBonus": true
+        },
         "Conditions": [
             {
                 "Trigger": 2,

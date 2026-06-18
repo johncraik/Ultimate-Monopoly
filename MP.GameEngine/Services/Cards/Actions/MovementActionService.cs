@@ -74,8 +74,12 @@ public class MovementActionService : ICardActionService<MovementAction>
                     await _movementService.AdvancePlayer(engine, target, FindNearest(engine, target, action), MovementDirection(action), ct);
                     break;
                 case MovementKind.GoToJustVisiting:
+                    // Honour CollectGoBonus: a card that crosses GO en route to Just Visiting collects the
+                    // bonus and unlocks buying (DirectionOfTravel — e.g. "Mishandled evidence"); a "do not
+                    // pass GO" card (mass breakout, call a meeting) sets CollectGoBonus=false → counter-
+                    // direction, so no bonus and no initial-GO unlock.
                     await _movementService.AdvancePlayer(engine, target, IndexHelper.JustVisitingSpace,
-                        PlayerMovementDirection.CounterDirectionOfTravel, ct);
+                        MovementDirection(action), ct);
                     continue;   // Just Visiting performs no space action
                 default:
                     continue;
