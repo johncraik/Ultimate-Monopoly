@@ -97,19 +97,32 @@ public class MovementActionService : ICardActionService<MovementAction>
     private async Task ApplySwap(Framework.GameEngine engine, PlayerModel player, MovementAction action, CardActionContext? context, CancellationToken ct)
     {
         PlayerModel? target;
-        if (action.Target == PlayerTarget.DiceOffPlayer)
+        if (action.Target is PlayerTarget.DiceOffPlayer or PlayerTarget.ContextPlayer)
         {
-            // The dice-off winner an earlier action in this group resolved (e.g. the tax-payer redirect, card 444).
-            target = context?.DiceOffPlayerId is { } id ? engine.Cache.Game.GetPlayer(id) : null;
+            // A player an earlier action in this group resolved (e.g. the tax-payer redirect, card 444).
+            target = context?.ContextPlayerId is { } id ? engine.Cache.Game.GetPlayer(id) : null;
+        }
+        else if (action.Target == PlayerTarget.NearestPlayerAhead)
+        {
+            // Board-relative: the nearest player ahead, same-direction preferred (the FP "ID check" swap).
+            target = FindNearestPlayerAhead(engine, player);
         }
         else
         {
             var pick = action.Target == PlayerTarget.Self ? PlayerTarget.ChosenPlayer : action.Target;
-            target = (await CardActionHelper.ResolveTargets(engine, player, pick, ct, JailFilter.OnlyNotJailed)).FirstOrDefault();
+            // Default to swapping with a non-jailed player; a card can opt into a jailed target via its
+            // JailFilter ("swap places with any other player in jail" → OnlyJailed).
+            var filter = action.JailFilter == JailFilter.None ? JailFilter.OnlyNotJailed : action.JailFilter;
+            target = (await CardActionHelper.ResolveTargets(engine, player, pick, ct, filter)).FirstOrDefault();
         }
 
         if (target is null || target.PlayerId == player.PlayerId)
             return;
+
+        // Stash the partner so a later action in the group can act on the same player — e.g. the GO swap's
+        // "both players receive £200" grants the swapped player via PlayerTarget.ContextPlayer.
+        if (context is not null)
+            context.ContextPlayerId = target.PlayerId;
 
         var holderIndex = player.BoardIndex;
         player.BoardIndex = target.BoardIndex;
@@ -122,6 +135,42 @@ public class MovementActionService : ICardActionService<MovementAction>
             InitialPlayerBoardIndex = holderIndex,
             FinalPlayerBoardIndex = player.BoardIndex
         });
+
+        // The swapped-in player "proceeds as normal" on the holder's old space (the FP "ID check" swap).
+        // The holder, now on the target's old space, performs no landed action (standard swap rule).
+        if (action.ResolveLandedSpaceForTarget)
+            await _boardService.ResolveBoardSpaceForPlayer(engine, target, ct);
+    }
+
+    /// <summary>
+    /// The nearest other player ahead of <paramref name="holder"/> on the board, scanning step-by-step in
+    /// the holder's travel direction: a player also travelling that direction is preferred (returned as soon
+    /// as the nearest such is found), otherwise the nearest player ahead in any direction is the fallback
+    /// (cards-dev-changes.md §4). Null when no other player is ahead.
+    /// </summary>
+    private static PlayerModel? FindNearestPlayerAhead(Framework.GameEngine engine, PlayerModel holder)
+    {
+        var others = engine.Cache.Game.GetPlayers(holder.PlayerId);
+        PlayerModel? nearestAny = null;
+
+        var index = holder.BoardIndex;
+        for (var step = 0; step < IndexHelper.PhysicalBoardSize; step++)
+        {
+            (index, _) = IndexHelper.MoveIndex(index, 1, holder.Direction);
+            var here = others.Where(p => p.BoardIndex == index).ToList();
+            if (here.Count == 0)
+                continue;
+
+            // Same-direction at this step wins outright (it's the nearest same-direction player ahead).
+            var sameDirection = here.FirstOrDefault(p => p.Direction == holder.Direction);
+            if (sameDirection is not null)
+                return sameDirection;
+
+            // Otherwise remember the nearest player ahead (any direction) as the fallback.
+            nearestAny ??= here[0];
+        }
+
+        return nearestAny;
     }
 
     /// <summary>

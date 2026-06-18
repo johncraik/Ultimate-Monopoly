@@ -33,5 +33,7 @@ public enum CardTrigger
     OnNextMove              = 1 << 13,  // after the holder's next move, roll or third-die (move forward 23 / back 17)
     // 1 << 14 retired (was OnCompleteSet)
     OnTaxLanded             = 1 << 15,  // land on a tax space — the assessed tax is threaded as the trigger amount ("your next tax is tripled")
-    OnSnakeEyes             = 1 << 16   // roll snake eyes (double 1) — the £500 bonus moment ("pay your snake-eyes money to the lowest roller")
+    OnSnakeEyes             = 1 << 16,  // roll snake eyes (double 1) — the £500 bonus moment ("pay your snake-eyes money to the lowest roller")
+    OnTurnStart             = 1 << 17,  // the holder's own turn begins, before the roll — the "anytime own turn" play window (advance X; change direction; …)
+    OnSpaceLand             = 1 << 18   // the holder lands on a space (their move or another's third die) — the other "anytime own turn" window; pairs with OnTurnStart
 }

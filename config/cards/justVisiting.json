@@ -1,0 +1,195 @@
+[
+    {
+        "RawText": "Advance 2 spaces. Keep until needed",
+        "CardType": "JustVisiting",
+        "ConditionType": "ChoiceCardholderTurn",
+        "SuppressDefault": {
+            "SuppressBoardResolution": true
+        },
+        "Conditions": [
+            {
+                "Trigger": 393216
+            }
+        ],
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Movement",
+                        "Kind": 0,
+                        "Spaces": 2
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "After your next move (roll or third die movement), move forward 23 spaces",
+        "CardType": "JustVisiting",
+        "ConditionType": "MetCardholderTurn",
+        "Conditions": [
+            {
+                "Trigger": 8192
+            }
+        ],
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Movement",
+                        "Kind": 0,
+                        "Spaces": 23
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "After your next move (roll or third die movement), go back 17 spaces",
+        "CardType": "JustVisiting",
+        "ConditionType": "MetCardholderTurn",
+        "Conditions": [
+            {
+                "Trigger": 8192
+            }
+        ],
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Movement",
+                        "Kind": 0,
+                        "Spaces": -17
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Escaping prisoner drops {G0__0}. Finders keepers.",
+        "CardType": "JustVisiting",
+        "ConditionType": "None",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Money",
+                        "Amount": 500,
+                        "Direction": 1,
+                        "Counterparty": 0
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Former prisoner agrees to steal the £200 bonus for passing GO clockwise from other players. Valid for {OC__0} occasions",
+        "CardType": "JustVisiting",
+        "ConditionType": "MetAnyPlayerTurn",
+        "SuppressDefault": {
+            "SuppressGoBonus": true
+        },
+        "Conditions": [
+            {
+                "Trigger": 4,
+                "RequiredDirection": 0
+            }
+        ],
+        "Groups": [
+            {
+                "TurnsActive": 10,
+                "TurnsRemaining": 10,
+                "Actions": [
+                    {
+                        "$type": "Money",
+                        "Amount": 1,
+                        "Direction": 1,
+                        "Counterparty": 0,
+                        "AmountSource": 1
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Robbed by a prisoner who has escaped. {G0__0} into free parking and return a property to the bank.",
+        "CardType": "JustVisiting",
+        "ConditionType": "None",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Money",
+                        "Amount": 300,
+                        "Direction": 0,
+                        "Counterparty": 1
+                    },
+                    {
+                        "$type": "Property",
+                        "Kind": 0
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Swap places with any other player in jail. Your jail fees to leave are also swapped.",
+        "CardType": "JustVisiting",
+        "ConditionType": "None",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Movement",
+                        "Kind": 3,
+                        "Target": 1,
+                        "JailFilter": 1
+                    },
+                    {
+                        "$type": "Jail",
+                        "Kind": 3,
+                        "Target": 5
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "You befriend a prison guard. The next time you leave jail it will cost you nothing (no jail fee)",
+        "CardType": "JustVisiting",
+        "ConditionType": "MetCardholderTurn",
+        "Conditions": [
+            {
+                "Trigger": 512
+            }
+        ],
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Jail",
+                        "Kind": 2,
+                        "FreeNextExit": true
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "You call a meeting. All other players not in jail advance to Just Visiting.",
+        "CardType": "JustVisiting",
+        "ConditionType": "None",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Movement",
+                        "Kind": 4,
+                        "Target": 2,
+                        "JailFilter": 2
+                    }
+                ]
+            }
+        ]
+    }
+]

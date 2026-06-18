@@ -154,10 +154,10 @@ public class GamePlayHub : GameBaseHub
     /// then enqueues on the single-writer executor; the engine plays the card (moving the player to
     /// Just Visiting) and consumes it. Returns false when not allowed or no card is held.
     /// </summary>
-    public async Task<bool> LeaveJailCard()
+    public async Task<bool> LeaveJailCard(string cardId)
     {
         var gameId = GetGameId();
-        if (string.IsNullOrEmpty(gameId) || string.IsNullOrEmpty(Context.UserIdentifier))
+        if (string.IsNullOrEmpty(gameId) || string.IsNullOrEmpty(Context.UserIdentifier) || string.IsNullOrEmpty(cardId))
             return false;
 
         var engine = await _engineFactory.GetAsync(gameId);
@@ -167,9 +167,30 @@ public class GamePlayHub : GameBaseHub
         if (!engine.TurnStateProvider.CanLeaveJail(current.PlayerId, Context.UserIdentifier))
             return false;
 
-        if (current.GetOutOfJailCard() is null) return false;
+        _playerProfiles.EnqueueLeaveJailCard(gameId, Context.UserIdentifier, cardId);
+        return true;
+    }
 
-        _playerProfiles.EnqueueLeaveJailCard(gameId, Context.UserIdentifier);
+    /// <summary>
+    /// Plays a held card from hand at the start of the player's own turn (the OnTurnStart window) —
+    /// gated by <c>CanPortfolioCommand</c> (host-bypass aware). Optimistic pre-check, then enqueues on
+    /// the single-writer executor; the engine resolves and consumes the named card. Returns false when
+    /// not allowed or no card id is given.
+    /// </summary>
+    public async Task<bool> PlayCard(string cardId)
+    {
+        var gameId = GetGameId();
+        if (string.IsNullOrEmpty(gameId) || string.IsNullOrEmpty(Context.UserIdentifier) || string.IsNullOrEmpty(cardId))
+            return false;
+
+        var engine = await _engineFactory.GetAsync(gameId);
+        var current = engine.Cache.Game.CurrentPlayer();
+        if (current is null) return false;
+
+        if (!engine.TurnStateProvider.CanPortfolioCommand(current.PlayerId, Context.UserIdentifier))
+            return false;
+
+        _playerProfiles.EnqueuePlayCard(gameId, Context.UserIdentifier, cardId);
         return true;
     }
 

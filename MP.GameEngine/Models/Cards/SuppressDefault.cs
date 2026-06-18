@@ -22,6 +22,31 @@ public class SuppressDefault
     public bool SuppressDirectionChange { get; set; }
     
     public bool SuppressTripleBonus { get; set; }
+    public bool SuppressSnakeEyes { get; set; }
+
+    public bool SuppressBoardResolution { get; set; }
+
+    public bool SuppressRent { get; set; }
+
+    public SuppressDefaultType Type()
+    {
+        var type = 0;
+        if (SuppressGoBonus) type += 1;
+        if (SuppressTaxPayment) type += 2;
+        if (SuppressFreeParkingFine) type += 4;
+        if (SuppressFreeParkingMoneyTake) type += 8;
+        if (SuppressFreeParkingPropertyTake) type += 16;
+        if (SuppressFreeParkingPropertyHandIn) type += 32;
+        if (SuppressFreeParkingPurge) type += 64;
+        if (SuppressGoToJail) type += 128;
+        if (SuppressDirectionChange) type += 256;
+        if (SuppressTripleBonus) type += 512;
+        if (SuppressSnakeEyes) type += 1024;
+        if (SuppressBoardResolution) type += 2048;
+        if (SuppressRent) type += 4096;
+
+        return (SuppressDefaultType)type;
+    }
 
     /// <summary>
     /// Parameterless constructor for JSON deserialisation — the card import sets the individual
@@ -53,6 +78,10 @@ public class SuppressDefault
         SuppressDirectionChange = suppressDefaultType.HasFlag(SuppressDefaultType.SuppressDirectionChange);
         
         SuppressTripleBonus = suppressDefaultType.HasFlag(SuppressDefaultType.SuppressTripleBonus);
+        SuppressSnakeEyes = suppressDefaultType.HasFlag(SuppressDefaultType.SuppressSnakeEyes);
+        
+        SuppressBoardResolution = suppressDefaultType.HasFlag(SuppressDefaultType.SuppressBoardResolution);
+        SuppressRent = suppressDefaultType.HasFlag(SuppressDefaultType.SuppressRent);
     }
 
     public void Aggregate(SuppressDefault other)
@@ -72,6 +101,10 @@ public class SuppressDefault
         SuppressDirectionChange = SuppressDirectionChange || other.SuppressDirectionChange;
         
         SuppressTripleBonus = SuppressTripleBonus || other.SuppressTripleBonus;
+        SuppressSnakeEyes = SuppressSnakeEyes || other.SuppressSnakeEyes;
+        
+        SuppressBoardResolution = SuppressBoardResolution || other.SuppressBoardResolution;
+        SuppressRent = SuppressRent || other.SuppressRent;
     }
 }
 
@@ -89,4 +122,7 @@ public enum SuppressDefaultType
     SuppressGoToJail = 128,
     SuppressDirectionChange = 256,
     SuppressTripleBonus = 512,
+    SuppressSnakeEyes = 1024,
+    SuppressBoardResolution = 2048,
+    SuppressRent = 4096,
 }

@@ -392,6 +392,14 @@
     "RawRuleCode": "Jail_CollectRentInJail"
   },
   {
+    "Section": 6,
+    "Rule": 7,
+    "Point": "c",
+    "Title": "A card can waive your jail fee",
+    "RuleDescription": "A card can waive the fee for your next jail exit, so you leave jail without paying — your leave cost (and its 50%-per-turn escalation) is otherwise unchanged.",
+    "RawRuleCode": "Jail_FeeWaivedByCard"
+  },
+  {
     "Section": 7,
     "Rule": 1,
     "Point": null,

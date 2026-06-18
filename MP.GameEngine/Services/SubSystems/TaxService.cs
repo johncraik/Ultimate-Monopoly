@@ -2,18 +2,23 @@ using MP.GameEngine.Enums;
 using MP.GameEngine.Enums.Cards;
 using MP.GameEngine.Helpers;
 using MP.GameEngine.Helpers.RuleSet;
+using MP.GameEngine.Models.Cards;
 using MP.GameEngine.Models.Cards.Actions;
 using MP.GameEngine.Models.Snapshot;
+using MP.GameEngine.Services.Cards;
 
 namespace MP.GameEngine.Services.SubSystems;
 
 public class TaxService
 {
     private readonly TransactionService _transactionService;
+    private readonly CardTriggerService _triggerService;
 
-    public TaxService(TransactionService transactionService)
+    public TaxService(TransactionService transactionService,
+        CardTriggerService triggerService)
     {
         _transactionService = transactionService;
+        _triggerService = triggerService;
     }
 
 
@@ -39,10 +44,14 @@ public class TaxService
             tax *= engine.Cache.Game.GlobalEventInfo.TaxMultiplier ?? 1;
             engine.CiteRule(RuleCode.Event_Tax);
         }
-
+        
+        var triggerSuppress = await _triggerService.OnTaxLanded(engine, player, tax, ct);
         var suppressDefault = await engine.CardService.DrawCard(engine, player, CardType.Tax, ct,
             new CardActionContext { TriggerAmount = tax, TriggerReason = FinancialReason.Tax });
-        if(suppressDefault.SuppressTaxPayment) return;
+        
+        var sd = new SuppressDefault(triggerSuppress.Type());
+        sd.Aggregate(suppressDefault);
+        if(sd.SuppressTaxPayment) return;
 
         //Default outcome — pay the assessed tax.
         await _transactionService.PayTax(engine, player, tax, ct);

@@ -1,39 +1,104 @@
 @using MP.GameEngine.Models.Prompts.PromptTypes
 @model CardOptionPrompt
 @*
-    CARD OPTION PROMPT — server-rendered fragment. A drawn/played card offers an OR-choice between
-    its groups; the player selects one and confirms. Each option is a single-select btn-check radio
-    carrying data-card-option-key (the group's stable GroupId); ingame-prompts.js reads the checked
-    radio and submits CardOptionResponse { selectedKey } — the same select-then-confirm shape as
-    TargetProperty (which collects selected board indexes). The body and labels are pre-resolved by
-    the engine (the dynamic {G0__0}/{0} amounts are already substituted), so render them as text.
+    CARD OPTION PROMPT — server-rendered fragment with two modes, gated by PlayCardChoice:
+
+    • Group choice (PlayCardChoice == false): a drawn/played card offers a mandatory OR-choice
+      between its groups; the player MUST pick one and confirm. Keys are GroupIds.
+
+    • Play-card choice (PlayCardChoice == true): the held-card trigger layer offers a holder the
+      chance to play one of their live cards — declining is allowed (submits an empty selectedKey).
+      A single card is a yes/no; >1 is a radio list + a "Don't play". Keys are CardIds.
+
+    Both submit CardOptionResponse { selectedKey } via ingame-prompts.js: a checked radio carries
+    data-card-option-key, a single-card "Play" button carries the key directly, and a
+    [data-prompt-decline] click submits an empty key (allowed only in play-card mode). The body and
+    labels are pre-resolved by the engine (dynamic {G0__0}/{0} amounts already substituted).
 *@
 <div class="pp-prompt-card border border-2 border-info">
     <div class="pp-prompt-head text-bg-info">
         @(string.IsNullOrEmpty(Model.Title) ? "Choose an option" : Model.Title)
     </div>
-    <div class="pp-prompt-body">
-        @if (!string.IsNullOrEmpty(Model.Body))
-        {
-            <p class="mb-2">@Model.Body</p>
-        }
-        <div class="text-body-secondary small mb-2">Choose one:</div>
-        <div class="d-grid gap-2">
-            @foreach (var option in Model.Options)
+
+    @if (!Model.PlayCardChoice)
+    {
+        @* ── Group choice — mandatory single-select, unchanged ── *@
+        <div class="pp-prompt-body">
+            @if (!string.IsNullOrEmpty(Model.Body))
             {
-                var id = $"co-{Model.PromptId}-{option.Key}";
-                <input type="radio" name="co-@Model.PromptId" class="btn-check" id="@id" data-card-option-key="@option.Key" autocomplete="off" />
-                <label class="btn btn-outline-info d-flex align-items-center text-start" for="@id">
-                    <i class="bi bi-chevron-right me-2"></i>
-                    <span>@option.Label</span>
-                </label>
+                <p class="mb-2">@Model.Body</p>
             }
+            <div class="text-body-secondary small mb-2">Choose one:</div>
+            <div class="d-grid gap-2">
+                @foreach (var option in Model.Options)
+                {
+                    var id = $"co-{Model.PromptId}-{option.Key}";
+                    <input type="radio" name="co-@Model.PromptId" class="btn-check" id="@id" data-card-option-key="@option.Key" autocomplete="off" />
+                    <label class="btn btn-outline-info d-flex align-items-center text-start" for="@id">
+                        <i class="bi bi-chevron-right me-2"></i>
+                        <span>@option.Label</span>
+                    </label>
+                }
+            </div>
+            <div class="text-danger small d-none mt-2" data-prompt-error></div>
         </div>
-        <div class="text-danger small d-none mt-2" data-prompt-error></div>
-    </div>
-    <div class="pp-prompt-foot">
-        <button type="button" class="btn btn-info w-100" data-prompt-submit>
-            <i class="bi bi-check2 me-1"></i> Confirm
-        </button>
-    </div>
+        <div class="pp-prompt-foot">
+            <button type="button" class="btn btn-info w-100" data-prompt-submit>
+                <i class="bi bi-check2 me-1"></i> Confirm
+            </button>
+        </div>
+    }
+    else if (Model.Options.Count == 1)
+    {
+        @* ── Play-card choice, single card — yes/no ── *@
+        <div class="pp-prompt-body">
+            @if (!string.IsNullOrEmpty(Model.Body))
+            {
+                <p class="mb-2">@Model.Body</p>
+            }
+            <div class="border border-info rounded p-2 d-flex align-items-center">
+                <i class="bi bi-card-heading me-2"></i>
+                <span>@Model.Options[0].Label</span>
+            </div>
+            <div class="text-danger small d-none mt-2" data-prompt-error></div>
+        </div>
+        <div class="pp-prompt-foot d-flex gap-2">
+            <button type="button" class="btn btn-outline-secondary flex-fill" data-prompt-decline>
+                Don't play
+            </button>
+            <button type="button" class="btn btn-info flex-fill" data-prompt-submit data-card-option-key="@Model.Options[0].Key">
+                <i class="bi bi-check2 me-1"></i> Play card
+            </button>
+        </div>
+    }
+    else
+    {
+        @* ── Play-card choice, multiple cards — radio list + decline ── *@
+        <div class="pp-prompt-body">
+            @if (!string.IsNullOrEmpty(Model.Body))
+            {
+                <p class="mb-2">@Model.Body</p>
+            }
+            <div class="d-grid gap-2">
+                @foreach (var option in Model.Options)
+                {
+                    var id = $"co-{Model.PromptId}-{option.Key}";
+                    <input type="radio" name="co-@Model.PromptId" class="btn-check" id="@id" data-card-option-key="@option.Key" autocomplete="off" />
+                    <label class="btn btn-outline-info d-flex align-items-center text-start" for="@id">
+                        <i class="bi bi-chevron-right me-2"></i>
+                        <span>@option.Label</span>
+                    </label>
+                }
+            </div>
+            <div class="text-danger small d-none mt-2" data-prompt-error></div>
+        </div>
+        <div class="pp-prompt-foot d-flex gap-2">
+            <button type="button" class="btn btn-outline-secondary flex-fill" data-prompt-decline>
+                Don't play
+            </button>
+            <button type="button" class="btn btn-info flex-fill" data-prompt-submit>
+                <i class="bi bi-check2 me-1"></i> Play selected
+            </button>
+        </div>
+    }
 </div>

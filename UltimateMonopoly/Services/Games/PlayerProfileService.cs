@@ -140,18 +140,38 @@ public class PlayerProfileService
             await sp.GetRequiredService<JailService>().LeaveJailByPaying(engine, current, ct);
         });
 
-    // Leave jail by playing a held Get Out of Jail Free card — the card sibling of
-    // EnqueueLeaveJailPay (same CanLeaveJail gate, host-bypass aware). CardService.PlayCard
-    // resolves the card (its Release action moves the player to Just Visiting) then consumes it
-    // (removed from hand, returned to its deck). No-ops if the player holds no such card.
-    public void EnqueueLeaveJailCard(string gameId, string submittingUserId)
+    // Leave jail by playing a specific held Get Out of Jail Free card — the card sibling of
+    // EnqueueLeaveJailPay (same CanLeaveJail gate, host-bypass aware). The player may hold more than
+    // one such card (one per standard deck), so the chosen card is named by id; CardService.PlayCard
+    // resolves it (its Release action moves the player to Just Visiting) then consumes it. No-ops if
+    // the named card isn't in hand.
+    public void EnqueueLeaveJailCard(string gameId, string submittingUserId, string cardId)
         => _executor.Enqueue(gameId, async (engine, _, ct) =>
         {
             var current = engine.Cache.Game.CurrentPlayer();
             if (current is null || !engine.TurnStateProvider.CanLeaveJail(current.PlayerId, submittingUserId))
                 return;
 
-            var card = current.GetOutOfJailCard();
+            var card = current.Cards.FirstOrDefault(c => c.CardId == cardId);
+            if (card is null)
+                return;
+
+            await engine.CardService.PlayCard(engine, current, card, ct);
+        });
+
+    // Play a held card from hand at the start of the player's own turn — the OnTurnStart play window
+    // (the engine fires OnSpaceLand itself on landing; this is the explicit command path). A portfolio
+    // command (CanPortfolioCommand: StartOfTurn, current player, not jailed, idle — its doc lists
+    // "play card from hand"). Resolves the named card in hand by id and plays it via
+    // CardService.PlayCard (resolve → consume, or retain if it has TurnsRemaining). No-ops if not held.
+    public void EnqueuePlayCard(string gameId, string submittingUserId, string cardId)
+        => _executor.Enqueue(gameId, async (engine, _, ct) =>
+        {
+            var current = engine.Cache.Game.CurrentPlayer();
+            if (current is null || !engine.TurnStateProvider.CanPortfolioCommand(current.PlayerId, submittingUserId))
+                return;
+
+            var card = current.Cards.FirstOrDefault(c => c.CardId == cardId);
             if (card is null)
                 return;
 

@@ -50,6 +50,10 @@ public class PlayerModel
     public ushort? MinJailTurns { get; set; }
     public bool CollectRentInJail { get; set; }
 
+    /// <summary>One-shot: the player's next jail exit waives the fee ("befriend a prison guard"). Set by a
+    /// <c>JailAction.ModifyLeaveFee</c> with <c>FreeNextExit</c>; consumed (charge skipped, flag cleared) in <c>PayJailFee</c>.</summary>
+    public bool FreeNextJailExit { get; set; }
+
     [JsonIgnore]
     public bool CanLeaveJail => !IsInJail || (IsInJail && (MinJailTurns == null || JailTurnCounter >= MinJailTurns));
     
@@ -95,10 +99,12 @@ public class PlayerModel
         
         TurnsToMiss = model.TurnsToMiss;
         ExtraTurns = model.ExtraTurns;
+        
         JailTurnCounter = model.JailTurnCounter;
         MaxJailTurnsOverride = model.MaxJailTurnsOverride;
         MinJailTurns = model.MinJailTurns;
         CollectRentInJail = model.CollectRentInJail;
+        FreeNextJailExit = model.FreeNextJailExit;
         
         IsBankrupt = model.IsBankrupt;
         
@@ -188,6 +194,27 @@ public class PlayerModel
                 if(a is not JailAction j) return false;
                 return j.Kind == JailKind.Release;
             })));
+
+    public List<CardModel> GetOutOfJailCards()
+        => Cards.Where(c => c.Groups.Any(g => 
+            g.Actions.Any(a =>
+            {
+                if(a is not JailAction j) return false;
+                return j.Kind == JailKind.Release;
+            })))
+            .ToList();
+    
+    public List<CardModel> GetPlayableCards()
+        => Cards.Where(c => c.ConditionType != CardConditionType.None 
+                            && c.Conditions.Any(cd => cd.Trigger is CardTrigger.OnTurnStart or CardTrigger.OnSpaceLand 
+                                                      || cd.Trigger.HasFlag(CardTrigger.OnTurnStart) || cd.Trigger.HasFlag(CardTrigger.OnSpaceLand)))
+            .ToList();
+    
+    public List<CardModel> GetOtherCards()
+        => Cards.Where(c => c.ConditionType != CardConditionType.None 
+                            && c.Conditions.All(cd => cd.Trigger is not CardTrigger.OnTurnStart and not CardTrigger.OnSpaceLand 
+                                                      && !cd.Trigger.HasFlag(CardTrigger.OnTurnStart) && !cd.Trigger.HasFlag(CardTrigger.OnSpaceLand)))
+            .ToList();
 
     #endregion
 

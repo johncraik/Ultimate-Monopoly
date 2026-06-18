@@ -2,7 +2,9 @@ using MP.GameEngine.Enums;
 using MP.GameEngine.Enums.Cards;
 using MP.GameEngine.Enums.Players;
 using MP.GameEngine.Helpers.RuleSet;
+using MP.GameEngine.Models.Cards;
 using MP.GameEngine.Models.Snapshot;
+using MP.GameEngine.Services.Cards;
 
 namespace MP.GameEngine.Services.SubSystems;
 
@@ -11,14 +13,17 @@ public class GoService
     private readonly TransactionService _transactionService;
     private readonly LoanService _loanService;
     private readonly PropertyCommandService _propCommandService;
+    private readonly CardTriggerService _triggerService;
 
     public GoService(TransactionService transactionService,
         LoanService loanService,
-        PropertyCommandService propCommandService)
+        PropertyCommandService propCommandService,
+        CardTriggerService triggerService)
     {
         _transactionService = transactionService;
         _loanService = loanService;
         _propCommandService = propCommandService;
+        _triggerService = triggerService;
     }
     
     public async Task CollectGoMoney(Framework.GameEngine engine, PlayerModel player, ushort goPasses, CancellationToken ct)
@@ -32,9 +37,14 @@ public class GoService
         
         bonus *= goPasses;
         
-        //Cite rule and give GO bonus:
-        engine.CiteRule(player.Direction == PlayerDirection.Forward ? RuleCode.Go_PassClockwise : RuleCode.Go_PassAntiClockwise);
-        await _transactionService.ReceiveGoBonus(engine, player, bonus, ct);
+        _ = await _triggerService.OnPassGo(engine, player, bonus, ct);
+        var suppressDefault = await _triggerService.OnOtherPassGo(engine, player, bonus, ct);
+        if(!suppressDefault.SuppressGoBonus)
+        {
+            //Cite rule and give GO bonus:
+            engine.CiteRule(player.Direction == PlayerDirection.Forward ? RuleCode.Go_PassClockwise : RuleCode.Go_PassAntiClockwise);
+            await _transactionService.ReceiveGoBonus(engine, player, bonus, ct);
+        }
         
         //Pay mortage fee (no-ops if no mortgages):
         await _propCommandService.PayMortgageFee(engine, player, ct);
@@ -48,8 +58,12 @@ public class GoService
 
     public async Task LandOnGo(Framework.GameEngine engine, PlayerModel player, CancellationToken ct)
     {
+        var triggerSuppress = await _triggerService.OnLandGo(engine, player, RuleDictionary.LandOnGoBonus, ct);
         var suppressDefault = await engine.CardService.DrawCard(engine, player, CardType.Go, ct);
-        if(suppressDefault.SuppressGoBonus) return;
+
+        var sd = new SuppressDefault(triggerSuppress.Type());
+        sd.Aggregate(suppressDefault);
+        if(sd.SuppressGoBonus) return;
         
         //Cite rule and notify user:
         engine.CiteRule(RuleCode.Go_LandOn);

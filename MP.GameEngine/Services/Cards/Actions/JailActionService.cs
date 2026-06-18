@@ -34,6 +34,16 @@ public class JailActionService : ICardActionService<JailAction>
     /// <param name="ct">Cancellation token.</param>
     public async Task<bool> ResolveActionAsync(Framework.GameEngine engine, PlayerModel player, JailAction action, CancellationToken ct, CardActionContext? context = null)
     {
+        // SwapLeaveFee exchanges the holder's jail-leave cost with the context player's (the swap partner
+        // an earlier Swap action in this group stashed) — "swap places with a jailed player, fees also
+        // swapped". Holder-vs-context, so it sidesteps the per-target loop below.
+        if (action.Kind == JailKind.SwapLeaveFee)
+        {
+            if (context?.ContextPlayerId is { } otherId && engine.Cache.Game.GetPlayer(otherId) is { } other)
+                (player.JailCost, other.JailCost) = (other.JailCost, player.JailCost);
+            return true;
+        }
+
         var filter = action.Kind switch
         {
             JailKind.SendToJail => JailFilter.OnlyNotJailed,
@@ -60,7 +70,10 @@ public class JailActionService : ICardActionService<JailAction>
                 case JailKind.Release when target.IsInJail:
                     return await _jailService.LeaveJailByCard(engine, target, ct);
                 case JailKind.ModifyLeaveFee:
-                    if (action.LeaveFeeSetTo is { } fee)
+                    if (action.FreeNextExit)
+                        //One-shot free exit — leave JailCost (and its escalation) intact; PayJailFee waives the next charge.
+                        target.FreeNextJailExit = true;
+                    else if (action.LeaveFeeSetTo is { } fee)
                         target.JailCost = fee;
                     else if (action.LeaveFeeMultiplier is { } multiplier)
                         target.JailCost *= multiplier;

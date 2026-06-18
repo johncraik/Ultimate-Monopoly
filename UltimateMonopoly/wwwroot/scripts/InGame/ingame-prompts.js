@@ -90,9 +90,13 @@
                 return { response: { '$type': 'LeaveJail', promptId: promptId, action: Number(btn.dataset.leavejailAction) } };
 
             case 'CardOption': {
-                // Single-select radio — read the checked option's key (GroupId), the same
-                // select-then-confirm shape as TargetProperty. The validator checks the key matches
-                // one of the prompt's options; labels are pre-resolved server-side.
+                // Two modes (see _CardOptionPrompt.cshtml). Play-card mode allows declining — a
+                // [data-prompt-decline] click submits an empty key (the validator permits it only when
+                // PlayCardChoice). A single-card "Play" button carries its key directly; otherwise read
+                // the checked radio (group choice + multi-card play). Labels are pre-resolved server-side.
+                if (decline) return { response: { '$type': 'CardOption', promptId: promptId, selectedKey: '' } };
+                if (btn.dataset.cardOptionKey)
+                    return { response: { '$type': 'CardOption', promptId: promptId, selectedKey: btn.dataset.cardOptionKey } };
                 const chosen = promptEl.querySelector('input.btn-check[data-card-option-key]:checked');
                 if (!chosen) return { error: 'Choose an option.' };
                 return { response: { '$type': 'CardOption', promptId: promptId, selectedKey: chosen.dataset.cardOptionKey } };

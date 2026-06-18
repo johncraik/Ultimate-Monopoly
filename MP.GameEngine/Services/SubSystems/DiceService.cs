@@ -4,13 +4,20 @@ using MP.GameEngine.Models.Cards;
 using MP.GameEngine.Models.EventReceipts;
 using MP.GameEngine.Models.Prompts.PromptTypes;
 using MP.GameEngine.Models.Snapshot;
+using MP.GameEngine.Services.Cards;
 
 namespace MP.GameEngine.Services.SubSystems;
 
 public class DiceService
 {
+    private readonly CardTriggerService _triggerService;
 
-    public async Task<DiceRoll> RollTurnDice(Framework.GameEngine engine, CancellationToken ct)
+    public DiceService(CardTriggerService triggerService)
+    {
+        _triggerService = triggerService;
+    }
+    
+    public async Task<(DiceRoll Roll, SuppressDefault SuppressDefault)> RollTurnDice(Framework.GameEngine engine, CancellationToken ct)
     {
         var player = engine.Cache.Game.CurrentPlayer();
         if (player == null) throw new InvalidOperationException($"Current player not found in game players list.");
@@ -25,12 +32,33 @@ public class DiceService
 
         if(dice.Die2 == null || dice.ThirdDie == null)
             throw new InvalidOperationException("Dice roll is not complete");
-
+        
         var roll = engine.Cache.SetTurnDiceRoll(dice.Die1, (ushort)dice.Die2, (ushort)dice.ThirdDie);
         if (roll is null) throw new InvalidOperationException("Dice roll is not valid");
 
+        var sd = new SuppressDefault();
+        switch (roll.RollType)
+        {
+            case DiceRollType.Double when roll.Die1 == 1:
+                var suppressSnakeEyes = await _triggerService.OnSnakeEyes(engine, player, ct);
+                var suppressDouble = await _triggerService.OnRollDouble(engine, player, ct);
+                sd.Aggregate(suppressSnakeEyes);
+                sd.Aggregate(suppressDouble);
+                break;
+            case DiceRollType.Double:
+                var suppressDefaultDouble = await _triggerService.OnRollDouble(engine, player, ct);
+                sd.Aggregate(suppressDefaultDouble);
+                break;
+            case DiceRollType.Triple:
+                var suppressTriple = await _triggerService.OnRollTriple(engine, player, ct);
+                var suppressOtherTriple = await _triggerService.OnOtherRollsTriple(engine, player, ct);
+                sd.Aggregate(suppressTriple);
+                sd.Aggregate(suppressOtherTriple);
+                break;
+        }
+
         engine.EventEmitter.Emit(new DiceRollReceipt(player.PlayerId, roll));
-        return roll;
+        return (engine.Cache.GetTurnDiceRoll() ?? throw new InvalidOperationException("Turn dice roll not set"), sd);
     }
 
     /// <summary>

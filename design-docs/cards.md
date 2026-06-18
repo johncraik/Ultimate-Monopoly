@@ -5,6 +5,12 @@ and a **build** line — ✅ buildable now · 🟢 functionally complete (action
 held-card trigger / play-card layer pending) · 🟡 primitive exists, flag missing · ⬜ needs a new
 action/flag. The build deltas are catalogued in `cards-dev-changes.md` (the `§` refs).
 
+> **"Anytime on your own turn" cards** carry `Trigger=OnTurnStart | OnSpaceLand` — the two play
+> windows a held card can be offered on the holder's turn: `OnTurnStart` (before the roll, fired by
+> the play-a-card command in `PlayerProfileService`) and `OnSpaceLand` (after any landing — the
+> holder's own move or being moved by another's third die — fired by the engine). `CardTrigger.None`
+> is reserved for resolve-on-draw cards (`ConditionType=None`), which carry no trigger.
+
 ## Chance
 You get a chance card from landing on a chance space. These are standard monopoly cards.
 
@@ -236,16 +242,16 @@ You also get a third card from you or anyone else rolling your dice number.
   - One group, two actions: self → jail (`MovementAction{AdvanceToIndex=Jail}` per the "go-to-jail = movement" decision) + `JailAction{Kind=SendToJail, Target=ChosenPlayer}`. `ConditionType=None`.
   - ✅ Buildable now (`JailAction` + `ChosenPlayer` via TargetPlayer prompt).
 - Advance 1 space. Keep until needed
-  - `MovementAction{Kind=MoveSpaces, Spaces=1}`. `ConditionType=ChoiceCardholderTurn`, `Trigger=None` (anytime, own turn).
+  - `MovementAction{Kind=MoveSpaces, Spaces=1}`. `ConditionType=ChoiceCardholderTurn`, `Trigger=OnTurnStart | OnSpaceLand` (anytime, own turn). Card `SuppressDefault{SuppressBoardResolution}` — the card resolves its own destination (`ResolveLandedSpace=true`), so the original landing must not re-resolve.
   - ✅ Buildable now.
 - Advance 3 spaces. Keep until needed
-  - `MovementAction{Kind=MoveSpaces, Spaces=3}`. `ConditionType=ChoiceCardholderTurn`, `Trigger=None`.
+  - `MovementAction{Kind=MoveSpaces, Spaces=3}`. `ConditionType=ChoiceCardholderTurn`, `Trigger=OnTurnStart | OnSpaceLand`. Card `SuppressDefault{SuppressBoardResolution}`.
   - ✅ Buildable now.
 - Advance 5 spaces.
   - `MovementAction{Kind=MoveSpaces, Spaces=5}`. `ConditionType=None` (resolve-on-draw, not kept).
   - ✅ Buildable now.
 - Advance up to 5 spaces. Keep until needed
-  - 5 groups, each `MovementAction{Kind=MoveSpaces, Spaces=1..5}`; `CardOptionPrompt` picks. `ConditionType=ChoiceCardholderTurn`, `Trigger=None`.
+  - 5 groups, each `MovementAction{Kind=MoveSpaces, Spaces=1..5}`; `CardOptionPrompt` picks. `ConditionType=ChoiceCardholderTurn`, `Trigger=OnTurnStart | OnSpaceLand`. Card `SuppressDefault{SuppressBoardResolution}`.
   - ✅ Buildable now ("up to N" = N groups, §4 — no quantity prompt).
 - All outstanding loans are wiped out for all players. Any player with no loans receives £1000 but must return a property to the bank
   - Compound, deterministic: snapshot who holds an outstanding loan → **Loans** wipe (all players) → `MoneyAction{Receive, £1000, Bank}` to the snapshot's no-loan players → **Property** return-to-bank (their chosen property) from those same players.
@@ -257,7 +263,7 @@ You also get a third card from you or anyone else rolling your dice number.
   - `DiceAction{Kind=ModifyTripleBonus, PayoutFactor=0, Target=ChosenPlayer}`. `ConditionType=ChoiceAnyPlayerTurn`, `Trigger=OnOtherRollsTriple`.
   - 🟢 Functionally complete — `DiceActionService` zeroes the target's triple-bonus *payout* via `PlayerService.ApplyTripleBonus(target, factor:0)`, while the accumulator still increments +£500 (the payout-vs-accumulator split). Remaining: the held/reactive firing on another player's triple (`OnOtherRollsTriple`) and suppressing that player's default bonus — the trigger layer.
 - Change direction. Keep until needed
-  - **Direction** action: `PlayerModel.FlipDirection()` (self). `ConditionType=ChoiceCardholderTurn`, `Trigger=None`.
+  - **Direction** action: `PlayerModel.FlipDirection()` (self). `ConditionType=ChoiceCardholderTurn`, `Trigger=OnTurnStart` (turn-start only — flipping direction mid-board on a landing isn't offered; you pick direction before rolling).
   - ✅ Built — `DirectionActionService` (action done; held-play funnels through the `PlayCard` seam).
 - Convert a double into a triple. Keep until needed
   - `DiceAction{Kind=ConvertDoubleToTriple}`. `ConditionType=ChoiceCardholderTurn`, `Trigger=OnRollDouble`.
@@ -275,7 +281,7 @@ You also get a third card from you or anyone else rolling your dice number.
   - `MovementAction{Kind=AdvanceToIndex, TargetIndex=FreeParking}`. `ConditionType=None`.
   - ✅ Buildable now.
 - Go to jail for 10 turns. You can roll the dice but cannot leave jail. You can collect all rent due. Keep until needed
-  - `JailAction{Kind=SendToJail, Target=Self, TurnsOverride=10, MinJailTurns=10, CollectRentInJail=true}`. `ConditionType=ChoiceCardholderTurn`, `Trigger=None` (the strategic self-play).
+  - `JailAction{Kind=SendToJail, Target=Self, TurnsOverride=10, MinJailTurns=10, CollectRentInJail=true}`. `ConditionType=ChoiceCardholderTurn`, `Trigger=OnTurnStart | OnSpaceLand` (the strategic self-play). Card `SuppressDefault{SuppressBoardResolution}` — the holder moves to jail, so the original landing must not resolve.
   - 🟢 Functionally complete — `JailActionService` applies `MaxJailTurnsOverride`/`MinJailTurns`/`CollectRentInJail` on a successful jailing; `PlayerModel.CanLeaveJail` (the `MinJailTurns` lock) blocks every exit — double, fee, card, and the `TurnStateProvider.CanLeaveJail` command gate — until turn 10, then `ForcePlayerToLeaveJail` releases; `PropertyService` collects rent while jailed; the flags reset on every exit. Remaining: the anytime-own-turn play-from-hand (the play-card layer).
 - Hand in any property into free parking. This does not get recorded and can be from a set you have handed in before
   - **Property** action: hand-in to FP (self's chosen property), `not-recorded` (don't append to `PlayerModel.FPHandedInSets`), silent no-op if no valid property. `ConditionType=None`.
@@ -314,8 +320,8 @@ You also get a third card from you or anyone else rolling your dice number.
   - **Property** action: title → bank, self's chosen property (TargetProperty). `ConditionType=None`.
   - ✅ Built — `PropertyActionService` (`Kind=ReturnToBank`).
 - Receive the money from free parking that another player would have received. Keep until needed
-  - Held `MoneyAction{Receive, Counterparty=FreeParking, AmountSource=TriggerAmount, Amount=1}` (Amount=1 → exactly the FP-take amount). `ConditionType=ChoiceAnyPlayerTurn`, `Trigger=OnOtherTakesFreeParking`; result suppresses the other player's money-take only.
-  - 📝 **REVIEW LATER — deliberately NOT in `third.json`.** The receive action rides the `AmountSource=TriggerAmount` seam, but this card must suppress **another** player's FP money-take — the granular, group-scoped suppress / trigger-result (§3.3, ⬜ not built; distinct from the card-level `SuppressDefault`). Revisit in the trigger-layer pass: firing on `OnOtherTakesFreeParking` (`ChoiceAnyPlayerTurn`) + the other-player suppress.
+  - Held `MoneyAction{Receive, Counterparty=FreeParking, AmountSource=TriggerAmount, Amount=1}` (Amount=1 → exactly the FP-take amount) + card `SuppressDefault{SuppressFreeParkingMoneyTake}`. `ConditionType=ChoiceAnyPlayerTurn`, `Trigger=OnOtherTakesFreeParking`.
+  - ✅ Built — written to `third.json`. The bystander's receive rides the `AmountSource=TriggerAmount` seam (the FP take amount threaded by `OnOtherTakesFreeParking`), and the card-level `SuppressFreeParkingMoneyTake` is consumed by `FreeParkingService.TakeFromFreeParking` (it aggregates the trigger result and gates the taker's money take), so the bystander gets the pot money and the taker takes none. No group-scoped suppress needed after all — the trigger-result consumption at the call site does it.
 - Send any player of your choice to jail
   - `JailAction{Kind=SendToJail, Target=ChosenPlayer}`. `ConditionType=None`.
   - ✅ Buildable now.
@@ -329,8 +335,8 @@ You also get a third card from you or anyone else rolling your dice number.
   - `JailAction{Kind=ModifyLeaveFee, LeaveFeeMultiplier=3, Target=Self}` (applies to the holder's next jail exit). `ConditionType=None` — a pure downside, so it resolves on draw, not a held choice.
   - ✅ Built — `JailActionService` `ModifyLeaveFee` multiplies `PlayerModel.JailCost`.
 - Your next payment to another player is doubled
-  - Held `MoneyAction{AmountSource=TriggerAmount, factor ×2}`. `ConditionType=MetCardholderTurn`, `Trigger=OnPayPlayer`, duration once.
-  - 📝 **REVIEW LATER — deliberately NOT in `third.json`.** The `AmountSource=TriggerAmount` seam is built, but the **counterparty (the player being paid) is trigger-context** — no `MoneyCounterparty` value expresses "the player from the trigger". Needs a trigger-player counterparty (or a trigger-layer override of the counterparty). Revisit in the trigger-layer pass (firing on `OnPayPlayer` + duration-once).
+  - Held `MoneyAction{Pay, Counterparty=TriggerPlayer, AmountSource=TriggerAmount, Amount=2}` + card `SuppressDefault{SuppressRent}`. `ConditionType=MetCardholderTurn`, `Trigger=OnRentDue`, duration once (single-use). **Replace** (not additive) — the card pays the **multiplied** rent (×2) to the owner itself and suppresses the default rent, so the owner collects 2× via the card and the default rent acknowledge + charge are skipped.
+  - ✅ Built — new `MoneyCounterparty.TriggerPlayer` resolves to `CardActionContext.TriggerCounterpartyId`; `PropertyService.PayPropertyRent` threads the owner into `OnPayRent` (→ `OnRentDue`) and, on `SuppressRent` from the trigger, **skips its rent acknowledge + default `PayRent`**. `MoneyActionService.ApplyToTriggerPlayer` pays that owner (payer-POV, `FinancialReason.Rent` on the receipt/notification). Written to `third.json` (`Money{Pay, TriggerPlayer, AmountSource=TriggerAmount, Amount=2}` + `SuppressDefault{SuppressRent}`, `MetCardholderTurn`/`OnRentDue`). Forced single-use — fires once on the next rent, then returns to the deck. (New `SuppressDefault.SuppressRent` flag, bit 4096.)
 - Your next triple is downgraded to a double
   - Held **Dice** action: downgrade the holder's triple → double. `ConditionType=MetCardholderTurn`, `Trigger=OnRollTriple`.
   - 🟢 Functionally complete — `DiceActionService` (`DiceKind.DowngradeTripleToDouble`) sets `GameModel.ModifiedDiceRollType=Double`; `PlayerTurnOrchestrator.TripleRoll` re-routes the roll through `HandleDoubleRoll` (two-dice move, direction flip) *before* the `Doubles/TriplesInRow` counters update (§4). Remaining: the held firing on the holder's triple (`OnRollTriple`) — the trigger layer.
@@ -359,7 +365,7 @@ You get a double card for rolling a double (or a triple downgraded to a double)
   - Set `EventInfo.JailFull = true` (the card its code comment already quotes).
   - ✅ Built — `GlobalEventActionService` (maps the named event via `GlobalEventService`); clear-on-double built.
 - Send any player of your choice to jail. Keep until needed
-  - `JailAction{Kind=SendToJail, Target=ChosenPlayer}`. `ConditionType=ChoiceCardholderTurn`, `Trigger=None` (anytime, own turn).
+  - `JailAction{Kind=SendToJail, Target=ChosenPlayer}`. `ConditionType=ChoiceCardholderTurn`, `Trigger=OnTurnStart | OnSpaceLand` (anytime, own turn).
   - ✅ Buildable now.
 - Receive ALL the money from free parking (uncapped). Keep until needed
   - Held: receive the whole FP pot (`GameModel.FreeParkingAmount`), uncapped. `ConditionType=ChoiceCardholderTurn`, `Trigger=OnLandFreeParking` (play on landing FP).
@@ -452,35 +458,35 @@ You get a GO card from landing on GO space.
 
 **10 cards**: (drawn on landing GO; the "Default GO …" line is the `SuppressDefault` metadata, §3b)
 - Advance to "GO". Keep until needed
-  - `MovementAction{Kind=AdvanceToIndex, TargetIndex=0}`. `ConditionType=ChoiceCardholderTurn`, `Trigger=None`. Default GO (collect £200) runs — no suppress.
-  - ✅ Buildable now.
+  - `MovementAction{Kind=AdvanceToIndex, TargetIndex=0}`. `ConditionType=ChoiceCardholderTurn`, `Trigger=OnTurnStart | OnSpaceLand`. The card resolves GO itself (collect £200 — no `SuppressGoBonus`); card `SuppressDefault{SuppressBoardResolution}` stops the original landing re-resolving.
+  - ✅ Built — written to `go.json`. (§12 advance-no-draw still deferred — advancing to GO also draws a GO card; the receipt-helper plan covers it later.)
 - All players receive £200 times 2 dice. (Percentage applies; capped at cardholder player's %cap)
-  - £200 × 2-dice granted from the bank to every player, %-capped per the *cardholder*. `SuppressDefault=true` (no £200 GO).
-  - 🟡 Mostly — `MoneyAction{Receive, 200, Bank, Target=Everyone, DiceMultiplier=TwoDice, PercentageApplies=true, SuppressDefault}`; ⬜ this card caps at the *cardholder's* %cap, but the multi-target path caps per receiving subject (needs a cap-source flag).
+  - £200 × 2-dice granted from the bank to every player. `SuppressDefault{SuppressGoBonus}` (no £200 GO).
+  - ✅ Built — written to `go.json` (`Money{Receive, 200, Bank, Target=Everyone, DiceMultiplier=TwoDice, PercentageApplies}` + `SuppressGoBonus`). **%cap is per *receiving* player** — the implemented multi-target behaviour, accepted over the per-cardholder cap.
 - BAD NEWS. Purge 2 of your properties
   - **Building** purge 2 of the holder's own properties (chosen). Default GO runs.
-  - ✅ Built — `BuildingActionService` (`Kind=Purge, Count=2`). Default GO runs.
+  - ✅ Built — `BuildingActionService` (`Kind=Purge, Count=2`), written to `go.json`. Default GO runs.
 - Immunity from swapping all money with another player. Keep until needed
   - **Immunity** card, keyed to the money-swap action. `ConditionType=ChoiceCardholderTurn` (counter window). Default GO runs.
   - ⬜ Deferred — Immunity/NOPE substrate (§6, `cards-design.md` §6).
 - Receive £200 times one die
-  - `MoneyAction{Receive, 200, Bank, DiceMultiplier=OneDie}`. `SuppressDefault=true`.
-  - ✅ Buildable now (`DiceMultiplier=OneDie` + `SuppressDefault`).
+  - `MoneyAction{Receive, 200, Bank, DiceMultiplier=OneDie}` + `SuppressDefault{SuppressGoBonus}`.
+  - ✅ Built — written to `go.json`.
 - Receive £500 when passing GO anti-clockwise. Valid for 3 occasions
-  - Held `MoneyAction{Receive, 500, Bank}`. `ConditionType=MetCardholderTurn`, `Trigger=OnPassGo` (anti-clockwise), duration 3. Default GO runs.
-  - 🟡 `OnPassGo` + `TurnsActive`/`TurnsRemaining` exist; ⬜ anti-clockwise condition param + duration (§3.6).
+  - Held `MoneyAction{Receive, 500, Bank}`. `ConditionType=MetCardholderTurn`, `Trigger=OnPassGo` + `RequiredDirection=Backward` (anti-clockwise), `TurnsActive/Remaining=3`. Default GO runs.
+  - ✅ Built — written to `go.json`. New `CardCondition.RequiredDirection` gates `OnPassGo` to anti-clockwise (`MatchingCardForTrigger` checks the subject's travel direction); duration via the multi-use lifecycle.
 - Roll 2 dice. Multiple that value by the third die rolled this turn. Receive the final value multiplied by £200 (Percentage applies)
-  - `MoneyAction{Receive, 200, Bank, PercentageApplies=true}` scaled by (2-dice total × third die). `SuppressDefault=true`.
-  - ⬜ NEW: compound dice multiplier — 2-dice × third die (§2.14); `PercentageApplies` ✅.
+  - `MoneyAction{Receive, 200, Bank, DiceMultiplier=TwoDiceByThirdDie, PercentageApplies=true}` + `SuppressDefault{SuppressGoBonus}`.
+  - ✅ Built — written to `go.json`. New `DiceMultiplier.TwoDiceByThirdDie` — `RollDiceMultiplier` rolls a fresh 2-dice total and multiplies by the turn's third die (`Cache.GetTurnDiceRoll().ThirdDie`).
 - Swap spaces with any other player. Both players receive £200
-  - `MovementAction{Kind=Swap, Target=ChosenPlayer}` + £200 to both players (holder + chosen) from the bank. `SuppressDefault=true`.
-  - 🟡 `Swap` exists; ⬜ "both players receive" = grant to holder + chosen (§4 each-grant).
-- UNLUCKY! No money for landing on GO for 5 occassions, including this one.
-  - Held: suppress the holder's GO bonus for 5 landings (incl. this one). `ConditionType=MetCardholderTurn`, `Trigger=OnLandGo`, duration 5. (Default "runs but is cancelled by the held effect" — the §3.4 trigger-time suppression.)
-  - ⬜ NEW: GO-bonus suppress + duration 5 (§3.6, §3b).
+  - `MovementAction{Kind=Swap, Target=ChosenPlayer}` (stashes the partner) + `Money{Receive, 200, Bank, Target=Self}` + `Money{Receive, 200, Bank, Target=ContextPlayer}`. `SuppressDefault{SuppressGoBonus}`.
+  - ✅ Built — written to `go.json`. Generalised the shared-player slot (`context.DiceOffPlayerId` → `ContextPlayerId`); `ApplySwap` now stashes the chosen partner and new `PlayerTarget.ContextPlayer` (`MoneyActionService.ApplyToContextSubject`) grants them the £200.
+- UNLUCKY! No money for landing on GO for the next 5 occasions.
+  - Held `NoOpAction` + `SuppressDefault{SuppressGoBonus}`. `ConditionType=MetCardholderTurn`, `Trigger=OnLandGo`, `TurnsActive/Remaining=5`. The drawing turn keeps its £200; the next 5 GO landings are suppressed. ("Including this one" dropped — John's call.)
+  - ✅ Built — written to `go.json`. Relies on the §11.1 fix (a kept card no longer suppresses at draw, `DrawCard` keep-branch returns `None`), so the drawing turn's £200 stands and the held card suppresses the next 5 via `OnLandGo` + the multi-use counter.
 - When moving anti-clockwise, receive £200 for passing GO. Valid for 10 occasions
-  - Held `MoneyAction{Receive, 200, Bank}`. `ConditionType=MetCardholderTurn`, `Trigger=OnPassGo` (anti-clockwise), duration 10. Default GO runs.
-  - 🟡 `OnPassGo` exists; ⬜ anti-clockwise param + duration 10 (§3.6).
+  - Held `MoneyAction{Receive, 200, Bank}`. `ConditionType=MetCardholderTurn`, `Trigger=OnPassGo` + `RequiredDirection=Backward` (anti-clockwise), `TurnsActive/Remaining=10`. Default GO runs.
+  - ✅ Built — written to `go.json` (same `RequiredDirection` mechanism as the £500 anti-clockwise card).
 
 
 ## Just Visiting Card
@@ -488,35 +494,35 @@ You get a Just Visiting card from landing on Just Visiting space.
 
 **10 cards**:
 - Advance 2 spaces. Keep until needed
-  - `MovementAction{Kind=MoveSpaces, Spaces=2}`. `ConditionType=ChoiceCardholderTurn`, `Trigger=None`.
-  - ✅ Buildable now.
+  - `MovementAction{Kind=MoveSpaces, Spaces=2}`. `ConditionType=ChoiceCardholderTurn`, `Trigger=OnTurnStart | OnSpaceLand`. Card `SuppressDefault{SuppressBoardResolution}`.
+  - ✅ Built — written to `justVisiting.json` (the proven anytime-advance pattern).
 - After your next move (roll or third die movement), move forward 23 spaces.
-  - Held `MovementAction{Kind=MoveSpaces, Spaces=23}`. `ConditionType=MetCardholderTurn`, `Trigger=OnNextMove` (fires on roll *and* third-die movement).
-  - 🟡 `OnNextMove` flag exists; needs the trigger pipeline (§3.1). Action ✅.
+  - Held `MovementAction{Kind=MoveSpaces, Spaces=23}`. `ConditionType=MetCardholderTurn`, `Trigger=OnNextMove` (fires on roll *and* third-die movement), single-use.
+  - ✅ Built — written to `justVisiting.json`. `OnNextMove` is wired into the orchestrator (fires after every move, per-player), so the held card fires on the holder's next move and is consumed.
 - After your next move (roll or third die movement), go back 17 spaces.
-  - Held `MovementAction{Kind=MoveSpaces, Spaces=-17}`. `ConditionType=MetCardholderTurn`, `Trigger=OnNextMove`.
-  - 🟡 as above (§3.1).
+  - Held `MovementAction{Kind=MoveSpaces, Spaces=-17}`. `ConditionType=MetCardholderTurn`, `Trigger=OnNextMove`, single-use.
+  - ✅ Built — written to `justVisiting.json` (as the +23 card, `Spaces=-17`).
 - Escaping prisoner drops £500. Finders keepers.
   - `MoneyAction{Receive, 500, Bank}`. `ConditionType=None`.
-  - ✅ Buildable now.
+  - ✅ Built — written to `justVisiting.json`.
 - Former prisoner agrees to steal the £200 bonus for passing GO clockwise from other players. Valid for 10 occasions
-  - Held: when another player passes GO (clockwise), the holder receives their £200 bonus instead. `ConditionType=MetAnyPlayerTurn`, `Trigger=OnOtherPassGo`, duration 10.
-  - 🟡 `OnOtherPassGo` exists; ⬜ steal-the-bonus (`AmountSource`/granular suppress, §3.2/§3.3) + duration 10 (§3.6).
+  - Held `MoneyAction{Receive, Bank, AmountSource=TriggerAmount, Amount=1}` + card `SuppressDefault{SuppressGoBonus}`. `ConditionType=MetAnyPlayerTurn`, `Trigger=OnOtherPassGo` + `RequiredDirection=Forward` (clockwise), `TurnsActive/Remaining=10`.
+  - ✅ Built — written to `justVisiting.json`. `GoService` already consumes `OnOtherPassGo`'s `SuppressGoBonus` (skips the passer's bonus); the holder receives the threaded pass amount, `RequiredDirection` gates to clockwise. (£200 hardcoded in the text — a money tag would show the ×1 factor, not the trigger amount.)
 - Immunity from any card drawn when landing on Go To Jail. Play once, keep until needed
   - **Immunity** card, keyed to the Go-To-Jail draw. Play-once counter window.
   - ⬜ Deferred — Immunity/NOPE substrate (§6).
 - Robbed by a prisoner who has escaped. £300 into free parking and return a property to the bank.
   - `MoneyAction{Pay, 300, FreeParking}` + **Property** return-to-bank (chosen). `ConditionType=None`.
-  - ✅ Built — `MoneyAction{Pay, 300, FreeParking}` + `PropertyActionService` (`Kind=ReturnToBank`).
+  - ✅ Built — written to `justVisiting.json` (`Money{Pay, 300, FreeParking}` + `Property{ReturnToBank}`).
 - Swap places with any other player in jail. Your jail fees to leave are also swapped.
-  - `MovementAction{Kind=Swap}` with a jailed player + swap the two players' `JailCost`.
-  - 🟡 `Swap` + `JailCost` exist; ⬜ NEW: swap target = jailed player; swap-`JailCost` (§2.15).
+  - `MovementAction{Kind=Swap, Target=ChosenPlayer, JailFilter=OnlyJailed}` (stashes the partner) + `JailAction{Kind=SwapLeaveFee, Target=ContextPlayer}`. `ConditionType=None`.
+  - ✅ Built — written to `justVisiting.json`. `ApplySwap` now honours `action.JailFilter` (so `OnlyJailed` targets a jailed player; positions swap, and since `IsInJail` is derived from `BoardIndex` the holder lands in jail), and new `JailKind.SwapLeaveFee` exchanges the two players' `JailCost` via the stashed `ContextPlayer`.
 - You befriend a prison guard. The next time you leave jail it will cost you nothing (no jail fee)
-  - Held: set `PlayerModel.JailCost = 0` for the next exit. `ConditionType=MetCardholderTurn`, `Trigger=OnInJail`, duration once.
-  - 🟡 `JailCost` exists; ⬜ NEW: leave-fee set-to-0 + duration once (§2.15).
+  - Held `JailAction{Kind=ModifyLeaveFee, FreeNextExit=true}`. `ConditionType=MetCardholderTurn`, `Trigger=OnInJail`, single-use.
+  - ✅ Built — written to `justVisiting.json`. One-shot `PlayerModel.FreeNextJailExit` flag (set via `ModifyLeaveFee.FreeNextExit`, leaving `JailCost`/escalation intact); `PayJailFee` waives the next charge and clears it. `OnInJail` now also fires on `LeaveJailByPaying` (the command path) so it triggers on the voluntary exit. Cites new `RuleCode.Jail_FeeWaivedByCard` (rules.json §6.7c).
 - You call a meeting. All other players not in jail advance to Just Visiting.
-  - `MovementAction{Kind=GoToJustVisiting, Target=AllOthers}`, excluding jailed players. `ConditionType=None`.
-  - 🟡 `GoToJustVisiting` + `AllOthers` exist; ⬜ NEW: the not-in-jail exclusion (§2.20).
+  - `MovementAction{Kind=GoToJustVisiting, Target=AllOthers, JailFilter=OnlyNotJailed}`. `ConditionType=None`.
+  - ✅ Built — written to `justVisiting.json`. `MovementActionService` already filters `GoToJustVisiting` targets by `JailFilter`, so `OnlyNotJailed` is the not-in-jail exclusion — no new code.
 
 
 ## Free Parking Card
@@ -524,67 +530,67 @@ You get a Free Parking card from landing on Free Parking space.
 
 **10 cards**: (drawn on landing FP; the "Default free parking …" line is the `SuppressDefault` metadata, §3b)
 - Advance 6 spaces. Keep until needed
-  - `MovementAction{Kind=MoveSpaces, Spaces=6}`. `ConditionType=ChoiceCardholderTurn`, `Trigger=None`. Default FP runs.
-  - ✅ Buildable now.
+  - `MovementAction{Kind=MoveSpaces, Spaces=6}`. `ConditionType=ChoiceCardholderTurn`, `Trigger=OnTurnStart | OnSpaceLand`. Card `SuppressDefault{SuppressBoardResolution}` (FP — the holder moves away, so the original FP landing must not resolve).
+  - ✅ Built — written to `freeParking.json` (the proven anytime-advance pattern).
 - All players receive from the bank 50% of the amount in free parking.
   - Each player receives 50% of `GameModel.FreeParkingAmount` from the bank. Default FP runs.
-  - ✅ Built — `MoneyAction{Receive, Bank, Target=Everyone, Basis=PercentOfFreeParkingPot, Amount=50}`. Default FP runs.
+  - ✅ Built — written to `freeParking.json` (`Money{Receive, Bank, Target=Everyone, Basis=PercentOfFreeParkingPot, Amount=50}`; each player gets 50% of the pot from the bank, pot intact). Default FP runs.
 - Each player, excluding you, must hand in a property into free parking (it does not get recorded and can be from a set you have handed in before). You will receive all properties in free parking.
   - `AllOthers` each hand a property in to FP (not recorded, no-op if none) + the holder receives all FP-held properties. Default FP runs.
-  - ✅ Built — `PropertyAction{Kind=HandInToFreeParking, Target=AllOthers}` + `PropertyAction{Kind=ReceiveAllFreeParking}`. Default FP runs.
+  - ✅ Built — written to `freeParking.json` (`Property{HandInToFreeParking, Target=AllOthers}` + `Property{ReceiveAllFreeParking}`). Default FP runs.
 - ID check fails. Swap places with the player in front of you travelling in the same direction. The player now on free parking proceeds as normal
-  - `MovementAction{Kind=Swap}` with the **board-relative "nearest player ahead"** target (§4 selector); the swapped-in player resolves the FP landing (`ResolveLandedSpace=true` for them).
-  - 🟡 `Swap` exists; ⬜ NEW: board-relative target selector (§3.7c / §4).
+  - `MovementAction{Kind=Swap, Target=NearestPlayerAhead, ResolveLandedSpaceForTarget=true}` + card `SuppressDefault{SuppressAllFreeParking}`. `ConditionType=None`.
+  - ✅ Built — written to `freeParking.json`. New `PlayerTarget.NearestPlayerAhead` (board-relative §4 selector, same-direction preferred) + `MovementAction.ResolveLandedSpaceForTarget` (the swapped-in player resolves FP — "proceeds as normal"); the departed holder's FP is cancelled via `SuppressAllFreeParking`.
 - Immunity from triple bonus being cancelled, or a triple being downgraded. Keep until needed
   - **Immunity** card, keyed to two action types (triple-bonus-cancel + triple-downgrade).
   - ⬜ Deferred — Immunity/NOPE substrate (§6).
 - Pass any retained card you have to the player rolling the lowest number on one die.
-  - **Card** action: pass the holder's held card(s) to the dice-off lowest roller.
-  - ⬜ NEW: **Card** pass action + dice-off picker + ties (§1, §3.7).
+  - `CardTransferAction{Kind=Pass, DiceOff={Highest=true}}` — the holder picks **one** of their held cards to give to the **highest** one-die roller (John's steer; the card text reads "highest"). `ConditionType=None`.
+  - ✅ Built — written to `freeParking.json`. New **Card** action category: `CardTransferAction` + `CardTransferActionService` (Pass/Steal), card chosen via a mandatory `CardOptionPrompt` over the hand; recipient via the dice-off picker.
 - Steal any card from any player
-  - **Card** action: steal a card from a `ChosenPlayer`.
-  - ⬜ NEW: **Card** steal action (§1).
+  - `CardTransferAction{Kind=Steal}` — the holder picks a `ChosenPlayer`, then picks **which** of that player's cards to take (a `CardOptionPrompt` over the target's hand). `ConditionType=None`.
+  - ✅ Built — written to `freeParking.json` (the same `CardTransferActionService` as the pass card).
 - Your lucky day! First take £3000 (% applies) from free parking, the bank pays any shortfall. Then proceed as normal.
-  - `MoneyAction{Receive, 3000, Counterparty=FreeParking, PercentageApplies=true}` with a bank shortfall backstop; then default FP runs.
-  - `PercentageApplies` ✅; ⬜ NEW: take-from-FP with bank-shortfall backstop (§2.18).
+  - `MoneyAction{Receive, 3000, Counterparty=FreeParking, PercentageApplies=true}`; then default FP runs. `ConditionType=None`.
+  - ✅ Built — written to `freeParking.json`. The bank-shortfall backstop is now intrinsic: `TransactionService.ApplyBalances` floors the FP pot at 0 (`Max(0, pot − amount)`), so a fixed take exceeding the pot credits the player in full with the bank covering the rest (and the old `uint` underflow is gone). Normal pot-capped takes are unaffected.
 - Immunity from one property being purged. Keep until needed
   - **Immunity** card, keyed to the purge action.
   - ⬜ Deferred — Immunity/NOPE substrate (§6).
 - UNLUCKY! Someone else beat you to free parking while you were looking for a parking space. All money and properties in free parking are returned to the bank.
   - Clear the FP pot (money + properties) back to the bank. `SuppressDefault=true` (no fine/take/hand-in/purge).
-  - ✅ Built — `PropertyAction{Kind=ClearFreeParkingToBank}` (properties → bank + `FreeParkingAmount=0`). `SuppressDefault=true`.
+  - ✅ Built — written to `freeParking.json` (`Property{ClearFreeParkingToBank}` — properties → bank + `FreeParkingAmount=0`); card `SuppressDefault{SuppressAllFreeParking}`.
 
 ## Go To Jail Card
 You get a Go To Jail Card from landing on Go To Jail space.
 
 **10 cards**: (drawn on landing Go-To-Jail; the "Default Go To Jail …" line is the `SuppressDefault` metadata, §3b)
 - As a regular offender, your jail term is doubled (maximum of 6 turns) and must remain in jail for 3 turns. You still get to roll the dice on those 3 turns, but you cannot leave.
-  - **Jail** term modifier: double the existing term (cap 6, via `MaxJailTurnsOverride`) + lock for 3 turns (roll but can't leave). Default jail (`SendToJail`) runs, then this modifies.
-  - 🟡 `MaxJailTurnsOverride`/`JailTurnCounter` exist; ⬜ NEW: double-with-cap + lock-N flags (§2.16).
+  - `JailAction{Kind=SendToJail, TurnsOverride=6, MinJailTurns=3}` + card `SuppressDefault{SuppressGoToJail}`. `ConditionType=None`.
+  - ✅ Built — written to `goToJail.json`. The card states the concrete numbers (max 6, lock 3), so it's the existing `SendToJail`+override pattern: the card does the one jailing with `TurnsOverride=6`/`MinJailTurns=3`, and `SuppressGoToJail` stops the default Go-To-Jail double-send. The `MinJailTurns` lock gives "roll but can't leave" via `CanLeaveJail`.
 - Corrupt judge steals one of your properties and puts it into free parking. It is not recorded.
-  - Forced (involuntary) **Property** hand-in of the holder's property to FP, not recorded. Default jail runs.
-  - 🟡 `PropertyTransferService` + `FPHandedInSets` exist; ⬜ NEW: forced Property→FP (§2.17).
+  - `PropertyAction{Kind=HandInToFreeParking}` (the holder picks which property — "corrupt judge" is flavour; not the literal forced/involuntary read). Not recorded (doesn't touch `FPHandedInSets`). Default jail runs. `ConditionType=None`.
+  - ✅ Built — written to `goToJail.json`. The existing holder-chooses hand-in; no involuntary mode needed.
 - Dodgy judge facilitates a double in jail to become a triple (double upgraded to a triple only when in jail). Keep until needed
-  - Held **Dice** action: convert a double → triple, **conditional on being in jail**. `ConditionType=ChoiceCardholderTurn`, `Trigger=OnRollDouble` + an in-jail state condition.
-  - ⬜ NEW: **Dice** convert (§2.13, before counters §4) + state-conditional (in jail).
+  - Held `DiceAction{Kind=ConvertDoubleToTriple}`. `ConditionType=ChoiceCardholderTurn`, `Trigger=OnRollDouble` + condition `JailFilter=OnlyJailed`.
+  - ✅ Built — written to `goToJail.json`. The convert action + `OnRollDouble` already exist; new `CardCondition.JailFilter` (reusing the `JailFilter` enum) gates the condition to in-jail — `MatchingCardForTrigger` checks `subject.IsInJail` (same shape as the `RequiredDirection` gate).
 - Fine of £1000 imposed by the judge. You do not go to jail, you stay where you are.
-  - `MoneyAction{Pay, 1000, FreeParking}`. `SuppressDefault=true` (don't go to jail).
-  - ✅ Buildable now (fixed £1000; `SuppressDefault`).
+  - `MoneyAction{Pay, 1000, FreeParking}` + card `SuppressDefault{SuppressGoToJail}` (don't go to jail).
+  - ✅ Built — written to `goToJail.json`.
 - Friend in jail arranges for someone to purge 2 properties of your choice
   - **Building** purge 2 of the holder's own properties (chosen). Default jail runs.
-  - ✅ Built — `BuildingActionService` (`Kind=Purge, Count=2`). Default jail runs.
+  - ✅ Built — written to `goToJail.json` (`Building{Kind=Purge, Count=2}`). Default jail runs.
 - Mishandled evidence. Do not go to jail, advance to just visiting.
-  - `MovementAction{Kind=GoToJustVisiting, Target=Self}`. `SuppressDefault=true`.
-  - ✅ Buildable now (`GoToJustVisiting` + `SuppressDefault`).
+  - `MovementAction{Kind=GoToJustVisiting, Target=Self}` + card `SuppressDefault{SuppressGoToJail}`.
+  - ✅ Built — written to `goToJail.json`.
 - Pay each player £1500 and go to jail (% applies)
   - `MoneyAction{Pay, 1500, Counterparty=EachPlayer, PercentageApplies=true}` + default jail runs.
-  - ✅ Buildable now.
+  - ✅ Built — written to `goToJail.json` (no suppress — default jail runs).
 - Wrongful arrest! Counter law suit wins you £2000 (% applies). Advance to just visiting.
-  - `MoneyAction{Receive, 2000, Bank, PercentageApplies=true}` + `MovementAction{Kind=GoToJustVisiting}`. `SuppressDefault=true`.
-  - ✅ Buildable now.
+  - `MoneyAction{Receive, 2000, Bank, PercentageApplies=true}` + `MovementAction{Kind=GoToJustVisiting}` + card `SuppressDefault{SuppressGoToJail}`.
+  - ✅ Built — written to `goToJail.json`.
 - You are caught by the police and bribe the arresting officer. Pay £100 times the number of properties you own. Do not go to jail, you stay where you are.
-  - `MoneyAction{Pay, 100, FreeParking, PerUnit=PerProperty}`. `SuppressDefault=true`.
-  - ✅ Buildable now (`PerUnit=PerProperty`).
+  - `MoneyAction{Pay, 100, FreeParking, PerUnit=PerProperty}` + card `SuppressDefault{SuppressGoToJail}`.
+  - ✅ Built — written to `goToJail.json`.
 - Immunity from returning a property to the bank. Keep until needed
   - **Immunity** card, keyed to the return-property-to-bank action.
   - ⬜ Deferred — Immunity/NOPE substrate (§6).

@@ -30,6 +30,7 @@ public class CardService
     private readonly ICardActionService<DeckDrawAction> _deckDrawActionService;
     private readonly ICardActionService<DiceAction> _diceActionService;
     private readonly ICardActionService<NoOpAction> _noOpActionService;
+    private readonly ICardActionService<CardTransferAction> _cardTransferActionService;
 
     /// <summary>
     /// Creates the card interpreter over the per-action handlers it dispatches to
@@ -46,7 +47,8 @@ public class CardService
         ICardActionService<GlobalEventAction> globalEventActionService,
         ICardActionService<DeckDrawAction> deckDrawActionService,
         ICardActionService<DiceAction> diceActionService,
-        ICardActionService<NoOpAction> noOpActionService)
+        ICardActionService<NoOpAction> noOpActionService,
+        ICardActionService<CardTransferAction> cardTransferActionService)
     {
         _moneyActionService = moneyActionService;
         _movementActionService = movementActionService;
@@ -60,6 +62,7 @@ public class CardService
         _deckDrawActionService = deckDrawActionService;
         _diceActionService = diceActionService;
         _noOpActionService = noOpActionService;
+        _cardTransferActionService = cardTransferActionService;
     }
 
 
@@ -93,11 +96,13 @@ public class CardService
             return card.SuppressDefault;
         }
 
-        //Keep-until-needed — held in the player's hand until its trigger fires (held-card
-        //trigger evaluation is a later increment).
+        //Keep-until-needed — held in the player's hand until its trigger fires. A kept card does NOT
+        //suppress the drawing space's default (card-triggers.md §11.1): its SuppressDefault applies only
+        //when it is later played / triggered (PlayCard returns it then). E.g. "no GO money for the next 5
+        //landings" must NOT cancel the £200 on the very landing that drew it — the holder gets it this turn.
         player.Cards.Add(card);
         engine.EventEmitter.Emit(new CardTakenReceipt { PlayerId = player.PlayerId, CardType = card.CardType });
-        return card.SuppressDefault;
+        return new SuppressDefault(SuppressDefaultType.None);
     }
     
     /// <summary>
@@ -112,33 +117,44 @@ public class CardService
     /// </summary>
     public async Task<SuppressDefault> PlayCard(Framework.GameEngine engine, PlayerModel player, CardModel card, CancellationToken ct, CardActionContext? context = null)
     {
+        //Remove the card from the hand BEFORE resolving its actions, so it cannot re-match its own
+        //trigger while those actions run. Without this an "advance N" card loops forever: its move
+        //re-resolves the landed space (ResolveLandedSpace), which re-fires OnSpaceLand, which finds the
+        //still-held card and plays it again. Re-added below if the play is rejected or it's multi-use.
+        player.Cards.Remove(card);
+
         var applied = await ResolveCard(engine, player, card, ct, context);
         var chosenGroup = card.Groups.FirstOrDefault(g => g.IsChosenGroup);
 
         if (!applied)
         {
-            //The play didn't take effect (e.g. a jail release blocked by a card lock) — keep the card
-            //in the player's hand, untouched, so they can try again. Undo the chosen-group mark.
+            //The play didn't take effect (e.g. a jail release blocked by a card lock) — return the card
+            //to the player's hand, untouched, so they can try again. Undo the chosen-group mark.
             if (chosenGroup is not null)
                 chosenGroup.IsChosenGroup = false;
+            player.Cards.Add(card);
             return new SuppressDefault(SuppressDefaultType.None);
         }
 
         if(chosenGroup is null)
             throw new InvalidOperationException("Played a card that doesn't have a chosen group.");
 
-        if(chosenGroup.TurnsRemaining is > 0)
-            //Still can be played/activated again later
+        if(chosenGroup.TurnsRemaining is > 1)
+        {
+            //Still can be played/activated again later — decrement and return it to the hand.
+            chosenGroup.TurnsRemaining--;
+            player.Cards.Add(card);
             return card.SuppressDefault;
-        
+        }
+
         //Reset chosen group and turns remaining
         foreach (var g in card.Groups)
         {
             g.IsChosenGroup = false;
-            g.TurnsRemaining = g.TurnsActive; 
+            g.TurnsRemaining = g.TurnsActive;
         }
-        
-        player.Cards.Remove(card);
+
+        //Spent — already removed from the hand above; return it to the back of its deck.
         ReturnToDeck(engine, card);
         return card.SuppressDefault;
     }
@@ -224,6 +240,7 @@ public class CardService
             DeckDrawAction dd => _deckDrawActionService.ResolveActionAsync(engine, player, dd, ct, context),
             DiceAction di => _diceActionService.ResolveActionAsync(engine, player, di, ct, context),
             NoOpAction n => _noOpActionService.ResolveActionAsync(engine, player, n, ct, context),
+            CardTransferAction ctr => _cardTransferActionService.ResolveActionAsync(engine, player, ctr, ct, context),
             _ => throw new ArgumentOutOfRangeException(nameof(action), action, "Unhandled card action type.")
         };
     

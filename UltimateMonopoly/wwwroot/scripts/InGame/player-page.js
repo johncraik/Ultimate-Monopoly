@@ -24,10 +24,26 @@
         });
     }
 
+    // Card commands carry a data-card-id (the specific held card) — invoked as method(cardId).
+    function bindCardCommand(selector, method) {
+        document.addEventListener('click', function (e) {
+            const btn = e.target.closest(selector);
+            if (!btn || btn.disabled || !window.GamePlayHub) return;
+            const cardId = btn.dataset.cardId;
+            if (!cardId) return;
+            btn.disabled = true;
+            GamePlayHub.invoke(method, cardId).catch(err => {
+                console.error(method + ' failed:', err);
+                btn.disabled = false;   // re-enable so it isn't stuck on a transient failure
+            });
+        });
+    }
+
     bindCommand('[data-start-turn]', 'StartTurn');   // Roll Dice
     bindCommand('[data-end-turn]', 'EndTurn');
     bindCommand('[data-leave-jail-pay]', 'LeaveJailPay');   // pay the fee to leave jail
-    bindCommand('[data-leave-jail-card]', 'LeaveJailCard'); // play a Get Out of Jail Free card
+    bindCardCommand('[data-leave-jail-card]', 'LeaveJailCard'); // play a specific Get Out of Jail Free card (by id)
+    bindCardCommand('[data-play-card]', 'PlayCard');           // play a held card from hand at turn start (by id)
 
     // Property portfolio commands — the button carries data-cmd + data-board-index.
     // Invokes the matching GamePlayHub method (gated server-side), which opens the

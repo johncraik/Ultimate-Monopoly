@@ -1,0 +1,215 @@
+[
+    {
+        "RawText": "Advance to 'GO'. Keep until needed",
+        "CardType": "Go",
+        "ConditionType": "ChoiceCardholderTurn",
+        "SuppressDefault": {
+            "SuppressBoardResolution": true
+        },
+        "Conditions": [
+            {
+                "Trigger": 393216
+            }
+        ],
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Movement",
+                        "Kind": 1,
+                        "TargetIndex": 0
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "All players receive {G0__0} times the two dice rolled (%cap applies)",
+        "CardType": "Go",
+        "ConditionType": "None",
+        "SuppressDefault": {
+            "SuppressGoBonus": true
+        },
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Money",
+                        "Amount": 200,
+                        "Direction": 1,
+                        "Counterparty": 0,
+                        "Target": 3,
+                        "DiceMultiplier": 2,
+                        "PercentageApplies": true
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "BAD NEWS. Purge 2 of your properties",
+        "CardType": "Go",
+        "ConditionType": "None",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Building",
+                        "Kind": 0,
+                        "Count": 2
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Receive {G0__0} times one die",
+        "CardType": "Go",
+        "ConditionType": "None",
+        "SuppressDefault": {
+            "SuppressGoBonus": true
+        },
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Money",
+                        "Amount": 200,
+                        "Direction": 1,
+                        "Counterparty": 0,
+                        "DiceMultiplier": 1
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Receive {G0__0} when passing 'GO' anti-clockwise. Valid for {OC__0} occasions",
+        "CardType": "Go",
+        "ConditionType": "MetCardholderTurn",
+        "Conditions": [
+            {
+                "Trigger": 2,
+                "RequiredDirection": 1
+            }
+        ],
+        "Groups": [
+            {
+                "TurnsActive": 3,
+                "TurnsRemaining": 3,
+                "Actions": [
+                    {
+                        "$type": "Money",
+                        "Amount": 500,
+                        "Direction": 1,
+                        "Counterparty": 0
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Roll 2 dice. Multiply that value by the third die rolled this turn. Receive the final value multiplied by {G0__0} (%cap applies)",
+        "CardType": "Go",
+        "ConditionType": "None",
+        "SuppressDefault": {
+            "SuppressGoBonus": true
+        },
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Money",
+                        "Amount": 200,
+                        "Direction": 1,
+                        "Counterparty": 0,
+                        "DiceMultiplier": 3,
+                        "PercentageApplies": true
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Swap spaces with any other player. Both players receive {G0__1}",
+        "CardType": "Go",
+        "ConditionType": "None",
+        "SuppressDefault": {
+            "SuppressGoBonus": true
+        },
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Movement",
+                        "Kind": 3,
+                        "Target": 1
+                    },
+                    {
+                        "$type": "Money",
+                        "Amount": 200,
+                        "Direction": 1,
+                        "Counterparty": 0
+                    },
+                    {
+                        "$type": "Money",
+                        "Amount": 200,
+                        "Direction": 1,
+                        "Counterparty": 0,
+                        "Target": 5
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "UNLUCKY! No money for landing on GO for the next {OC__0} occasions",
+        "CardType": "Go",
+        "ConditionType": "MetCardholderTurn",
+        "SuppressDefault": {
+            "SuppressGoBonus": true
+        },
+        "Conditions": [
+            {
+                "Trigger": 1
+            }
+        ],
+        "Groups": [
+            {
+                "TurnsActive": 5,
+                "TurnsRemaining": 5,
+                "Actions": [
+                    {
+                        "$type": "NoOp"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "When moving anti-clockwise, receive {G0__0} for passing GO. Valid for {OC__0} occasions",
+        "CardType": "Go",
+        "ConditionType": "MetCardholderTurn",
+        "Conditions": [
+            {
+                "Trigger": 2,
+                "RequiredDirection": 1
+            }
+        ],
+        "Groups": [
+            {
+                "TurnsActive": 10,
+                "TurnsRemaining": 10,
+                "Actions": [
+                    {
+                        "$type": "Money",
+                        "Amount": 200,
+                        "Direction": 1,
+                        "Counterparty": 0
+                    }
+                ]
+            }
+        ]
+    }
+]
+

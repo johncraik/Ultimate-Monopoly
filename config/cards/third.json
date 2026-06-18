@@ -23,6 +23,14 @@
         "RawText": "Advance 1 space. Keep until needed",
         "CardType": "Third",
         "ConditionType": "ChoiceCardholderTurn",
+        "SuppressDefault": {
+            "SuppressBoardResolution": true
+        },
+        "Conditions": [
+            {
+                "Trigger": 393216
+            }
+        ],
         "Groups": [
             {
                 "Actions": [
@@ -39,6 +47,14 @@
         "RawText": "Advance 3 spaces. Keep until needed",
         "CardType": "Third",
         "ConditionType": "ChoiceCardholderTurn",
+        "SuppressDefault": {
+            "SuppressBoardResolution": true
+        },
+        "Conditions": [
+            {
+                "Trigger": 393216
+            }
+        ],
         "Groups": [
             {
                 "Actions": [
@@ -71,6 +87,14 @@
         "RawText": "Advance up to 5 spaces. Keep until needed",
         "CardType": "Third",
         "ConditionType": "ChoiceCardholderTurn",
+        "SuppressDefault": {
+            "SuppressBoardResolution": true
+        },
+        "Conditions": [
+            {
+                "Trigger": 393216
+            }
+        ],
         "Groups": [
             {
                 "GroupText": "Advance 1 space",
@@ -181,6 +205,11 @@
         "RawText": "Change direction. Keep until needed",
         "CardType": "Third",
         "ConditionType": "ChoiceCardholderTurn",
+        "Conditions": [
+            {
+                "Trigger": 131072
+            }
+        ],
         "Groups": [
             {
                 "Actions": [
@@ -287,6 +316,14 @@
         "RawText": "Go to jail for 10 turns. You can roll the dice but cannot leave jail. You can collect all rent due. Keep until needed",
         "CardType": "Third",
         "ConditionType": "ChoiceCardholderTurn",
+        "SuppressDefault": {
+            "SuppressBoardResolution": true
+        },
+        "Conditions": [
+            {
+                "Trigger": 393216
+            }
+        ],
         "Groups": [
             {
                 "Actions": [
@@ -562,6 +599,9 @@
         "RawText": "Your next tax payment is tripled",
         "CardType": "Third",
         "ConditionType": "MetCardholderTurn",
+        "SuppressDefault": {
+            "SuppressTaxPayment": true
+        },
         "Conditions": [
             {
                 "Trigger": 32768
@@ -627,7 +667,7 @@
         ]
     },
     {
-        "RawText": "Your money for landing on GO is doubled for the next 5 occasions",
+        "RawText": "Your money for landing on GO is doubled for the next {OC__0} occasions",
         "CardType": "Third",
         "ConditionType": "MetCardholderTurn",
         "SuppressDefault": {
@@ -649,6 +689,58 @@
                         "Direction": 1,
                         "Counterparty": 0,
                         "AmountSource": 1
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Receive the money from free parking that another player would have received. Keep until needed",
+        "CardType": "Third",
+        "ConditionType": "ChoiceAnyPlayerTurn",
+        "SuppressDefault": {
+            "SuppressFreeParkingMoneyTake": true
+        },
+        "Conditions": [
+            {
+                "Trigger": 16
+            }
+        ],
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Money",
+                        "Direction": 1,
+                        "Counterparty": 1,
+                        "AmountSource": 1,
+                        "Amount": 1
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Your next payment to another player is doubled",
+        "CardType": "Third",
+        "ConditionType": "MetCardholderTurn",
+        "SuppressDefault": {
+            "SuppressRent": true
+        },
+        "Conditions": [
+            {
+                "Trigger": 2048
+            }
+        ],
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Money",
+                        "Direction": 0,
+                        "Counterparty": 4,
+                        "AmountSource": 1,
+                        "Amount": 2
                     }
                 ]
             }

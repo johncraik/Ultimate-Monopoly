@@ -23,9 +23,18 @@ public sealed class CardActionContext
     public FinancialReason TriggerReason { get; set; } = FinancialReason.CardCharge;
 
     /// <summary>
-    /// The player a <see cref="Enums.Cards.PlayerTarget.DiceOffPlayer"/> action's dice-off resolved to,
-    /// stashed so a later action in the <i>same group</i> acts on the same winner — e.g. the tax-payer
-    /// redirect resolves the lowest roller and the following Swap reads it back (card 444).
+    /// A player an earlier action in the <i>same group</i> resolved, stashed so a later action acts on the
+    /// same one — a dice-off winner (the tax-payer redirect resolves the lowest roller and the following
+    /// Swap reads it back, card 444) or a swap partner (the GO swap stashes the chosen player so a money
+    /// grant can pay them, "both players receive £200"). Read via <see cref="Enums.Cards.PlayerTarget.ContextPlayer"/>.
     /// </summary>
-    public string? DiceOffPlayerId { get; set; }
+    public string? ContextPlayerId { get; set; }
+
+    /// <summary>
+    /// The counterparty player the firing trigger supplied — the player on the other side of the event
+    /// (the owner being paid rent on <c>OnRentDue</c>). Read by a <c>MoneyAction</c> whose counterparty
+    /// is <see cref="Enums.Cards.MoneyCounterparty.TriggerPlayer"/> ("your next payment to another
+    /// player is doubled" pays the same owner an equal extra).
+    /// </summary>
+    public string? TriggerCounterpartyId { get; set; }
 }

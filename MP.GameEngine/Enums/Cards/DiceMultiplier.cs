@@ -5,5 +5,7 @@ public enum DiceMultiplier
 {
     None,
     OneDie,
-    TwoDice
+    TwoDice,
+    /// <summary>A fresh two-dice total multiplied by the third die already rolled this turn ("roll 2 dice × the third die").</summary>
+    TwoDiceByThirdDie
 }

@@ -3,6 +3,7 @@ using MP.GameEngine.Enums.Cards;
 using MP.GameEngine.Enums.Players;
 using MP.GameEngine.Enums.Properties;
 using MP.GameEngine.Models.Snapshot;
+using MP.GameEngine.Services.Cards;
 
 namespace MP.GameEngine.Services.SubSystems;
 
@@ -13,22 +14,28 @@ public class BoardService
     private readonly FreeParkingService _fpService;
     private readonly PropertyService _propertyService;
     private readonly TaxService _taxService;
+    private readonly CardTriggerService _triggerService;
 
     public BoardService(GoService goService, 
         JailService jailService,
         FreeParkingService fpService,
         PropertyService propertyService,
-        TaxService taxService)
+        TaxService taxService,
+        CardTriggerService triggerService)
     {
         _goService = goService;
         _jailService = jailService;
         _fpService = fpService;
         _propertyService = propertyService;
         _taxService = taxService;
+        _triggerService = triggerService;
     }
 
     public async Task ResolveBoardSpaceForPlayer(Framework.GameEngine engine, PlayerModel player, CancellationToken ct)
     {
+        var suppressDefault = await _triggerService.OnSpaceLand(engine, player, ct);
+        if (suppressDefault.SuppressBoardResolution) return;
+        
         var space = engine.Cache.Board.GetBoardSpace(player.BoardIndex);
 
         var propertySpace = engine.Cache.Game.GetPropertySpace(space.Index);

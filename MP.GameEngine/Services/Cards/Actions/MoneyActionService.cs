@@ -58,6 +58,14 @@ public class MoneyActionService : ICardActionService<MoneyAction>
             return true;
         }
 
+        // The shared context player a prior action in this group stashed (a swap partner / dice-off winner)
+        // is the subject — no fresh prompt/roll. Used by the GO swap's "both players receive £200".
+        if (action.Target == PlayerTarget.ContextPlayer)
+        {
+            await ApplyToContextSubject(engine, player, action, context, ct);
+            return true;
+        }
+
         // Self (default): the holder is the subject, with the counterparty driving where it flows.
         if (action.Target == PlayerTarget.Self)
         {
@@ -66,7 +74,7 @@ public class MoneyActionService : ICardActionService<MoneyAction>
             var amount = RealiseAmount(engine, player, action, diceMultiplier, context);
             if (amount == 0)
                 return true;
-            await ApplyByCounterparty(engine, player, action, amount, ResolveReason(action, context), ct);
+            await ApplyByCounterparty(engine, player, action, amount, ResolveReason(action, context), context, ct);
             return true;
         }
 
@@ -88,13 +96,37 @@ public class MoneyActionService : ICardActionService<MoneyAction>
     }
 
     /// <summary>Applies a realised amount for the holder per the action's counterparty (the original Self-path routing).</summary>
-    private Task ApplyByCounterparty(Framework.GameEngine engine, PlayerModel holder, MoneyAction action, uint amount, FinancialReason reason, CancellationToken ct)
+    private Task ApplyByCounterparty(Framework.GameEngine engine, PlayerModel holder, MoneyAction action, uint amount, FinancialReason reason, CardActionContext? context, CancellationToken ct)
         => action.Counterparty switch
         {
             MoneyCounterparty.EachPlayer => ApplyToEachPlayer(engine, holder, action.Direction, amount, ct),
             MoneyCounterparty.DiceOffPlayer => ApplyToDiceOffWinner(engine, holder, action.Direction, action.DiceOff, amount, ct),
+            MoneyCounterparty.TriggerPlayer => ApplyToTriggerPlayer(engine, holder, action.Direction, amount, reason, context, ct),
             _ => ApplyToBankOrFreeParking(engine, holder, action.Direction, action.Counterparty, amount, reason, ct)
         };
+
+    /// <summary>
+    /// The player the firing trigger supplied (<see cref="CardActionContext.TriggerCounterpartyId"/>) is the
+    /// counterparty — the holder pays them (or receives from them, payer-POV). Used by "your next payment to
+    /// another player is doubled": the held card pays an equal extra to the same owner it owes rent to. No-op
+    /// when no trigger counterparty was supplied, the named player is gone, or it resolves to the holder.
+    /// </summary>
+    private async Task ApplyToTriggerPlayer(Framework.GameEngine engine, PlayerModel holder,
+        MoneyDirection direction, uint amount, FinancialReason reason, CardActionContext? context, CancellationToken ct)
+    {
+        if (context?.TriggerCounterpartyId is not { } otherId)
+            return;
+
+        var other = engine.Cache.Game.GetPlayer(otherId);
+        if (other is null || other.PlayerId == holder.PlayerId)
+            return;
+
+        // Payer-POV (transactions.md §4); carry the trigger reason (e.g. Rent) so the receipt/notification reads correctly.
+        if (direction == MoneyDirection.Pay)
+            await _transactionService.PayCardCharge(engine, holder, amount, TransactionCounterparty.Player, other, ct, reason);
+        else
+            await _transactionService.PayCardCharge(engine, other, amount, TransactionCounterparty.Player, holder, ct, reason);
+    }
 
     /// <summary>
     /// The financial reason a Bank / Free Parking card move records: a <see cref="AmountSource.TriggerAmount"/>
@@ -124,7 +156,32 @@ public class MoneyActionService : ICardActionService<MoneyAction>
 
         // Share the resolved player so a following action (the Swap in card 444) acts on the same one.
         if (context is not null)
-            context.DiceOffPlayerId = subject.PlayerId;
+            context.ContextPlayerId = subject.PlayerId;
+
+        var diceMultiplier = await RollDiceMultiplier(engine, subject, action.DiceMultiplier, ct);
+        var amount = RealiseAmount(engine, subject, action, diceMultiplier, context);
+        if (amount == 0)
+            return;
+
+        await ApplyToBankOrFreeParking(engine, subject, action.Direction, action.Counterparty, amount,
+            ResolveReason(action, context), ct);
+    }
+
+    /// <summary>
+    /// The shared context player (<see cref="CardActionContext.ContextPlayerId"/>, stashed by an earlier
+    /// action in the group — a swap partner or dice-off winner) is the subject of a Bank / Free Parking
+    /// move, applied with no fresh prompt/roll. Used by the GO swap's "both players receive £200" (the Swap
+    /// stashes the chosen partner; this grants them). No-op when nothing was stashed or the player is gone.
+    /// </summary>
+    private async Task ApplyToContextSubject(Framework.GameEngine engine, PlayerModel holder, MoneyAction action,
+        CardActionContext? context, CancellationToken ct)
+    {
+        if (context?.ContextPlayerId is not { } id)
+            return;
+
+        var subject = engine.Cache.Game.GetPlayer(id);
+        if (subject is null)
+            return;
 
         var diceMultiplier = await RollDiceMultiplier(engine, subject, action.DiceMultiplier, ct);
         var amount = RealiseAmount(engine, subject, action, diceMultiplier, context);
@@ -216,18 +273,32 @@ public class MoneyActionService : ICardActionService<MoneyAction>
     }
 
 
-    /// <summary>The holder's dice-multiplier roll summed (1 or 2 dice); 1 when the action has no multiplier.</summary>
+    /// <summary>
+    /// The holder's dice-multiplier roll summed (1 or 2 dice); 1 when the action has no multiplier.
+    /// <see cref="DiceMultiplier.TwoDiceByThirdDie"/> additionally multiplies the fresh two-dice total by
+    /// the third die already rolled this turn ("roll 2 dice × the third die rolled this turn").
+    /// </summary>
     private async Task<uint> RollDiceMultiplier(Framework.GameEngine engine, PlayerModel holder,
         DiceMultiplier multiplier, CancellationToken ct)
     {
         if (multiplier == DiceMultiplier.None)
             return 1;
 
-        var count = multiplier == DiceMultiplier.TwoDice ? (ushort)2 : (ushort)1;
+        var count = multiplier is DiceMultiplier.TwoDice or DiceMultiplier.TwoDiceByThirdDie ? (ushort)2 : (ushort)1;
         var roll = await _diceService.RollCardDice(engine, holder, count,
             "Roll the dice", "Roll the dice to determine the card amount.", ct);
 
-        return count >= 2 ? (uint)(roll.Die1 + (roll.Die2 ?? 0)) : roll.Die1;
+        var total = count >= 2 ? (uint)(roll.Die1 + (roll.Die2 ?? 0)) : roll.Die1;
+
+        if (multiplier == DiceMultiplier.TwoDiceByThirdDie)
+        {
+            //Compound: the fresh two-dice total × the third die already rolled this turn.
+            var thirdDie = engine.Cache.GetTurnDiceRoll()?.ThirdDie
+                ?? throw new InvalidOperationException("No turn third die to multiply the card amount by.");
+            total *= thirdDie;
+        }
+
+        return total;
     }
 
 

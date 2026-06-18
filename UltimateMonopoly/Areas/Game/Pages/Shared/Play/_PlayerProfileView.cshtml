@@ -3,9 +3,11 @@
 @using MP.GameEngine.Enums.Cards
 @using MP.GameEngine.Enums.Properties
 @using MP.GameEngine.Helpers
+@using MP.GameEngine.Helpers.Cards
 @using MP.GameEngine.Helpers.RuleSet
 @using MP.GameEngine.Models.Prompts.PromptTypes
 @using MP.GameEngine.Models.Snapshot
+@using MP.GameEngine.Models.Snapshot.Cards
 @using UltimateMonopoly.Models.ViewModels.Games
 @using UltimateMonopoly.Services.Cache
 @model PlayerProfilePlayViewModel
@@ -268,6 +270,25 @@
                     </div>
                 </div>
             }
+            
+            @if (player.MissNextTurn)
+            {
+                <div class="d-grid mb-2">
+                    <div class="btn btn-hero-warning">
+                        <i class="bi bi-x-octagon-fill me-1"></i>
+                        @(player.TurnsToMiss == 1 ? "You are missing your next turn!" : $"You are missing {player.TurnsToMiss} turns!")
+                    </div>
+                </div>
+            }
+            else if (player.HasExtraTurns)
+            {
+                <div class="d-grid mb-2">
+                    <div class="btn btn-hero-info">
+                        <i class="bi bi-plus-circle-fill me-1"></i>
+                        @(player.ExtraTurns == 1 ? "You have an extra turn!" : $"You have an extra {player.ExtraTurns} turns!")
+                    </div>
+                </div>
+            }
 
             @* ───────────────────────── Tab content ───────────────────────── *@
             <div class="tab-content pp-content">
@@ -275,24 +296,52 @@
                 @* ===================== Profile ===================== *@
                 <div class="tab-pane fade show active" id="pp-profile" role="tabpanel">
 
-                    @if (player.IsInJail && canLeaveJail)
+                    @switch (player.IsInJail)
                     {
-                        <div class="d-grid gap-2 mb-3">
-                            @* Leave jail by paying the fee (LeaveJailPay → JailService.LeaveJailByPaying).
+                        case true when canLeaveJail:
+                        {
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <div class="d-grid gap-2">
+                                        @* Leave jail by paying the fee (LeaveJailPay → JailService.LeaveJailByPaying).
                                Guarded by CanLeaveJail; the figure is the grid-rounded charge. *@
-                            <button type="button" class="btn btn-outline-warning" data-leave-jail-pay>
-                                <i class="bi bi-cash-coin me-1"></i> Leave jail — pay @Cost(player.JailCost, FinancialReason.JailFee)
-                            </button>
-                            @* Only when the player holds a Get Out of Jail Free card
+                                        <button type="button" class="btn btn-outline-warning py-2" data-leave-jail-pay>
+                                            <i class="bi bi-cash-coin me-1"></i> Leave jail — pay @Cost(player.JailCost, FinancialReason.JailFee)
+                                        </button>
+                                        @* Only when the player holds a Get Out of Jail Free card
                                (LeaveJailCard → CardService.PlayCard). Same CanLeaveJail gate;
                                holding the card is the extra condition. *@
-                            @if (player.GetOutOfJailCard() is not null)
+                                        @if (player.GetOutOfJailCard() is { } jailCard)
+                                        {
+                                            <button type="button" class="btn btn-outline-secondary py-2" data-leave-jail-card data-card-id="@jailCard.CardId">
+                                                <i class="bi bi-ticket-perforated me-1"></i> Leave jail — use card
+                                            </button>
+                                        }
+                                    </div>  
+                                </div>
+                            </div>
+                            break;
+                        }
+                        case true when !canLeaveJail:
+                        {
+                            // Only when a card lock is the reason they can't leave (MinJailTurns not yet
+                            // served) — not merely "it isn't your turn". Remaining = MinJailTurns − counter.
+                            if (player is { CanLeaveJail: false, MinJailTurns: { } minTurns })
                             {
-                                <button type="button" class="btn btn-outline-secondary" data-leave-jail-card>
-                                    <i class="bi bi-ticket-perforated me-1"></i> Leave jail — use card
-                                </button>
+                                var lockedTurns = minTurns - player.JailTurnCounter;
+                                <div class="card mb-3">
+                                    <div class="card-body">
+                                        <div class="d-grid">
+                                            <div class="btn btn-hero-warning">
+                                                <i class="bi bi-lock-fill me-1"></i>
+                                                @(lockedTurns <= 1 ? "You cannot leave jail until your next turn" : $"You cannot leave jail for {lockedTurns} turns")
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             }
-                        </div>
+                            break;
+                        }
                     }
 
                     @* Block 1 — money / jail cost / triple bonus / %cap *@
@@ -486,7 +535,7 @@
 
                                 <div class="accordion-item">
                                     <h2 class="accordion-header">
-                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#@paneId">
+                                        <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#@paneId">
                                             <span class="pp-set-dot me-2 bg-prop-@slug"></span>
                                             <span class="flex-grow-1">@set.ToDisplayName()</span>
                                             <span class="badge text-bg-secondary me-2">@grp.Count()/@setIndexes.Count</span>
@@ -610,10 +659,34 @@
                 @* ===================== Cards ===================== *@
                 <div class="tab-pane fade" id="pp-cards" role="tabpanel">
                     @{
-                        // Held keep-until-needed cards, grouped by card type (enum order).
-                        var heldCards = player.Cards.OrderBy(c => c.CardType).ToList();
+                        // Three lists off PlayerModel, each grouped/ordered by card type:
+                        //  1) Get out of jail   2) Playable now (turn-start / on-landing)   3) Triggered.
+                        // A get-out-of-jail card is OnInJail-triggered, so it also matches GetOtherCards();
+                        // exclude it from the triggered list so it appears once, under its own section.
+                        var jailCards = player.GetOutOfJailCards().OrderBy(c => c.CardType).ToList();
+                        var jailIds = jailCards.Select(c => c.CardId).ToHashSet();
+                        var playableCards = player.GetPlayableCards().OrderBy(c => c.CardType).ToList();
+                        var triggeredCards = player.GetOtherCards()
+                            .Where(c => !jailIds.Contains(c.CardId))
+                            .OrderBy(c => c.CardType).ToList();
+
+                        // Shared card chrome — icon, dynamic text, deck-coloured badge, and (right) the
+                        // condition type + trigger(s). A play button (where applicable) is appended per section.
+                        Func<CardModel, object> cardChrome =
+                            @<div class="d-flex align-items-start gap-3">
+                                <i class="bi @CardIcon(item.CardType) fs-3 text-body-secondary"></i>
+                                <div class="flex-grow-1">
+                                    <p class="mb-2">@item.GetDisplayText(engine.Cache, playerId)</p>
+                                    <span class="badge text-bg-@CardDisplayHelper.CardColourDisplay(item.CardType)">@item.CardType.ToDisplayName()</span>
+                                </div>
+                                <div class="text-end small text-body-secondary flex-shrink-0">
+                                    <div class="fw-semibold">@item.ConditionDisplay()</div>
+                                    <div>@item.CardTriggerDisplay()</div>
+                                </div>
+                            </div>;
                     }
-                    @if (heldCards.Count == 0)
+
+                    @if (player.Cards.Count == 0)
                     {
                         <div class="card">
                             <div class="card-body text-center text-body-secondary py-4">
@@ -623,27 +696,58 @@
                     }
                     else
                     {
-                        foreach (var card in heldCards)
+                        @* 1) Get out of jail — Play routes to LeaveJailCard with this card's id; enabled only
+                           when the player can leave jail (in jail, their turn start, can-leave, idle). *@
+                        @if (jailCards.Count > 0)
                         {
-                            <div class="card mb-3">
-                                <div class="card-body">
-                                    <div class="d-flex align-items-start gap-3">
-                                        <i class="bi @CardIcon(card.CardType) fs-3 text-body-secondary"></i>
-                                        <div class="flex-grow-1">
-                                            <p class="mb-2">@card.GetDisplayText(engine.Cache, playerId)</p>
-                                            <span class="badge text-bg-secondary">@card.CardType.ToDisplayName()</span>
+                            <h6 class="text-body-secondary mb-2"><i class="bi bi-ticket-perforated me-1"></i> Get out of jail</h6>
+                            foreach (var card in jailCards)
+                            {
+                                <div class="card mb-2">
+                                    <div class="card-body">
+                                        @cardChrome(card)
+                                        <div class="d-grid mt-3">
+                                            <button type="button" class="btn btn-outline-secondary btn-sm" data-leave-jail-card data-card-id="@card.CardId" disabled="@(!canLeaveJail)">
+                                                <i class="bi bi-box-arrow-right me-1"></i> Leave jail — use card
+                                            </button>
                                         </div>
                                     </div>
-                                    @* TODO: wire Play — no-op for now. Held-card play goes through
-                                       CardService.PlayCard (resolve → remove from hand → return to deck),
-                                       which needs a hub command + enqueue gated on the holder's turn. *@
-                                    <div class="d-grid mt-3">
-                                        <button type="button" class="btn btn-outline-primary btn-sm" data-noop>
-                                            <i class="bi bi-play-circle me-1"></i> Play
-                                        </button>
+                                </div>
+                            }
+                        }
+
+                        @* 2) Playable now — Play routes to PlayCard with this card's id; enabled only at the
+                           player's own turn start (CanPortfolioCommand). The engine also offers these on landing. *@
+                        @if (playableCards.Count > 0)
+                        {
+                            <h6 class="text-body-secondary mb-2 mt-3"><i class="bi bi-play-circle me-1"></i> Playable</h6>
+                            foreach (var card in playableCards)
+                            {
+                                <div class="card mb-2">
+                                    <div class="card-body">
+                                        @cardChrome(card)
+                                        <div class="d-grid mt-3">
+                                            <button type="button" class="btn btn-outline-primary btn-sm" data-play-card data-card-id="@card.CardId" disabled="@(!canPortfolio)">
+                                                <i class="bi bi-play-circle me-1"></i> Play
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                            }
+                        }
+
+                        @* 3) Triggered — fire only when their trigger is met; no manual play. *@
+                        @if (triggeredCards.Count > 0)
+                        {
+                            <h6 class="text-body-secondary mb-2 mt-3"><i class="bi bi-lightning-charge me-1"></i> Triggered</h6>
+                            foreach (var card in triggeredCards)
+                            {
+                                <div class="card mb-2">
+                                    <div class="card-body">
+                                        @cardChrome(card)
+                                    </div>
+                                </div>
+                            }
                         }
                     }
                 </div>

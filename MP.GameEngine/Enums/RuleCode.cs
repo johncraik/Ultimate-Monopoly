@@ -126,4 +126,5 @@ public enum RuleCode
     
     Jail_CantLeaveDueToCard,             // Cant leave jail due to a card effect forcing them to remain in jail
     Jail_CollectRentInJail,              // Property owner is in jail and can collect rent due to card
+    Jail_FeeWaivedByCard,                // A held card waives the jail-leave fee for the next exit (befriend a guard). JailService.PayJailFee.
 }

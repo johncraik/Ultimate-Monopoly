@@ -7,6 +7,7 @@ using MP.GameEngine.Models.Boards;
 using MP.GameEngine.Models.Cards;
 using MP.GameEngine.Models.Prompts.PromptTypes;
 using MP.GameEngine.Models.Snapshot;
+using MP.GameEngine.Services.Cards;
 
 namespace MP.GameEngine.Services.SubSystems;
 
@@ -16,16 +17,19 @@ public class FreeParkingService
     private readonly PropertyTransferService _propertyTransferService;
     private readonly PropertyService _propertyService;
     private readonly PurgingService _purgingService;
+    private readonly CardTriggerService _triggerService;
 
     public FreeParkingService(TransactionService transactionService,
         PropertyTransferService propertyTransferService,
         PropertyService propertyService,
-        PurgingService purgingService)
+        PurgingService purgingService,
+        CardTriggerService triggerService)
     {
         _transactionService = transactionService;
         _propertyTransferService = propertyTransferService;
         _propertyService = propertyService;
         _purgingService = purgingService;
+        _triggerService = triggerService;
     }
 
     public async Task PayPropertyFee(Framework.GameEngine engine, PlayerModel player, BoardSpace propSpace, CancellationToken ct)
@@ -52,8 +56,12 @@ public class FreeParkingService
             return;
         }
         
+        var triggerSuppress = await _triggerService.OnLandFreeParking(engine, player, ct);
         var suppressDefault = await engine.CardService.DrawCard(engine, player, CardType.FreeParking, ct);
-        if(suppressDefault.SuppressAllFreeParking)
+        
+        var sd = new SuppressDefault(triggerSuppress.Type());
+        sd.Aggregate(suppressDefault);
+        if(sd.SuppressAllFreeParking)
             return;
         
         
@@ -62,14 +70,15 @@ public class FreeParkingService
         //- B) Has money in FP, and the player has a property they can hand in: take money and FP property, and hand in property
         //- C) Has money in FP, but not properties valid to hand in: purge, take money, and take property from FP
         
-        if (engine.Cache.Game.FreeParkingAmount == 0 
-            || engine.Cache.Game.GetOwnedProperties(player.PlayerId).Count == 0)
+        //Dont go down path A if we suppressed money take (meaning we already took money)
+        if (!sd.SuppressFreeParkingMoneyTake && (engine.Cache.Game.FreeParkingAmount == 0 
+            || engine.Cache.Game.GetOwnedProperties(player.PlayerId).Count == 0))
         {
             if(suppressDefault.SuppressFreeParkingFine)
                 return;
             
             //A) No money, so pay fee based on dice roll
-            var roll = engine.Cache.TurnDiceRoll;
+            var roll = engine.Cache.GetTurnDiceRoll();
             if(roll?.Die2 == null)
                 throw new InvalidOperationException("Cannot process free parking without a valid dice roll");
 
@@ -101,8 +110,10 @@ public class FreeParkingService
             return set != null && !player.FPHandedInSets.Contains((PropertySet)set);
         }).ToList();
 
-        //Take from FP (money and any properties)
-        await TakeFromFreeParking(engine, player, suppressDefault, ct);
+        //Take from FP (money and any properties) — pass the combined suppress (sd) so a held card's
+        //suppression (e.g. "no cash on your next FP visit" → SuppressFreeParkingMoneyTake, supplied via
+        //the OnLandFreeParking trigger, not the drawn card) is honoured, not just the drawn card's.
+        await TakeFromFreeParking(engine, player, sd, ct);
         
         if (eligibleProperties.Count == 0)
         {
@@ -168,6 +179,9 @@ public class FreeParkingService
         uint amount = cap;
         if (engine.Cache.Game.FreeParkingAmount < amount)
             amount = engine.Cache.Game.FreeParkingAmount;
+        
+        var triggerSuppress = await _triggerService.OnOtherTakesFreeParking(engine, player, amount, ct);
+        suppressDefault.Aggregate(triggerSuppress);
         
         var fpProperties = engine.Cache.Game.Properties
             .Where(p => p.State == PropertyState.FreeParking)

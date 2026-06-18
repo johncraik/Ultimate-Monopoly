@@ -43,4 +43,11 @@ public sealed class JailAction : CardAction
     /// (e.g. "tripled" → 3). Ignored when <see cref="LeaveFeeSetTo"/> is set.
     /// </summary>
     public ushort? LeaveFeeMultiplier { get; set; }
+
+    /// <summary>
+    /// For <see cref="JailKind.ModifyLeaveFee"/>: set the one-shot <c>PlayerModel.FreeNextJailExit</c> flag
+    /// ("befriend a prison guard — next exit is free"). Leaves <c>JailCost</c> (and its escalation) intact;
+    /// <c>PayJailFee</c> waives the next charge and clears the flag. Takes precedence over the set/multiply.
+    /// </summary>
+    public bool FreeNextExit { get; set; }
 }

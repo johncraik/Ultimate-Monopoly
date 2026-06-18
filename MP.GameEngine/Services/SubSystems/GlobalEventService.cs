@@ -12,7 +12,8 @@ public class GlobalEventService
 
     public void ClearCurrentEvent(Framework.GameEngine engine)
     {
-        var diceType = engine.Cache.TurnDiceRoll?.RollType;
+        var dice = engine.Cache.GetTurnDiceRoll();
+        var diceType = dice?.RollType;
         if (diceType == null || diceType != DiceRollType.Double)
             return;
         

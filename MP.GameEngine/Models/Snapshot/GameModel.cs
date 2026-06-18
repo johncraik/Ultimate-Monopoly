@@ -58,6 +58,7 @@ public class GameModel
         ReserveRuleActive = model.ReserveRuleActive;
         FreeParkingAmount = model.FreeParkingAmount;
         GlobalEventInfo = new EventInfo(model.GlobalEventInfo);
+        ModifiedDiceRollType = model.ModifiedDiceRollType;
         
         Players = model.Players.Select(p => new PlayerModel(p)).ToList();
         Properties = model.Properties.Select(p => new PropertyModel(p)).ToList();

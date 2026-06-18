@@ -86,6 +86,11 @@
         "RawText": "Send any player of your choice to jail. Keep until needed",
         "CardType": "Double",
         "ConditionType": "ChoiceCardholderTurn",
+        "Conditions": [
+            {
+                "Trigger": 393216
+            }
+        ],
         "Groups": [
             {
                 "Actions": [

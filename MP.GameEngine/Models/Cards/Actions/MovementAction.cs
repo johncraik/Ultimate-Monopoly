@@ -43,4 +43,11 @@ public sealed class MovementAction : CardAction
     /// (game-rules.md Movement rule 4).
     /// </summary>
     public bool ResolveLandedSpace { get; set; } = true;
+
+    /// <summary>
+    /// For a <see cref="MovementKind.Swap"/>: resolve the landed space for the <i>swapped-in</i> player
+    /// (the target, who takes the holder's old space) — the FP "ID check" swap, where "the player now on
+    /// free parking proceeds as normal". Default false (the standard swap performs no landed action).
+    /// </summary>
+    public bool ResolveLandedSpaceForTarget { get; set; }
 }

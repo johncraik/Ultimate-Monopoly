@@ -7,6 +7,7 @@ using MP.GameEngine.Models.EventReceipts;
 using MP.GameEngine.Models.Prompts.PromptTypes;
 using MP.GameEngine.Models.Prompts.PromptTypes.Responses;
 using MP.GameEngine.Models.Snapshot;
+using MP.GameEngine.Services.Cards;
 
 namespace MP.GameEngine.Services.SubSystems;
 
@@ -14,12 +15,15 @@ public class JailService
 {
     private readonly MovementService _movementService;
     private readonly TransactionService _transactionService;
+    private readonly CardTriggerService _triggerService;
 
     public JailService(MovementService movementService,
-        TransactionService transactionService)
+        TransactionService transactionService,
+        CardTriggerService triggerService)
     {
         _movementService = movementService;
         _transactionService = transactionService;
+        _triggerService = triggerService;
     }
     
     public async Task<bool> SendPlayerToJail(Framework.GameEngine engine, PlayerModel player, CancellationToken ct)
@@ -29,6 +33,7 @@ public class JailService
         player.DoublesInRow = 0;
         player.TriplesInRow = 0;
 
+        var sent = false;
         if (engine.Cache.Game.GlobalEventInfo.JailFull)
         {
             //Jail is full event
@@ -40,19 +45,20 @@ public class JailService
                 $"The jail is full, so you must pay your jail fee of {RuleDictionary.Currency}{jailCost:N0}", ct: ct);
 
             await PayJailFee(engine, player, ct);
-            //Paid the fee INSTEAD of going to jail — the player isn't moved, and no jail receipt/notification.
-            return false;
         }
-
-        await _movementService.SendPlayerToJail(engine, player, ct);
-        
-        engine.Notifier.Notify(engine.Cache.GameId, player.PlayerId, "You have been sent to jail");
+        else
+        {
+            await _movementService.SendPlayerToJail(engine, player, ct);
+            
+            engine.Notifier.Notify(engine.Cache.GameId, player.PlayerId, "You have been sent to jail");
+            sent = true;
+        }
         
         engine.EventEmitter.Emit(new PlayerEnteredJailReceipt
         {
             PlayerId = player.PlayerId
         });
-        return true;
+        return sent;
     }
 
     public async Task CheckAndLeaveJail(Framework.GameEngine engine, PlayerModel player, CancellationToken ct)
@@ -65,6 +71,8 @@ public class JailService
             engine.CiteRule(RuleCode.Jail_CantLeaveDueToCard);
             return;
         }
+        
+        _ = await _triggerService.OnInJail(engine, player, ct);
 
         //Reset jail counter to 0
         player.JailTurnCounter = 0;
@@ -88,6 +96,8 @@ public class JailService
         player.MinJailTurns = null;
         player.CollectRentInJail = false;
         engine.CiteRule(RuleCode.Jail_ThreeTurnLimit);
+        
+        _ = await _triggerService.OnInJail(engine, player, ct);
         
         //Round the cost for front-end prompt:
         var jailCost = MoneyHelper.NormaliseAmount(player.JailCost, engine.Cache.RoundingRule, FinancialReason.JailFee);
@@ -121,11 +131,15 @@ public class JailService
             engine.CiteRule(RuleCode.Jail_CantLeaveDueToCard);
             return;
         }
-        
+
         if(!player.IsInJail)
             return;
-        
-        await _movementService.AdvancePlayer(engine, player, IndexHelper.JustVisitingSpace, 
+
+        //Held jail cards react to the voluntary exit too (e.g. "befriend a guard" waives the fee) before
+        //the fee is charged — the other exit paths fire OnInJail already; this one is the command path.
+        _ = await _triggerService.OnInJail(engine, player, ct);
+
+        await _movementService.AdvancePlayer(engine, player, IndexHelper.JustVisitingSpace,
             PlayerMovementDirection.CounterDirectionOfTravel, ct);
 
         await PayJailFee(engine, player, ct);
@@ -133,6 +147,15 @@ public class JailService
 
     private async Task PayJailFee(Framework.GameEngine engine, PlayerModel player, CancellationToken ct)
     {
+        if (player.FreeNextJailExit)
+        {
+            //One-shot waiver ("befriend a guard") — skip the charge and the 50% escalation, consume the flag.
+            player.FreeNextJailExit = false;
+            engine.CiteRule(RuleCode.Jail_FeeWaivedByCard);
+            engine.Notifier.Notify(engine.Cache.GameId, player.PlayerId, "You befriended a guard — no jail fee to leave.");
+            return;
+        }
+
         await _transactionService.PayJailFee(engine, player, ct);
         
         //Increase jail cost by 50% of original cost

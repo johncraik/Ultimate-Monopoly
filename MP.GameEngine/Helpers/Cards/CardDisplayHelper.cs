@@ -6,15 +6,17 @@ using MP.GameEngine.Enums.Games;
 using MP.GameEngine.Helpers.RuleSet;
 using MP.GameEngine.Models.Cards;
 using MP.GameEngine.Models.Cards.Actions;
+using MP.GameEngine.Models.Snapshot.Cards;
 
 namespace MP.GameEngine.Helpers.Cards;
 
 public static class CardDisplayHelper
 {
+    private const string OccasionsIdentifier = "OC";
     public const string GroupIdentifier = "G";
-    private const string GroupKeySeparator = "__";
-    private const char CostTagOpen = '{';
-    private const char CostTagClose = '}';
+    private const string KeySeparator = "__";
+    private const char TagOpen = '{';
+    private const char TagClose = '}';
     
     public const string UniqueTagOpen = "[[";
     public const string UniqueTagClose = "]]";
@@ -28,7 +30,7 @@ public static class CardDisplayHelper
     /// <param name="cost">The cost value to replace the tag with.</param>
     /// <returns>The card text with the specified cost tag replaced by the formatted cost value.</returns>
     private static string ReplaceCostTag(this string cardText, string groupKey, int costIndex, uint cost)
-        => cardText.Replace($"{CostTagOpen}{groupKey}{GroupKeySeparator}{costIndex}{CostTagClose}",
+        => cardText.Replace($"{TagOpen}{groupKey}{KeySeparator}{costIndex}{TagClose}",
             $"{RuleDictionary.Currency}{cost:N0}");
 
     /// <summary>
@@ -40,9 +42,12 @@ public static class CardDisplayHelper
     /// <param name="cost">The cost value to replace the tag with.</param>
     /// <returns>A string with the cost tag replaced by the cost value formatted with the currency symbol.</returns>
     private static string ReplaceCostTag(this string cardText, int costIndex, uint cost)
-        => cardText.Replace($"{CostTagOpen}{costIndex}{CostTagClose}",
+        => cardText.Replace($"{TagOpen}{costIndex}{TagClose}",
             $"{RuleDictionary.Currency}{cost:N0}");
-
+    
+    private static string ReplaceOccasionsTag(this string cardText, int occasionsIndex, int occasionsCount)
+        => cardText.Replace($"{TagOpen}{OccasionsIdentifier}{KeySeparator}{occasionsIndex}{TagClose}",
+            $"{occasionsCount:N0}");
 
     public static string FormatCardText(this string text, CardGroup g, ushort playerCap, 
         GameRoundingRule roundingRule, bool isGroupText)
@@ -50,24 +55,29 @@ public static class CardDisplayHelper
         for (var i = 0; i < g.Actions.Count; i++)
         {
             var a = g.Actions[i];
-            if(a is not MoneyAction moneyAction) continue;
-
-            var cost = moneyAction.Amount;
-            
-            //ONLY apply % cap and rounding if value is NOT multiplied (cap and rounding applies AFTER multiplying amount)
-            var displayCost = (uint)Math.Abs(cost);
-            if(moneyAction is { PerUnit: MoneyPerUnit.None, DiceMultiplier: DiceMultiplier.None })
+            if (a is MoneyAction moneyAction)
             {
-                if(moneyAction.PercentageApplies)
-                    cost = (cost * playerCap) / 100;
+                var cost = moneyAction.Amount;
+            
+                //ONLY apply % cap and rounding if value is NOT multiplied (cap and rounding applies AFTER multiplying amount)
+                var displayCost = (uint)Math.Abs(cost);
+                if(moneyAction is { PerUnit: MoneyPerUnit.None, DiceMultiplier: DiceMultiplier.None })
+                {
+                    if(moneyAction.PercentageApplies)
+                        cost = (cost * playerCap) / 100;
                 
-                displayCost = MoneyHelper.NormaliseAmountToPositive((long)Math.Round(cost, MidpointRounding.AwayFromZero), roundingRule,
-                    cost < 0 ? FinancialReason.CardCharge : FinancialReason.CardPayout);
+                    displayCost = MoneyHelper.NormaliseAmountToPositive((long)Math.Round(cost, MidpointRounding.AwayFromZero), roundingRule,
+                        cost < 0 ? FinancialReason.CardCharge : FinancialReason.CardPayout);
+                }
+                
+                text = isGroupText 
+                    ? text.ReplaceCostTag(i, displayCost) 
+                    : text.ReplaceCostTag(g.GroupKey, i, displayCost);
             }
-                
-            text = isGroupText 
-                ? text.ReplaceCostTag(i, displayCost) 
-                : text.ReplaceCostTag(g.GroupKey, i, displayCost);
+            
+            if(g.TurnsRemaining == null) continue;
+            
+            text = text.ReplaceOccasionsTag(i, (int)g.TurnsRemaining);
         }
 
         return text;
@@ -90,4 +100,24 @@ public static class CardDisplayHelper
             CardType.GoToJail => "jail",
             _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
         };
+
+
+    public static string ConditionDisplay(this CardModel card)
+        => card.ConditionType switch
+        {
+            CardConditionType.None => "No Conditions", //Should never be displayed since all kept cards have a condition
+            CardConditionType.MetCardholderTurn or CardConditionType.MetAnyPlayerTurn => "Forced",
+            CardConditionType.ChoiceCardholderTurn or CardConditionType.ChoiceAnyPlayerTurn => "Choice",
+            _ => throw new ArgumentOutOfRangeException()
+        };
+
+    public static string CardTriggerDisplay(this CardModel card)
+    {
+        if(card.ConditionType == CardConditionType.None 
+           || card.Conditions.All(c => c.Trigger == CardTrigger.None))
+            return "None";
+        
+        var triggers = card.Conditions.Select(c => c.Trigger).ToList();
+        return string.Join(" or ", triggers.Select(t => t.ToDisplayName()));
+    }
 }

@@ -23,9 +23,10 @@ namespace MP.GameEngine.Services.Cards;
 /// (under third-die board resolution the subject is not the turn player).
 ///
 /// The trigger set is derived from the held cards in <c>design-docs/cards.md</c> (the resolve-on-draw
-/// and "anytime on your own turn" cards need no trigger). The return type is <see cref="Task"/> for
-/// now; the granular per-trigger result that declares which default each call site must suppress is
-/// layered on later.
+/// and "anytime on your own turn" cards need no trigger). Each method returns the aggregated
+/// <see cref="SuppressDefault"/> across every card that fired on the trigger, so the call site knows
+/// which part of its default to skip (the doubled tax replaces the charge, the GO-money card cancels
+/// the bonus, …). A fresh aggregate is built per call — card definitions are never mutated.
 /// </summary>
 public class CardTriggerService
 {
@@ -33,17 +34,17 @@ public class CardTriggerService
 
     /// <summary>Subject landed on GO — the GO bonus is threaded as the trigger amount (GO money doubled,
     /// no money for landing on GO, pay each player on landing GO). <c>GoService.LandOnGo</c>.</summary>
-    public Task OnLandGo(Framework.GameEngine engine, PlayerModel lander, uint goBonus, CancellationToken ct)
+    public Task<SuppressDefault> OnLandGo(Framework.GameEngine engine, PlayerModel lander, uint goBonus, CancellationToken ct)
         => ProcessGameTrigger(engine, lander, CardTrigger.OnLandGo, Ctx(goBonus, FinancialReason.GoBonus), ct);
 
     /// <summary>Subject passed GO — the pass bonus is the trigger amount. The anti-clockwise variant is a
     /// condition parameter checked during evaluation (receive £X passing GO anti-clockwise). <c>GoService.CollectGoMoney</c>.</summary>
-    public Task OnPassGo(Framework.GameEngine engine, PlayerModel passer, uint passBonus, CancellationToken ct)
+    public Task<SuppressDefault> OnPassGo(Framework.GameEngine engine, PlayerModel passer, uint passBonus, CancellationToken ct)
         => ProcessGameTrigger(engine, passer, CardTrigger.OnPassGo, Ctx(passBonus, FinancialReason.GoBonus), ct);
 
     /// <summary>Another player passed GO — a bystander may steal their bonus (former prisoner). Subject is the
     /// passer; the holder reacts (any-player scope). <c>CollectGoMoney</c> during third-die movement.</summary>
-    public Task OnOtherPassGo(Framework.GameEngine engine, PlayerModel passer, uint passBonus, CancellationToken ct)
+    public Task<SuppressDefault> OnOtherPassGo(Framework.GameEngine engine, PlayerModel passer, uint passBonus, CancellationToken ct)
         => ProcessGameTrigger(engine, passer, CardTrigger.OnOtherPassGo, Ctx(passBonus, FinancialReason.GoBonus), ct);
 
 
@@ -51,12 +52,12 @@ public class CardTriggerService
 
     /// <summary>Subject landed on Free Parking — no-cash-next-visit (suppress) / receive-ALL-the-money (reads the
     /// pot directly), so no trigger amount. <c>FreeParkingService.ProcessFreeParking</c>.</summary>
-    public Task OnLandFreeParking(Framework.GameEngine engine, PlayerModel lander, CancellationToken ct)
+    public Task<SuppressDefault> OnLandFreeParking(Framework.GameEngine engine, PlayerModel lander, CancellationToken ct)
         => ProcessGameTrigger(engine, lander, CardTrigger.OnLandFreeParking, null, ct);
 
     /// <summary>Another player took the Free Parking money — a bystander may receive it instead. Subject is the
     /// taker; the take amount is the trigger amount.</summary>
-    public Task OnOtherTakesFreeParking(Framework.GameEngine engine, PlayerModel taker, uint amount, CancellationToken ct)
+    public Task<SuppressDefault> OnOtherTakesFreeParking(Framework.GameEngine engine, PlayerModel taker, uint amount, CancellationToken ct)
         => ProcessGameTrigger(engine, taker, CardTrigger.OnOtherTakesFreeParking, Ctx(amount, FinancialReason.FreeParkingTake), ct);
 
 
@@ -64,20 +65,20 @@ public class CardTriggerService
 
     /// <summary>Subject rolled a double — convert double→triple; the dodgy-judge double→triple (gated on an
     /// in-jail condition). Orchestrator double branch.</summary>
-    public Task OnRollDouble(Framework.GameEngine engine, PlayerModel roller, CancellationToken ct)
+    public Task<SuppressDefault> OnRollDouble(Framework.GameEngine engine, PlayerModel roller, CancellationToken ct)
         => ProcessGameTrigger(engine, roller, CardTrigger.OnRollDouble, null, ct);
 
     /// <summary>Subject rolled a triple — downgrade triple→double. Orchestrator triple branch.</summary>
-    public Task OnRollTriple(Framework.GameEngine engine, PlayerModel roller, CancellationToken ct)
+    public Task<SuppressDefault> OnRollTriple(Framework.GameEngine engine, PlayerModel roller, CancellationToken ct)
         => ProcessGameTrigger(engine, roller, CardTrigger.OnRollTriple, null, ct);
 
     /// <summary>Another player rolled a triple — a bystander may cancel their triple bonus. Subject is the roller.</summary>
-    public Task OnOtherRollsTriple(Framework.GameEngine engine, PlayerModel roller, CancellationToken ct)
+    public Task<SuppressDefault> OnOtherRollsTriple(Framework.GameEngine engine, PlayerModel roller, CancellationToken ct)
         => ProcessGameTrigger(engine, roller, CardTrigger.OnOtherRollsTriple, null, ct);
 
     /// <summary>Subject rolled snake eyes (double 1) — the £500 bonus moment ("pay your snake-eyes money to the
     /// lowest roller"). The bonus is threaded as the trigger amount.</summary>
-    public Task OnSnakeEyes(Framework.GameEngine engine, PlayerModel roller, CancellationToken ct)
+    public Task<SuppressDefault> OnSnakeEyes(Framework.GameEngine engine, PlayerModel roller, CancellationToken ct)
         => ProcessGameTrigger(engine, roller, CardTrigger.OnSnakeEyes, Ctx(RuleDictionary.SnakeEyesBonus, FinancialReason.SneakEyes), ct);
 
 
@@ -85,23 +86,24 @@ public class CardTriggerService
 
     /// <summary>Subject is in jail and may play a card (get-out-of-jail-free; befriend a guard → next exit is free).
     /// The leave-jail path.</summary>
-    public Task OnInJail(Framework.GameEngine engine, PlayerModel jailed, CancellationToken ct)
+    public Task<SuppressDefault> OnInJail(Framework.GameEngine engine, PlayerModel jailed, CancellationToken ct)
         => ProcessGameTrigger(engine, jailed, CardTrigger.OnInJail, null, ct);
 
 
     // ───────────────────── Rent ─────────────────────
 
     /// <summary>Subject is paying rent to another player — "your next payment to another player is doubled". The
-    /// rent is the trigger amount. <c>PropertyService.PayRent</c>.</summary>
-    public Task OnPayRent(Framework.GameEngine engine, PlayerModel payer, uint rent, CancellationToken ct)
-        => ProcessGameTrigger(engine, payer, CardTrigger.OnRentDue, Ctx(rent, FinancialReason.Rent), ct);
+    /// rent is the trigger amount and <paramref name="ownerId"/> the player being paid (threaded so the held
+    /// card can pay that same owner an equal extra). <c>PropertyService.PayPropertyRent</c>.</summary>
+    public Task<SuppressDefault> OnPayRent(Framework.GameEngine engine, PlayerModel payer, uint rent, string? ownerId, CancellationToken ct)
+        => ProcessGameTrigger(engine, payer, CardTrigger.OnRentDue, Ctx(rent, FinancialReason.Rent, ownerId), ct);
 
 
     // ───────────────────── Movement ─────────────────────
 
     /// <summary>After the subject's next move — roll <i>or</i> third-die movement ("after your next move, move
     /// forward 23 / go back 17"). Post-move, <c>MovementService</c>.</summary>
-    public Task OnNextMove(Framework.GameEngine engine, PlayerModel mover, CancellationToken ct)
+    public Task<SuppressDefault> OnNextMove(Framework.GameEngine engine, PlayerModel mover, CancellationToken ct)
         => ProcessGameTrigger(engine, mover, CardTrigger.OnNextMove, null, ct);
 
 
@@ -109,16 +111,25 @@ public class CardTriggerService
 
     /// <summary>Subject landed on a tax space — the keystone of the held-tax modifiers. The assessed tax is
     /// threaded as the trigger amount ("your next tax is tripled"). <c>TaxService.PayTax</c>.</summary>
-    public Task OnTaxLanded(Framework.GameEngine engine, PlayerModel lander, uint taxAmount, CancellationToken ct)
+    public Task<SuppressDefault> OnTaxLanded(Framework.GameEngine engine, PlayerModel lander, uint taxAmount, CancellationToken ct)
         => ProcessGameTrigger(engine, lander, CardTrigger.OnTaxLanded, Ctx(taxAmount, FinancialReason.Tax), ct);
+
+
+    // ───────────────────── Anytime own turn ─────────────────────
+
+    /// <summary>The subject landed on a space — the other "anytime own turn" window, fired after every move
+    /// (the subject's own roll/double/triple move and when moved by another player's third die — the holder
+    /// is still the subject being moved, cards-design.md §4.1).</summary>
+    public Task<SuppressDefault> OnSpaceLand(Framework.GameEngine engine, PlayerModel lander, CancellationToken ct)
+        => ProcessGameTrigger(engine, lander, CardTrigger.OnSpaceLand, null, ct);
 
 
     // ───────────────────── Core ─────────────────────
 
     /// <summary>Builds the trigger context an amount-carrying trigger threads into the played card's actions
     /// (the <c>AmountSource.TriggerAmount</c> seam). Amountless triggers pass <c>null</c>.</summary>
-    private static CardActionContext Ctx(long amount, FinancialReason reason)
-        => new() { TriggerAmount = amount, TriggerReason = reason };
+    private static CardActionContext Ctx(long amount, FinancialReason reason, string? counterpartyId = null)
+        => new() { TriggerAmount = amount, TriggerReason = reason, TriggerCounterpartyId = counterpartyId };
 
     /// <summary>
     /// The shared evaluation core every public trigger method funnels through (mirrors
@@ -126,10 +137,9 @@ public class CardTriggerService
     /// prompts/forces in turn order, plays the chosen card with <paramref name="context"/>, then
     /// re-evaluates so a state change (e.g. triple→double) lets other players' cards react.
     /// </summary>
-    private async Task ProcessGameTrigger(Framework.GameEngine engine, PlayerModel subject, CardTrigger trigger,
+    private async Task<SuppressDefault> ProcessGameTrigger(Framework.GameEngine engine, PlayerModel subject, CardTrigger trigger,
         CardActionContext? context, CancellationToken ct)
-    {
-        //TODO: How this should conceptually work:
+        //NOTE: How this should conceptually work:
         // - Called from a sub-system at a trigger point (like land on go).
         // - This then needs to search for any cards in any players where the trigger matches (contains flag)
         // - Matching players with a valid card are then filtered out depending on player context (subject passed in):
@@ -146,16 +156,14 @@ public class CardTriggerService
         // - GUARD: a card already fired in THIS resolution pass must be excluded from re-evaluation, else a
         //   forced multi-use card (TurnsRemaining > 0, stays in hand) re-matches and loops forever.
         // - Return type becomes a typed result (granular suppression) once that layer lands.
-        
-        _ = await EvaluatePlayableCards(engine, trigger, subject, context, ct: ct);
-    }
+        => await EvaluatePlayableCards(engine, trigger, subject, context, ct: ct);
 
 
     private async Task<SuppressDefault> EvaluatePlayableCards(Framework.GameEngine engine, CardTrigger trigger, PlayerModel subject,
         CardActionContext? context, HashSet<HeldCard>? playedCards = null, SuppressDefault? completeSuppress = null, CancellationToken ct = default)
     {
         //Get cards that have a matching trigger:
-        var matchingCards = MatchingCardForTrigger(engine, subject.PlayerId, trigger);
+        var matchingCards = MatchingCardForTrigger(engine, subject, trigger);
         if (matchingCards.Count == 0)
             return completeSuppress ?? new SuppressDefault(SuppressDefaultType.None);
         
@@ -181,7 +189,7 @@ public class CardTriggerService
         if (completeSuppress != null)
             completeSuppress.Aggregate(suppressDefaults);
         else
-            completeSuppress = suppressDefaults;
+            completeSuppress = new SuppressDefault(suppressDefaults.Type());
         
         playedCards ??= [];
         playedCards.Add(playedCard);
@@ -193,26 +201,35 @@ public class CardTriggerService
 
     private record HeldCard(PlayerModel Player, CardModel Card);
     
-    private List<HeldCard> MatchingCardForTrigger(Framework.GameEngine engine, string subjectId, CardTrigger trigger)
+    private List<HeldCard> MatchingCardForTrigger(Framework.GameEngine engine, PlayerModel subject, CardTrigger trigger)
     {
         var matchingCards = new List<HeldCard>();
-        foreach (var held in from player in engine.Cache.Game.GetPlayers(subjectId, excludePovPlayer: false)  
+        foreach (var held in from player in engine.Cache.Game.GetPlayers(subject.PlayerId, excludePovPlayer: false)
                  let mc = player.Cards
                      .Where(c =>
                      {
                          if (c.ConditionType == CardConditionType.None)
                              return false;
 
-                         var triggers = c.Conditions.Select(cd => cd.Trigger).ToList();
-                         return triggers.Any(t => t.HasFlag(trigger));
+                         //Live when any condition matches the trigger flag AND its gates (if any): the
+                         //direction gate (e.g. "passing GO anti-clockwise") and the jail-state gate
+                         //(e.g. "a double in jail becomes a triple") against the subject.
+                         return c.Conditions.Any(cd => cd.Trigger.HasFlag(trigger)
+                             && (cd.RequiredDirection is null || cd.RequiredDirection == subject.Direction)
+                             && cd.JailFilter switch
+                             {
+                                 JailFilter.OnlyJailed => subject.IsInJail,
+                                 JailFilter.OnlyNotJailed => !subject.IsInJail,
+                                 _ => true
+                             });
                      })
-                     .ToList() 
-                 where mc.Count != 0 
+                     .ToList()
+                 where mc.Count != 0
                  select mc.Select(c => new HeldCard(player, c)).ToList())
         {
             matchingCards.AddRange(held);
         }
-        
+
         return matchingCards;
     }
 

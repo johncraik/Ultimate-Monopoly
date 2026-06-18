@@ -1,0 +1,162 @@
+[
+    {
+        "RawText": "Advance 6 spaces. Keep until needed",
+        "CardType": "FreeParking",
+        "ConditionType": "ChoiceCardholderTurn",
+        "SuppressDefault": {
+            "SuppressBoardResolution": true
+        },
+        "Conditions": [
+            {
+                "Trigger": 393216
+            }
+        ],
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Movement",
+                        "Kind": 0,
+                        "Spaces": 6
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "All players receive from the bank 50% of the amount in free parking",
+        "CardType": "FreeParking",
+        "ConditionType": "None",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Money",
+                        "Amount": 50,
+                        "Direction": 1,
+                        "Counterparty": 0,
+                        "Target": 3,
+                        "Basis": 2
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Each player, excluding you, must hand in a property into free parking (it does not get recorded and can be from a set you have handed in before). You will receive all properties in free parking.",
+        "CardType": "FreeParking",
+        "ConditionType": "None",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Property",
+                        "Kind": 1,
+                        "Target": 2
+                    },
+                    {
+                        "$type": "Property",
+                        "Kind": 3
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "ID check fails. Swap places with the player in front of you travelling in the same direction. The player now on free parking proceeds as normal",
+        "CardType": "FreeParking",
+        "ConditionType": "None",
+        "SuppressDefault": {
+            "SuppressFreeParkingFine": true,
+            "SuppressFreeParkingMoneyTake": true,
+            "SuppressFreeParkingPropertyTake": true,
+            "SuppressFreeParkingPropertyHandIn": true,
+            "SuppressFreeParkingPurge": true
+        },
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Movement",
+                        "Kind": 3,
+                        "Target": 6,
+                        "ResolveLandedSpaceForTarget": true
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Pass any retained card you have to the player rolling the highest number on one die.",
+        "CardType": "FreeParking",
+        "ConditionType": "None",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "CardTransfer",
+                        "Kind": 0,
+                        "DiceOff": {
+                            "Highest": true
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Steal any card from any player",
+        "CardType": "FreeParking",
+        "ConditionType": "None",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "CardTransfer",
+                        "Kind": 1
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Your lucky day! First take {G0__0} from free parking, the bank pays any shortfall. Then proceed as normal.",
+        "CardType": "FreeParking",
+        "ConditionType": "None",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Money",
+                        "Amount": 3000,
+                        "Direction": 1,
+                        "Counterparty": 1,
+                        "PercentageApplies": true
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "UNLUCKY! Someone else beat you to free parking while you were looking for a parking space. All money and properties in free parking are returned to the bank.",
+        "CardType": "FreeParking",
+        "ConditionType": "None",
+        "SuppressDefault": {
+            "SuppressFreeParkingFine": true,
+            "SuppressFreeParkingMoneyTake": true,
+            "SuppressFreeParkingPropertyTake": true,
+            "SuppressFreeParkingPropertyHandIn": true,
+            "SuppressFreeParkingPurge": true
+        },
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Property",
+                        "Kind": 4
+                    }
+                ]
+            }
+        ]
+    }
+]

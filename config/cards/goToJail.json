@@ -1,0 +1,176 @@
+[
+    {
+        "RawText": "As a regular offender, your jail term is doubled (maximum of 6 turns) and must remain in jail for 3 turns. You still get to roll the dice on those 3 turns, but you cannot leave.",
+        "CardType": "GoToJail",
+        "ConditionType": "None",
+        "SuppressDefault": {
+            "SuppressGoToJail": true
+        },
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Jail",
+                        "Kind": 0,
+                        "TurnsOverride": 6,
+                        "MinJailTurns": 3
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Corrupt judge steals one of your properties and puts it into free parking. It is not recorded.",
+        "CardType": "GoToJail",
+        "ConditionType": "None",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Property",
+                        "Kind": 1
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Dodgy judge facilitates a double in jail to become a triple (double upgraded to a triple only when in jail). Keep until needed",
+        "CardType": "GoToJail",
+        "ConditionType": "ChoiceCardholderTurn",
+        "Conditions": [
+            {
+                "Trigger": 32,
+                "JailFilter": 1
+            }
+        ],
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Dice",
+                        "Kind": 1
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Fine of {G0__0} imposed by the judge. You do not go to jail, you stay where you are.",
+        "CardType": "GoToJail",
+        "ConditionType": "None",
+        "SuppressDefault": {
+            "SuppressGoToJail": true
+        },
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Money",
+                        "Amount": 1000,
+                        "Direction": 0,
+                        "Counterparty": 1
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Friend in jail arranges for someone to purge 2 properties of your choice",
+        "CardType": "GoToJail",
+        "ConditionType": "None",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Building",
+                        "Kind": 0,
+                        "Count": 2
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Mishandled evidence. Do not go to jail, advance to just visiting.",
+        "CardType": "GoToJail",
+        "ConditionType": "None",
+        "SuppressDefault": {
+            "SuppressGoToJail": true
+        },
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Movement",
+                        "Kind": 4
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Pay each player {G0__0} and go to jail",
+        "CardType": "GoToJail",
+        "ConditionType": "None",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Money",
+                        "Amount": 1500,
+                        "Direction": 0,
+                        "Counterparty": 2,
+                        "PercentageApplies": true
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Wrongful arrest! Counter law suit wins you {G0__0}. Advance to just visiting.",
+        "CardType": "GoToJail",
+        "ConditionType": "None",
+        "SuppressDefault": {
+            "SuppressGoToJail": true
+        },
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Money",
+                        "Amount": 2000,
+                        "Direction": 1,
+                        "Counterparty": 0,
+                        "PercentageApplies": true
+                    },
+                    {
+                        "$type": "Movement",
+                        "Kind": 4
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "You are caught by the police and bribe the arresting officer. Pay {G0__0} times the number of properties you own. Do not go to jail, you stay where you are.",
+        "CardType": "GoToJail",
+        "ConditionType": "None",
+        "SuppressDefault": {
+            "SuppressGoToJail": true
+        },
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Money",
+                        "Amount": 100,
+                        "Direction": 0,
+                        "Counterparty": 1,
+                        "PerUnit": 3
+                    }
+                ]
+            }
+        ]
+    }
+]

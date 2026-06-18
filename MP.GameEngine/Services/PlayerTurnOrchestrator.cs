@@ -5,7 +5,9 @@ using MP.GameEngine.Enums.Games;
 using MP.GameEngine.Helpers;
 using MP.GameEngine.Helpers.RuleSet;
 using MP.GameEngine.Models;
+using MP.GameEngine.Models.Cards;
 using MP.GameEngine.Models.Snapshot;
+using MP.GameEngine.Services.Cards;
 using MP.GameEngine.Services.SubSystems;
 
 namespace MP.GameEngine.Services;
@@ -19,6 +21,7 @@ public class PlayerTurnOrchestrator
     private readonly JailService _jailService;
     private readonly BoardService _boardService;
     private readonly GlobalEventService _globalEventService;
+    private readonly CardTriggerService _triggerService;
     private readonly IGameCompletionService _completionService;
 
     public PlayerTurnOrchestrator(DiceService diceService,
@@ -28,6 +31,7 @@ public class PlayerTurnOrchestrator
         JailService jailService,
         BoardService boardService,
         GlobalEventService globalEventService,
+        CardTriggerService triggerService,
         IGameCompletionService completionService)
     {
         _diceService = diceService;
@@ -37,6 +41,7 @@ public class PlayerTurnOrchestrator
         _jailService = jailService;
         _boardService = boardService;
         _globalEventService = globalEventService;
+        _triggerService = triggerService;
         _completionService = completionService;
     }
 
@@ -59,7 +64,9 @@ public class PlayerTurnOrchestrator
             return;
         
         //Roll dice
-        var dice = await _diceService.RollTurnDice(engine, ct);
+        //var 'dice' IS the modified dice roll, if any, otherwise the original
+        //var 'suppressDefault' is the result of suppressed defaults from triggers
+        var (dice, suppressDefault) = await _diceService.RollTurnDice(engine, ct);
         
         //Start roll movement phase for player
         engine.TurnStateProvider.TransitionToRollMovementPhase();
@@ -93,9 +100,11 @@ public class PlayerTurnOrchestrator
                 
                 if (player.DoublesInRow < RuleDictionary.DoublesBeforeJail)
                 {
+                    var suppressCard = await engine.CardService.DrawCard(engine, player, CardType.Double, ct);
+                    suppressDefault.Aggregate(suppressCard);
                     
-                    var suppressDefault = await engine.CardService.DrawCard(engine, player, CardType.Double, ct);
-                    switch (engine.Cache.Game.ModifiedDiceRollType)
+                    //Switch roll type again IF card has changed roll type:
+                    switch (dice.RollType)
                     {
                         case DiceRollType.Normal:
                             throw new InvalidOperationException("Double rolls cannot be downgraded to a normal roll");
@@ -103,18 +112,17 @@ public class PlayerTurnOrchestrator
                             //Credit the triple bonus since double was upgraded to triple
                             await _playerService.ResolveTripleBonus(engine, player, ct);
                             
-                            await HandleTripleRoll(engine, player, new DiceRoll(dice, DiceRollType.Triple), ct);
+                            await HandleTripleRoll(engine, player, dice, ct);
                             transitionToThirdDie = false;
                             break;
                         default:
-                            await HandleDoubleRoll(engine, player, otherPlayers, dice, ct);
+                            await HandleDoubleRoll(engine, player, otherPlayers, dice, suppressDefault, ct);
                             break;
                     }
                     
                     if (!suppressDefault.SuppressDirectionChange && engine.Cache.Game.ModifiedDiceRollType == null)
                     {
                         //Suppress default is "do not turn around" or "double upgraded to triple"
-                        //TODO: Confirm against double cards actual suppressed defaults and outcomes
                         player.FlipDirection(engine);
                     }
                 }
@@ -133,7 +141,7 @@ public class PlayerTurnOrchestrator
             case DiceRollType.Triple:
                 if (player.TriplesInRow < RuleDictionary.TriplesBeforeJail)
                 {
-                    transitionToThirdDie = await TripleRoll(engine, player, otherPlayers, dice, ct);
+                    transitionToThirdDie = await TripleRoll(engine, player, otherPlayers, dice, suppressDefault, ct);
                 }
                 else
                 {
@@ -144,7 +152,7 @@ public class PlayerTurnOrchestrator
                     engine.CiteRule(RuleCode.Triple_ThreeInRowToJail);
                     var sentToJail = await _jailService.SendPlayerToJail(engine, player, ct);
                     
-                    transitionToThirdDie = !sentToJail && await TripleRoll(engine, player, otherPlayers, dice, ct);
+                    transitionToThirdDie = !sentToJail && await TripleRoll(engine, player, otherPlayers, dice, suppressDefault, ct);
                 }
                 
                 break;
@@ -203,11 +211,12 @@ public class PlayerTurnOrchestrator
             var movement = (ushort)(dice.Die1 + (dice.Die2 ?? throw new InvalidOperationException("Second die cannot be null")));
             await _movementService.MovePlayer(engine, player, movement, ct);
             await _boardService.ResolveBoardSpaceForPlayer(engine, player, ct);
+            _ = await _triggerService.OnNextMove(engine, player, ct);
         }
     }
 
     private async Task HandleDoubleRoll(Framework.GameEngine engine, PlayerModel player, List<PlayerModel> otherPlayers, 
-        DiceRoll dice, CancellationToken ct)
+        DiceRoll dice, SuppressDefault suppressDefault, CancellationToken ct)
     {
         //Will move player OUT of jail if in jail
         await _jailService.CheckAndLeaveJail(engine, player, ct);
@@ -218,7 +227,7 @@ public class PlayerTurnOrchestrator
         _ = await engine.PromptProvider.Acknowledge(player.PlayerId, effect.Title, effect.Body, ct: ct);
         
         //Apply snake eyes bonus (if applicable)
-        if(effect.SnakeEyesBonus)
+        if(effect.SnakeEyesBonus && !suppressDefault.SuppressSnakeEyes)
             await _transactionService.ReceiveSnakeEyes(engine, player, ct);
         
         //Move the player based on the effect steps:
@@ -227,6 +236,7 @@ public class PlayerTurnOrchestrator
             {
                 await _movementService.MovePlayer(engine, player, step, ct);
                 await _boardService.ResolveBoardSpaceForPlayer(engine, player, ct);
+                _ = await _triggerService.OnNextMove(engine, player, ct);
             }
         
         //Increment miss turns if effect requires it
@@ -242,6 +252,7 @@ public class PlayerTurnOrchestrator
                     //Will only be one step (per player), double foreach not a concern
                     await _movementService.MovePlayer(engine, p, step, ct);
                     await _boardService.ResolveBoardSpaceForPlayer(engine, p, ct);
+                    _ = await _triggerService.OnNextMove(engine, p, ct);
                 }
             
             //Increment other player's miss turns if effect requires it'
@@ -252,22 +263,24 @@ public class PlayerTurnOrchestrator
 
 
     private async Task<bool> TripleRoll(Framework.GameEngine engine, PlayerModel player, List<PlayerModel> otherPlayers,
-        DiceRoll dice, CancellationToken ct)
+        DiceRoll dice, SuppressDefault sd, CancellationToken ct)
     {
         var suppressDefault = await engine.CardService.DrawCard(engine, player, CardType.Triple, ct);
-        if (!suppressDefault.SuppressTripleBonus)
+        sd.Aggregate(suppressDefault);
+        if (!sd.SuppressTripleBonus)
         {
             //Credit the triple bonus, and increase it (default triple bonus - card will credit custom if needed):
             await _playerService.ResolveTripleBonus(engine, player, ct);
         }
                     
-        switch (engine.Cache.Game.ModifiedDiceRollType)
+        //Switch roll type again IF card has changed roll type:
+        switch (dice.RollType)
         {
             case DiceRollType.Normal:
                 throw new InvalidOperationException("Triple rolls cannot be downgraded to a normal roll");
             case DiceRollType.Double:
                 //The triple was downgraded to a double, so handle it as a double:
-                await HandleDoubleRoll(engine, player, otherPlayers, new DiceRoll(dice, DiceRollType.Double), ct);
+                await HandleDoubleRoll(engine, player, otherPlayers, dice, sd, ct);
                 return true;
             default:
                 await HandleTripleRoll(engine, player, dice, ct);
@@ -286,6 +299,7 @@ public class PlayerTurnOrchestrator
         var movement = (ushort)((dice.Die1 + dice.Die2 + dice.ThirdDie) ?? throw new InvalidOperationException("Dice roll result cannot be null"));
         await _movementService.MovePlayer(engine, player, movement, ct);
         await _boardService.ResolveBoardSpaceForPlayer(engine, player, ct);
+        _ = await _triggerService.OnNextMove(engine, player, ct);
     }
 
     
@@ -297,13 +311,18 @@ public class PlayerTurnOrchestrator
             return;
         
         var otherPlayers = engine.Cache.Game.GetPlayers();
-        var thirdDie = engine.Cache.TurnDiceRoll?.ThirdDie ?? throw new InvalidOperationException("Third die roll cannot be null");
+        var dice = engine.Cache.GetTurnDiceRoll();
+        var thirdDie = dice?.ThirdDie ?? throw new InvalidOperationException("Third die roll cannot be null");
 
-        foreach (var player in otherPlayers.Where(player => !player.IsInJail))
+        foreach (var player in otherPlayers)
         {
-            //Move each player based on third die, if not in jail
-            await _movementService.MovePlayer(engine, player, thirdDie, ct);
-            await _boardService.ResolveBoardSpaceForPlayer(engine, player, ct);
+            if (!player.IsInJail)
+            {
+                //Move each player based on third die, if not in jail
+                await _movementService.MovePlayer(engine, player, thirdDie, ct);
+                await _boardService.ResolveBoardSpaceForPlayer(engine, player, ct);
+                _ = await _triggerService.OnNextMove(engine, player, ct);
+            }
             
             //Check if player gets a third card (someone else rolled their number):
             if (!player.GetThirdCard) continue;
@@ -327,7 +346,7 @@ public class PlayerTurnOrchestrator
         if (engine.Cache.TurnState != TurnState.EndOfTurn)
             return;
 
-        var diceRoll = engine.Cache.TurnDiceRoll;
+        var diceRoll = engine.Cache.GetTurnDiceRoll();
         if (diceRoll == null) throw new InvalidOperationException("Turn dice roll cannot be null");
         
         var rollType = engine.Cache.Game.ModifiedDiceRollType ?? diceRoll.RollType;

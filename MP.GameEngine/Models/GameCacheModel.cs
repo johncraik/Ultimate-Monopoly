@@ -71,7 +71,7 @@ public class GameCacheModel(GameDTO gameDto, GameModel game, Board board)
         
     public GameState GameState { get; internal set; } = gameDto.State;
     
-    public DiceRoll? TurnDiceRoll { get; private set; }
+    private DiceRoll? TurnDiceRoll { get; set; }
     public TurnState TurnState { get; private set; } = TurnState.StartOfTurn;
 
 
@@ -98,6 +98,17 @@ public class GameCacheModel(GameDTO gameDto, GameModel game, Board board)
         StampConcurrency();
     }
 
+
+    public DiceRoll? GetTurnDiceRoll()
+    {
+        if(Game.ModifiedDiceRollType is null)
+            return TurnDiceRoll;
+        
+        return TurnDiceRoll != null 
+            ? new DiceRoll(TurnDiceRoll, Game.ModifiedDiceRollType.Value) 
+            : null;
+    }
+    
 
     #region Rule Codes
 

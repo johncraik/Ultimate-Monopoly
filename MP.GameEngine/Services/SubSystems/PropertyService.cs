@@ -6,6 +6,7 @@ using MP.GameEngine.Helpers.RuleSet;
 using MP.GameEngine.Models.Boards;
 using MP.GameEngine.Models.Prompts.PromptTypes;
 using MP.GameEngine.Models.Snapshot;
+using MP.GameEngine.Services.Cards;
 
 namespace MP.GameEngine.Services.SubSystems;
 
@@ -14,14 +15,17 @@ public class PropertyService
     private readonly AuctionService _auctionService;
     private readonly TransactionService _transactionService;
     private readonly PropertyTransferService _propertyTransferService;
+    private readonly CardTriggerService _triggerService;
 
     public PropertyService(AuctionService auctionService,
         TransactionService transactionService,
-        PropertyTransferService propertyTransferService)
+        PropertyTransferService propertyTransferService,
+        CardTriggerService triggerService)
     {
         _auctionService = auctionService;
         _transactionService = transactionService;
         _propertyTransferService = propertyTransferService;
+        _triggerService = triggerService;
     }
 
     public List<PropertyModel> GetProperties(Board board)
@@ -234,9 +238,15 @@ public class PropertyService
         var cost = PropertyRent(engine, player, space, property);
         if (cost == 0) return;
         
+        var suppress = await _triggerService.OnPayRent(engine, player, cost, property.OwnerPlayerId, ct);
+        if (suppress.SuppressRent)
+            //A held card replaced the rent (e.g. "next payment doubled" paid a multiplied amount to the
+            //owner itself) — skip the default rent acknowledge + charge.
+            return;
+
         _ = await engine.PromptProvider.Acknowledge(player.PlayerId, $"Rent for {property.Name}",
             $"You owe {RuleDictionary.Currency}{cost} in rent for landing on {property.Name}.", ct: ct);
-        
+
         await _transactionService.PayRent(engine, player, cost, property.BoardIndex, ct);
     }
 
@@ -256,11 +266,12 @@ public class PropertyService
 
         if (space.PropertySet == PropertySet.Utility)
         {
+            var dice = engine.Cache.GetTurnDiceRoll();
             rent = (ushort)(engine.Cache.Game.Metadata.CurrentPlayerId == player.PlayerId
                 //Is the player paying rent the turn roller (their turn)?
                 //If so, utility multiplier multiplied by (die1 + die2); otherwise by third die
-                ? (ushort)rent * (engine.Cache.TurnDiceRoll?.Die1 + engine.Cache.TurnDiceRoll?.Die2 ?? 0) //Should not be null, defensive
-                : (ushort)rent * (engine.Cache.TurnDiceRoll?.ThirdDie ?? 0)); //Should not be null, defensive
+                ? (ushort)rent * (dice?.Die1 + dice?.Die2 ?? 0) //Should not be null, defensive
+                : (ushort)rent * (dice?.ThirdDie ?? 0)); //Should not be null, defensive
             
             //Cite utility rent rules:
             engine.CiteRule(RuleCode.Utility_RentIsDiceTimesMultiplier);

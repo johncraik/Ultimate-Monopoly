@@ -46,6 +46,7 @@ public static class ServiceRegistration
         
         //Cards
         services.TryAddScoped<CardService>();
+        services.TryAddScoped<CardTriggerService>();
         services.TryAddScoped<ICardActionService<MoneyAction>, MoneyActionService>();
         services.TryAddScoped<ICardActionService<MovementAction>, MovementActionService>();
         services.TryAddScoped<ICardActionService<JailAction>, JailActionService>();
@@ -58,6 +59,7 @@ public static class ServiceRegistration
         services.TryAddScoped<ICardActionService<DeckDrawAction>, DeckDrawActionService>();
         services.TryAddScoped<ICardActionService<DiceAction>, DiceActionService>();
         services.TryAddScoped<ICardActionService<NoOpAction>, NoOpActionService>();
+        services.TryAddScoped<ICardActionService<CardTransferAction>, CardTransferActionService>();
 
         return services;
     }

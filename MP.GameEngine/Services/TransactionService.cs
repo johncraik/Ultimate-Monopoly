@@ -384,10 +384,12 @@ public class TransactionService
             // Bank is untracked — no balance to mutate.
             return;
         
-        // amount > 0: player took from FP → pot decreases.
+        // amount > 0: player took from FP → pot decreases (floored at 0 — the player still receives the
+        // full amount, so a take exceeding the pot has the bank cover the shortfall, e.g. the "lucky day"
+        // card; this also prevents the uint underflow a fixed over-pot take would otherwise cause).
         // amount < 0: player paid into FP → pot increases.
         engine.Cache.Game.FreeParkingAmount =
-            (uint)(engine.Cache.Game.FreeParkingAmount - amount);
+            (uint)Math.Max(0L, (long)engine.Cache.Game.FreeParkingAmount - amount);
             
         //Cite rule:
         engine.CiteRule(RuleCode.Default_FinesToFreeParking);
