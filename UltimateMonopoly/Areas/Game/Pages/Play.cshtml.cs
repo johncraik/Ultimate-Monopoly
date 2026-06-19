@@ -91,7 +91,7 @@ public class PlayModel : PageModel
 
     private async Task<IActionResult?> LoadAsync(string gameId)
     {
-        Engine = await _engineFactory.GetAsync(gameId);
+    Engine = await _engineFactory.GetAsync(gameId);
         if(Engine.Cache.HostPlayerId != _userInfo.UserId)
             return Forbid();
             

@@ -194,7 +194,7 @@ public class CardService
                 Title = "Choose an option",
                 Body = card.GetDisplayText(engine.Cache, player.PlayerId),
                 Options = card.Groups.Select(g => 
-                    new CardOption(g.GroupId, g.GetDisplayText(engine.Cache, player.PlayerId)))
+                    new CardOption(g.GroupId, g.GetDisplayText(engine.Cache, player.PlayerId) ?? string.Empty))
                     .ToList()
             }, ct);
 

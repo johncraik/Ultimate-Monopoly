@@ -8,6 +8,7 @@ using JC.Identity.Extensions;
 using JC.MySql;
 using JC.SqlServer.Hangfire;
 using JC.Web.Extensions;
+using JC.Web.RateLimiting;
 using Microsoft.AspNetCore.Authorization;
 using JC.Web.Security.Models;
 using UltimateMonopoly.Authorization;
@@ -59,8 +60,21 @@ builder.Services.AddAuthorization(options =>
         .Build();
 });
 
-// Web (security headers, cookies, client profiling)
-builder.Services.AddWebDefaults(builder.Configuration);
+// Web (security headers, cookies, client profiling). TrustProxyHeaders so the real client IP is
+// resolved from Cloudflare's CF-Connecting-IP (the app runs behind a Cloudflare tunnel on IIS) —
+// this drives the per-IP rate limiter below (and bot filtering / geo).
+builder.Services.AddWebDefaults(builder.Configuration,
+    configureClientIp: ip => ip.TrustProxyHeaders = true);
+
+// Rate limiting (opt-in) — scoped to the Identity auth endpoints via UseWhen in the pipeline below.
+// Per-IP brute-force defence on login / register / password / 2FA: 10 requests per minute per client IP.
+builder.Services.AddRateLimiting(options =>
+{
+    options.Strategy = RateLimitingStrategy.TokenBucket;
+    options.PermitLimit = 20;
+    options.Window = TimeSpan.FromMinutes(1);
+    options.PartitionBy = RateLimitPartitionBy.ClientIp;
+});
 
 // Github
 builder.Services.AddGithub<AppDbContext>(builder.Configuration, options =>
@@ -93,10 +107,29 @@ builder.Services.AddServices();
 
 var app = builder.Build();
 
+// Error handling — must wrap the whole pipeline, so it goes first. Unhandled exceptions re-execute to
+// the friendly /Error page (a developer page in dev for debugging); status responses (403/404/429/…)
+// re-execute to /Error/{code}. The /Error page is [AllowAnonymous] and lives outside /Identity/Account,
+// so it's never blocked by global auth nor caught by the auth-endpoint rate limiter.
+if (app.Environment.IsDevelopment())
+    app.UseDeveloperExceptionPage();
+else
+    app.UseExceptionHandler("/Error");
+
+app.UseStatusCodePagesWithReExecute("/Error/{0}");
+
 // Middleware
 app.UseStaticFiles();
 app.UseIdentity();
 app.UseWebDefaults();
+
+// Rate limit ONLY the Identity auth endpoints (login / register / forgot-password / reset / 2FA, …),
+// not account management (/Identity/Account/Manage) or the profile. Global limiter scoped via UseWhen.
+app.UseWhen(
+    ctx => ctx.Request.Path.StartsWithSegments("/Identity/Account")
+           && !ctx.Request.Path.StartsWithSegments("/Identity/Account/Manage"),
+    branch => branch.UseRateLimiting());
+
 app.UseGithubWebhooks();
 
 //Hangfire dashboard — SystemAdmin only

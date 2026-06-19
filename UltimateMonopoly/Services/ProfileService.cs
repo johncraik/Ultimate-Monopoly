@@ -17,7 +17,7 @@ public class ProfileService
 
     //TODO: to be extended with pieces that are in the game
     //Note: your avatar image is a game piece
-    private readonly string[] _avatarImageNames = ["car", "dog", "cat", "van", "horse", "wheel_barrow"];
+    private readonly string[] _avatarImageNames = ["car", "dog", "cat", "van", "horse", "wheel_barrow", "boot", "battleship", "plane"];
 
     private readonly FilePathProvider _filePathProvider;
     private readonly IUserInfo _userInfo;

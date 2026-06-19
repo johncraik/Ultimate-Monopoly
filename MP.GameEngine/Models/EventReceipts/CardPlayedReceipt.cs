@@ -15,8 +15,8 @@ public class CardPlayedReceipt : EventReceipt
     public string DisplayText { get; init; } = "";
     
     public string ChosenGroupId { get; init; } = "";
-    public string GroupRawText { get; init; } = "";
-    public string GroupDisplayText { get; init; } = "";
+    public string? GroupRawText { get; init; }
+    public string? GroupDisplayText { get; init; }
     public ushort NumberOfActions { get; init; }
     
     public bool IsImmunity { get; init; }

@@ -30,6 +30,13 @@
 
     var canEndTurn = turnStateProvider.CanEndTurn(current.PlayerId, cache.HostPlayerId);
 
+    // Current player's profile (for the turn bar's profile circle) and the turn's dice. GetTurnDiceRoll
+    // gives the EFFECTIVE roll (its RollType already reflects any card modification). ModifiedDiceRollType
+    // is the up/down signal: Triple = a double upgraded to a triple (up), Double = a triple downgraded (down).
+    var currentProfile = await PlayerCache.GetPlayerProfile(current.PlayerId);
+    var turnDice = cache.GetTurnDiceRoll();
+    var modifiedType = game.ModifiedDiceRollType;
+
     var availableCount = game.Properties.Count(p => string.IsNullOrEmpty(p.OwnerPlayerId));
     var fpProperties = game.Properties.Where(p => p.State == PropertyState.FreeParking).ToList();
 
@@ -332,34 +339,78 @@
         @* Current turn — info-headed card with the state-driven turn button *@
         <div class="card">
             <div class="card-header bg-info text-dark fw-semibold d-flex align-items-center justify-content-between gap-3">
-                <div class="min-w-0">
-                    <span class="fs-5 fw-semibold">@(await PlayerCache.GetPlayerName(current.PlayerId))</span>
-                    <span class="badge rounded-pill p-2 text-bg-secondary ms-2">@cache.TurnState.ToDisplayName()</span>
+                <div class="min-w-0 d-flex align-items-center gap-2">
+                    <profile-circle user="currentProfile" size="Md" />
+                    <span class="fs-5 fw-semibold text-truncate">@currentProfile.DisplayName</span>
+                    <span class="badge rounded-pill p-2 text-bg-secondary flex-shrink-0">@cache.TurnState.ToDisplayName()</span>
                 </div>
-                @* Turn button — driven by TurnState (commands in play-page.js,
-                   gated server-side and enqueued on the executor):
-                     • StartOfTurn → Roll Dice (StartTurn → EnqueueTurn)
-                     • EndOfTurn   → End Turn   (EndTurn → EnqueueEndTurn)
-                     • mid-turn    → End Turn, disabled (light)                  *@
-                @if (cache.TurnState == TurnState.StartOfTurn)
-                {
-                    <button type="button" class="btn btn-hero-success" data-start-turn>
-                        <i class="bi bi-dice-5 me-1"></i> Roll Dice
-                    </button>
-                }
-                else if (cache.TurnState == TurnState.EndOfTurn)
-                {
-                    <button type="button" class="btn btn-hero-danger" data-end-turn
-                            disabled="@(!canEndTurn)">
-                        <i class="bi bi-flag-fill me-1"></i> End Turn
-                    </button>
-                }
-                else
-                {
-                    <button type="button" class="btn btn-hero-light" data-end-turn disabled>
-                        <i class="bi bi-flag-fill me-1"></i> End Turn
-                    </button>
-                }
+
+                <div class="d-flex align-items-center gap-3 flex-shrink-0">
+                    @* The turn's dice (left of the turn button): the two dice and the third die, a roll-type
+                       badge, and — when a card changed the roll type — an up (double→triple) / down
+                       (triple→double) indicator. Only shown once a roll has happened this turn. *@
+                    @if (turnDice != null)
+                    {
+                        var (rollLabel, rollColour) = turnDice.RollType switch
+                        {
+                            DiceRollType.Triple => ("Triple", "warning"),
+                            DiceRollType.Double => ("Double", "primary"),
+                            _ => ("Normal", "secondary")
+                        };
+                        <div class="d-flex align-items-center gap-2 bg-secondary rounded-pill ps-3 pe-2 py-2 shadow-sm">
+                            <span class="d-flex align-items-center gap-1 fs-4 text-dark lh-1">
+                                <i class="bi bi-dice-@turnDice.Die1"></i>
+                                @if (turnDice.Die2 is { } d2)
+                                {
+                                    <i class="bi bi-dice-@d2"></i>
+                                }
+                            </span>
+                            @if (turnDice.ThirdDie is { } d3)
+                            {
+                                <span class="text-body-secondary fw-light">|</span>
+                                <i class="bi bi-dice-@d3 fs-4 text-dark lh-1"></i>
+                            }
+                            <span class="badge rounded-pill text-bg-@rollColour">@rollLabel</span>
+                            @if (modifiedType == DiceRollType.Triple)
+                            {
+                                <span class="badge rounded-pill text-bg-success d-inline-flex align-items-center" title="Upgraded to a triple by a card">
+                                    <i class="bi bi-arrow-up"></i>
+                                </span>
+                            }
+                            else if (modifiedType == DiceRollType.Double)
+                            {
+                                <span class="badge rounded-pill text-bg-danger d-inline-flex align-items-center" title="Downgraded to a double by a card">
+                                    <i class="bi bi-arrow-down"></i>
+                                </span>
+                            }
+                        </div>
+                    }
+
+                    @* Turn button — driven by TurnState (commands in play-page.js,
+                       gated server-side and enqueued on the executor):
+                         • StartOfTurn → Roll Dice (StartTurn → EnqueueTurn)
+                         • EndOfTurn   → End Turn   (EndTurn → EnqueueEndTurn)
+                         • mid-turn    → End Turn, disabled (light)                  *@
+                    @if (cache.TurnState == TurnState.StartOfTurn)
+                    {
+                        <button type="button" class="btn btn-hero-success" data-start-turn>
+                            <i class="bi bi-dice-5 me-1"></i> Roll Dice
+                        </button>
+                    }
+                    else if (cache.TurnState == TurnState.EndOfTurn)
+                    {
+                        <button type="button" class="btn btn-hero-danger" data-end-turn
+                                disabled="@(!canEndTurn)">
+                            <i class="bi bi-flag-fill me-1"></i> End Turn
+                        </button>
+                    }
+                    else
+                    {
+                        <button type="button" class="btn btn-hero-light" data-end-turn disabled>
+                            <i class="bi bi-flag-fill me-1"></i> End Turn
+                        </button>
+                    }
+                </div>
             </div>
         </div>
 

@@ -44,8 +44,11 @@ public class CardGroup
         GroupKey = group.GroupKey;
     }
     
-    public string GetDisplayText(GameCacheModel gameCache, string playerId)
+    public string? GetDisplayText(GameCacheModel gameCache, string playerId)
     {
+        if(string.IsNullOrEmpty(GroupText)) 
+            return null;
+        
         var roundingRule = gameCache.RoundingRule;
         var playerCap = gameCache.Game.PlayerPercentCap(playerId);
 

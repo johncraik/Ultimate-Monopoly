@@ -77,7 +77,7 @@
         "ConditionType": "ChoiceCardholderTurn",
         "Conditions": [
             {
-                "Trigger": 512
+                "Trigger": 0
             }
         ],
         "Groups": [
