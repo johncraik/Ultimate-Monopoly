@@ -77,10 +77,25 @@ public class BankruptcyService
         _ = await engine.PromptProvider.Acknowledge(player.PlayerId, "Bankruptcy", 
             "You have declared bankruptcy.", timeout: TimeSpan.FromSeconds(30), ct: ct);
         
+        var currentPlayer = engine.Cache.Game.CurrentPlayer();
         player.IsBankrupt = true;
         //Moves all properties back to the bank:
         _propertyTransferService.Bankrupt(engine, player);
         _propertyService.NormaliseProperties(engine);
+        
+        //Hand back all cards:
+        foreach (var card in player.Cards)
+        {
+            //Reset card groups:
+            foreach (var g in card.Groups)
+            {
+                g.TurnsRemaining = g.TurnsActive;
+                g.IsChosenGroup = false;
+            }
+            engine.Cache.Game.CardDecks.HandBack(card.CardType, card);
+        }
+        //Empty list:
+        player.Cards.Clear();
         
         engine.CiteRule(RuleCode.Bankruptcy_Declared);
         engine.CiteRule(RuleCode.Bankruptcy_AssetsToBank);
@@ -89,9 +104,11 @@ public class BankruptcyService
         var otherPlayers = engine.Cache.Game.GetPlayers(excludePovPlayer: false);
         if(otherPlayers.Count > 1)
         {
-            //End players turn, and transition to next player:
-            //TODO: Decide if its End of turn, OR player roll (for 3rd die):
-            //optionally, pass in bool to transition to next player so that it doesnt progress turn state (if current player is bankrupted player)
+            if(player.PlayerId != currentPlayer?.PlayerId)
+                //Player bankrupting was not current player; so do not mutate turn state
+                return;
+            
+            //End players turn (they were current player), and transition to next player
             engine.Cache.SetTurnState(TurnState.EndOfTurn);
             await engine.TurnStateProvider.TransitionToNextPlayer();
             return;

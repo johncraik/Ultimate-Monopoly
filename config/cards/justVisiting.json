@@ -192,5 +192,20 @@
                 ]
             }
         ]
+    },
+    {
+        "RawText": "Immunity from taking a Go To Jail card when landing on Go To Jail. Play once, keep until needed",
+        "CardType": "JustVisiting",
+        "ConditionType": "ChoiceCardholderTurn",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Immunity",
+                        "Immunity": 1
+                    }
+                ]
+            }
+        ]
     }
 ]

@@ -2,6 +2,7 @@ using System.Net;
 using JC.Core.Extensions;
 using Microsoft.AspNetCore.Html;
 using MP.GameEngine.Enums;
+using MP.GameEngine.Enums.Cards;
 using MP.GameEngine.Enums.Properties;
 using MP.GameEngine.Helpers;
 using MP.GameEngine.Models.Boards;
@@ -60,6 +61,8 @@ public static class StatRender
         StatKind.FinancialReason => new HtmlString(ReasonBadge((FinancialReason?)part.Value(r))),
         StatKind.Bool => new HtmlString(YesNo((bool)part.Value(r)!, part.Sentiment)),
         StatKind.TriBool => new HtmlString(TriBool((bool?)part.Value(r), part.Sentiment)),
+        StatKind.CardTrigger => new HtmlString(TriggerBadge((CardTrigger?)part.Value(r))),
+        StatKind.CardEngagement => new HtmlString(EngagementBadge((CardEngagement?)part.Value(r))),
         _ => new HtmlString(Dash)
     };
 
@@ -107,6 +110,24 @@ public static class StatRender
         => reason is { } fr
             ? $"<span class=\"badge text-bg-secondary fs-6\">{WebUtility.HtmlEncode(fr.ToDisplayName())}</span>"
             : Dash;
+
+    private static string TriggerBadge(CardTrigger? trigger)
+        => trigger is { } t && t != CardTrigger.None
+            ? $"<span class=\"badge text-bg-secondary fs-6\">{WebUtility.HtmlEncode(t.ToDisplayName())}</span>"
+            : Dash;
+
+    private static string EngagementBadge(CardEngagement? engagement)
+        => engagement is { } e
+            ? $"<span class=\"badge text-bg-secondary fs-6\">{WebUtility.HtmlEncode(EngagementLabel(e))}</span>"
+            : Dash;
+
+    /// <summary>Display label for an engagement bucket — ResolveOnDraw reads "Instant" to the player.</summary>
+    private static string EngagementLabel(CardEngagement e) => e switch
+    {
+        CardEngagement.Forced => "Forced",
+        CardEngagement.Choice => "Choice",
+        _ => "Instant"
+    };
 
     private static string YesNo(bool value, StatSentiment sentiment)
     {

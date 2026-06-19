@@ -24,12 +24,16 @@ public class MoneyActionService : ICardActionService<MoneyAction>
 {
     private readonly TransactionService _transactionService;
     private readonly DiceService _diceService;
+    private readonly CardImmunityService _immunityService;
 
     /// <summary>Creates the money-action handler over the transaction seam and the dice seam it routes through.</summary>
-    public MoneyActionService(TransactionService transactionService, DiceService diceService)
+    public MoneyActionService(TransactionService transactionService, 
+        DiceService diceService,
+        CardImmunityService immunityService)
     {
         _transactionService = transactionService;
         _diceService = diceService;
+        _immunityService = immunityService;
     }
 
     /// <summary>
@@ -212,6 +216,16 @@ public class MoneyActionService : ICardActionService<MoneyAction>
 
         if (target is null || target.PlayerId == holder.PlayerId)
             return;
+        
+        var result = await _immunityService.CheckSwappingMoneyImmunity(engine, target, ct);
+        if (result)
+        {
+            engine.Notifier.Notify(engine.Cache.GameId, holder.PlayerId, 
+                "Player played an immunity card. You do not swap your money");
+            engine.Notifier.Notify(engine.Cache.GameId, target.PlayerId, 
+                "You played an immunity card. You do not swap your money");
+            return;
+        }
 
         (holder.Money, target.Money) = (target.Money, holder.Money);
     }

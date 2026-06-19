@@ -217,6 +217,16 @@ public class CardTriggerService
                          if (c.ConditionType == CardConditionType.None)
                              return false;
 
+                         //"After your NEXT move": a card drawn THIS turn must not fire on the move that drew
+                         //it (the JustVisiting "go back 17"/"forward 23" cards are drawn on landing, then the
+                         //same move's OnNextMove fires immediately). DrawnOnTurn is stamped on draw; only let
+                         //it fire once the turn number has advanced. Constant during this evaluation, so the
+                         //re-evaluation recursion can't sneak it back in.
+                         if (trigger == CardTrigger.OnNextMove
+                             && c.DrawnOnTurn is { } drawnTurn
+                             && engine.Cache.Game.Metadata.TurnNumber <= drawnTurn)
+                             return false;
+
                          //Live when any condition matches the trigger flag AND its gates (if any): the
                          //direction gate (e.g. "passing GO anti-clockwise") and the jail-state gate
                          //(e.g. "a double in jail becomes a triple") against the subject.
@@ -244,11 +254,15 @@ public class CardTriggerService
             {
                 var holderPlayerId = c.Player.PlayerId;
                 if (holderPlayerId == subject.PlayerId)
-                    //Both subject and any are valid 
-                    return true;
+                    //The holder IS the subject — only their own-turn (cardholder) cards apply. An any-player
+                    //card is a bystander reaction to an event happening to SOMEONE ELSE ("steal the GO bonus
+                    //another player collected", "receive the Free Parking money another took"); it must never
+                    //fire on its own holder — you can't steal your own GO bonus when you pass GO.
+                    return c.Card.ConditionType is CardConditionType.MetCardholderTurn
+                        or CardConditionType.ChoiceCardholderTurn;
 
                 //Only any is valid (since holder is not the subject)
-                return c.Card.ConditionType is CardConditionType.MetAnyPlayerTurn 
+                return c.Card.ConditionType is CardConditionType.MetAnyPlayerTurn
                     or CardConditionType.ChoiceAnyPlayerTurn;
             }).ToList();
 

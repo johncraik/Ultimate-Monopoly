@@ -1,11 +1,13 @@
+using System.Text.Json;
 using MP.GameEngine.Enums;
+using MP.GameEngine.Enums.Cards;
 using MP.GameEngine.Enums.Properties;
 using MP.GameEngine.Models.Statistics;
 
 namespace UltimateMonopoly.Models.Statistics;
 
 /// <summary>How a stat value is formatted/rendered.</summary>
-public enum StatKind { Money, Number, BoardIndex, PropertySet, FinancialReason, Bool, TriBool }
+public enum StatKind { Money, Number, BoardIndex, PropertySet, FinancialReason, Bool, TriBool, CardTrigger, CardEngagement }
 
 /// <summary>
 /// Which direction is "good" — drives the single view's delta colour and the comparison
@@ -34,10 +36,17 @@ public sealed record StatDescriptor(
     StatPart Primary,
     Func<PlayerStatRecord, string?>? Sub = null,
     IReadOnlyList<StatPart>? Details = null,
-    StatPart? Secondary = null);
+    StatPart? Secondary = null,
+    Func<PlayerStatRecord, bool>? Visible = null);
 
-/// <summary>A titled group of stats — a card in the single view, an accordion section in the table.</summary>
-public sealed record StatSection(string Title, string Icon, string Tone, IReadOnlyList<StatDescriptor> Stats);
+/// <summary>
+/// A titled group of stats — a card in the single view, an accordion section in the table.
+/// <paramref name="Half"/> renders the single-view card at half width (the 50/50 pairs: Spending+Income,
+/// Jail+Free Parking — consecutive half sections share a row). <paramref name="LgCols"/> is the tile
+/// grid's large-breakpoint column count for a full-width card (ignored for half cards, which are 2-up).
+/// </summary>
+public sealed record StatSection(string Title, string Icon, string Tone, IReadOnlyList<StatDescriptor> Stats,
+    bool Half = false, int LgCols = 4);
 
 /// <summary>
 /// The single source of truth for the player-stats display: every stat's label, icon, tone,
@@ -51,6 +60,47 @@ public static class StatCatalogue
     // Shorthands.
     private static StatPart Money(Func<PlayerStatRecord, object?> v, StatSentiment s) => new(StatKind.Money, s, v);
     private static StatPart Num(Func<PlayerStatRecord, object?> v, StatSentiment s) => new(StatKind.Number, s, v);
+
+    // ── Cards (13.9) ──
+    // The decks shown in the Cards section — the distinct CardType values (aliases collapsed).
+    private static readonly IReadOnlyList<CardType> DeckTypes =
+    [
+        CardType.Chance, CardType.ComChest, CardType.PercentageChance, CardType.PercentageComChest,
+        CardType.Third, CardType.Double, CardType.Triple, CardType.Tax,
+        CardType.Go, CardType.JustVisiting, CardType.FreeParking, CardType.GoToJail
+    ];
+
+    /// <summary>One card type's count out of a serialised <c>Dictionary&lt;CardType,uint&gt;</c> (0 when absent or no data).</summary>
+    private static uint TypeCount(string? json, CardType type)
+        => json is null ? 0u
+            : JsonSerializer.Deserialize<Dictionary<CardType, uint>>(json)?.GetValueOrDefault(type) ?? 0u;
+
+    /// <summary>
+    /// A per-type "Played | Taken" split box. Only shown when the per-type JSON is present (a single game) —
+    /// it is null in the cross-game aggregate, so <see cref="StatDescriptor.Visible"/> hides the box there.
+    /// </summary>
+    private static StatDescriptor PerTypeCard(CardType t) => new(
+        t.ToDisplayName(), "bi-card-heading", "secondary",
+        Num(r => TypeCount(r.CardsPlayedByTypeJson, t), StatSentiment.Neutral) with { Label = "Played" },
+        Secondary: Num(r => TypeCount(r.CardsTakenByTypeJson, t), StatSentiment.Neutral) with { Label = "Taken" },
+        Visible: r => r.CardsPlayedByTypeJson is not null || r.CardsTakenByTypeJson is not null);
+
+    // The Cards section's stats: a per-type split box for every deck, then the totals and most-played categoricals.
+    private static readonly IReadOnlyList<StatDescriptor> CardStats =
+    [
+        ..DeckTypes.Select(PerTypeCard),
+        new("Cards taken", "bi-hand-index", "info", Num(r => r.TotalCardsTaken, StatSentiment.Neutral)),
+        new("Cards played", "bi-play-circle", "info", Num(r => r.TotalCardsPlayed, StatSentiment.Neutral)),
+        new("Never played", "bi-slash-circle", "secondary", Num(r => r.CardsNeverPlayed, StatSentiment.Neutral)),
+        new("Instant-play", "bi-lightning", "secondary", Num(r => r.InstantPlayCards, StatSentiment.Neutral)),
+        new("Immunity cards", "bi-shield-check", "primary",
+            Num(r => r.ImmunityCardsPlayed, StatSentiment.Neutral) with { Label = "Played" },
+            Secondary: Num(r => r.ImmunityCardsTaken, StatSentiment.Neutral) with { Label = "Taken" }),
+        new("Most-played trigger", "bi-lightning-charge", "info",
+            new StatPart(StatKind.CardTrigger, StatSentiment.Neutral, r => r.MostPlayedTrigger)),
+        new("Most-played engagement", "bi-toggles", "info",
+            new StatPart(StatKind.CardEngagement, StatSentiment.Neutral, r => r.MostPlayedEngagement))
+    ];
 
     public static readonly IReadOnlyList<StatSection> Sections =
     [
@@ -67,7 +117,7 @@ public static class StatCatalogue
                 ]),
             new("Largest rent paid", "bi-house-down", "warning", Money(r => r.LargestRentPayment, StatSentiment.LowerBetter),
                 Details: [new StatPart(StatKind.BoardIndex, StatSentiment.Neutral, r => r.LargestRentPaymentPropertyIndex)])
-        ]),
+        ], LgCols: 3),
 
         new StatSection("Spending", "bi-wallet2", "danger",
         [
@@ -79,7 +129,7 @@ public static class StatCatalogue
             new("Repaying loans", "bi-arrow-return-left", "secondary", Money(r => r.SpentOnRepayingLoans, StatSentiment.Neutral)),
             new("Rent paid", "bi-house-dash", "danger", Money(r => r.RentPaid, StatSentiment.LowerBetter)),
             new("Given in deals", "bi-arrow-right", "secondary", Money(r => r.MoneyGivenInDeals, StatSentiment.Neutral))
-        ]),
+        ], Half: true),
 
         new StatSection("Income", "bi-piggy-bank", "success",
         [
@@ -95,7 +145,7 @@ public static class StatCatalogue
             new("From deals", "bi-arrow-left-right", "success", Money(r => r.MoneyFromDeals, StatSentiment.HigherBetter)),
             new("From bankruptcies", "bi-emoji-dizzy", "success", Money(r => r.MoneyFromBankruptPlayers, StatSentiment.HigherBetter)),
             new("From cards", "bi-card-heading", "success", Money(r => r.MoneyFromCards, StatSentiment.HigherBetter))
-        ]),
+        ], Half: true),
 
         new StatSection("Property & sets", "bi-bank2", "warning",
         [
@@ -135,14 +185,14 @@ public static class StatCatalogue
             new("Left by paying", "bi-cash", "danger", Num(r => r.TimesLeftJailByPaying, StatSentiment.LowerBetter)),
             new("Left by dice", "bi-dice-6", "success", Num(r => r.TimesLeftJailByDice, StatSentiment.HigherBetter)),
             new("Left by card", "bi-card-text", "secondary", Num(r => r.TimesLeftJailByPlayingCard, StatSentiment.Neutral))
-        ]),
+        ], Half: true),
 
         new StatSection("Free Parking", "bi-p-square-fill", "info",
         [
             new("Properties taken", "bi-box-arrow-down", "success", Num(r => r.TotalPropertiesTakenFromFP, StatSentiment.HigherBetter)),
             new("Properties handed in", "bi-box-arrow-up", "danger", Num(r => r.TotalPropertiesHandedInFP, StatSentiment.LowerBetter)),
             new("Money taken", "bi-cash-coin", "success", Money(r => r.MoneyFromFreeParking, StatSentiment.HigherBetter))
-        ]),
+        ], Half: true),
 
         new StatSection("Loans & mortgages", "bi-bank", "warning",
         [
@@ -156,6 +206,8 @@ public static class StatCatalogue
             new("Times unmortgaged", "bi-house-check", "success", Num(r => r.TimesUnmortgaged, StatSentiment.HigherBetter)),
             new("Mortgage fees (GO)", "bi-percent", "danger", Money(r => r.MortgageFeesPaid, StatSentiment.LowerBetter))
         ]),
+
+        new StatSection("Cards", "bi-card-list", "info", CardStats),
 
         new StatSection("Endgame & peaks", "bi-flag-fill", "primary",
         [

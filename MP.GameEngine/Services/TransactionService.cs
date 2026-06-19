@@ -59,8 +59,11 @@ public class TransactionService
         
         if (owner is null && property.State != PropertyState.FreeParking) 
             return; // bankrupt owner; shouldn't own anything but defensive
-        if (property.State != PropertyState.FreeParking && (owner?.IsInJail ?? true))
-            return; // game-rules Default rule 2
+        if (property.State != PropertyState.FreeParking)
+        {
+            if(owner is { IsInJail: true, CollectRentInJail: false })
+                return;
+        }
 
         //Amount is passed in, computed/retrieved from call sight and not checked
         await Move(engine, player, -rent, FinancialReason.Rent,

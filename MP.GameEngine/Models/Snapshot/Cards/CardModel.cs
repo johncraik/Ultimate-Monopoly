@@ -47,8 +47,16 @@ public class CardModel
     
     /// <summary>Whether the card suppresses the default action of the board space</summary>
     public SuppressDefault SuppressDefault { get; set; } = new(SuppressDefaultType.None);
-    
-    
+
+    /// <summary>
+    /// The <see cref="Snapshot.TurnMetadata.TurnNumber"/> on which this card was drawn into a hand (null when
+    /// not currently held). Gates <see cref="Enums.Cards.CardTrigger.OnNextMove"/>: an "after your next move"
+    /// card must not fire on the very move that drew it, so it only becomes live once the turn number has
+    /// advanced past the one it was acquired on.
+    /// </summary>
+    public uint? DrawnOnTurn { get; set; }
+
+
 
     /// <summary>Parameterless constructor for serialisation.</summary>
     public CardModel()
@@ -67,14 +75,11 @@ public class CardModel
         CardText = model.CardText;
         CardType = model.CardType; 
         ConditionType = model.ConditionType;
-        SuppressDefault = model.SuppressDefault;
+        SuppressDefault = new SuppressDefault(model.SuppressDefault.Type());
+        DrawnOnTurn = model.DrawnOnTurn;
 
-        // Groups / Conditions are immutable card-definition data (fixed for the game's
-        // life), so the working-copy clone shares the references rather than deep-copying
-        // the whole action tree every turn. If a per-instance mutable field is ever added
-        // (e.g. a charge counter), deep-copy that field — not this static content.
-        Groups = model.Groups;
-        Conditions = model.Conditions;
+        Groups = model.Groups.Select(g => new CardGroup(g)).ToList().AsReadOnly();
+        Conditions = model.Conditions.Select(c => new CardCondition(c)).ToList().AsReadOnly();
     }
 
     

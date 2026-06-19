@@ -2,14 +2,17 @@ using MP.GameEngine.Enums.Properties;
 using MP.GameEngine.Models.EventReceipts;
 using MP.GameEngine.Models.Prompts.PromptTypes;
 using MP.GameEngine.Models.Snapshot;
+using MP.GameEngine.Services.Cards;
 
 namespace MP.GameEngine.Services.SubSystems;
 
 public class PurgingService
 {
-    public PurgingService()
+    private readonly CardImmunityService _immunityService;
+
+    public PurgingService(CardImmunityService immunityService)
     {
-        
+        _immunityService = immunityService;
     }
 
 
@@ -35,6 +38,16 @@ public class PurgingService
         if(purgingPlayer is null)
             throw new InvalidOperationException("Player not found");
 
+        var result = await _immunityService.CheckPurgingPropertyImmunity(engine, purgingPlayer, ct);
+        if (result)
+        {
+            engine.Notifier.Notify(engine.Cache.GameId, player.PlayerId, 
+                "Player played an immunity card. Their properties will not be purged");
+            engine.Notifier.Notify(engine.Cache.GameId, purgingPlayer.PlayerId, 
+                "You played an immunity card. Your properties will not be purged");
+            return;
+        }
+        
         //The HOLDER chooses which of the opponent's properties to purge: chooser = player, owner = opponent.
         await PurgeProperty(engine, player, purgingPlayer, propCount, ct);
     }

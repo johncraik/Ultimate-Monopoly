@@ -26,6 +26,24 @@ public class CardGroup
     
     public string GroupKey { get; set; }
 
+    public CardGroup()
+    {
+    }
+
+    public CardGroup(CardGroup group)
+    {
+        GroupId = group.GroupId;
+        GroupText = group.GroupText;
+
+        Actions = group.Actions;
+        IsChosenGroup = group.IsChosenGroup;
+        
+        TurnsActive = group.TurnsActive;
+        TurnsRemaining = group.TurnsRemaining;
+        
+        GroupKey = group.GroupKey;
+    }
+    
     public string GetDisplayText(GameCacheModel gameCache, string playerId)
     {
         var roundingRule = gameCache.RoundingRule;

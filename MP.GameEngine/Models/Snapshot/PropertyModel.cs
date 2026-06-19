@@ -75,13 +75,13 @@ public class PropertyModel
         var transferBetweenPlayers = OwnerPlayerId != null;
         
         OwnerPlayerId = playerId;
+        IsPurged = false;
         HasBeenPurged = false;
         StreetRuleQualifier = StreetRuleQualifier.NeverBuiltOn;
 
         if (transferBetweenPlayers) return;
         
         State = PropertyState.Owned;
-        IsPurged = false;
     }
 
     public void MortgageProperty()

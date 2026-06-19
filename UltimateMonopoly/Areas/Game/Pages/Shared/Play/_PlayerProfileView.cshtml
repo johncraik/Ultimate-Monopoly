@@ -545,7 +545,8 @@
                                             }
                                         </button>
                                     </h2>
-                                    <div id="@paneId" class="accordion-collapse collapse" data-bs-parent="#ppPropAccordion">
+                                    @* Expanded by default (show); no data-bs-parent so every set stays open independently and can be toggled without collapsing the others. *@
+                                    <div id="@paneId" class="accordion-collapse collapse show">
                                         <div class="accordion-body">
 
                                             @if (buildable && ownsAll && buildCost is not null)
@@ -590,6 +591,16 @@
                                                             else if (prop.State == PropertyState.Reserved)
                                                             {
                                                                 <span class="badge text-bg-info">Reserved</span>
+                                                            }
+                                                            @* Purge state — currently purged (buildings stripped, rent reset to SET), or
+                                                               purged at some earlier point (HasBeenPurged) but since recovered. *@
+                                                            @if (prop.IsPurged)
+                                                            {
+                                                                <span class="badge text-bg-danger">Purged</span>
+                                                            }
+                                                            else if (prop.HasBeenPurged)
+                                                            {
+                                                                <span class="badge text-bg-secondary">Purged Before</span>
                                                             }
                                                         </div>
                                                         <div class="pp-space-body">

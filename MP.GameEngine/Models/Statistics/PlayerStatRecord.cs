@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json;
 using JC.Core.Models.Auditing;
 using MP.GameEngine.Enums;
+using MP.GameEngine.Enums.Cards;
 using MP.GameEngine.Enums.Games;
 using MP.GameEngine.Enums.Properties;
 using MP.GameEngine.Helpers;
@@ -306,7 +307,43 @@ public class PlayerStatRecord : AuditModel
     #endregion
     
     
-    //TODO: 13.9 - Cards
+    //13.9 - Cards
+
+    #region Cards
+
+    /// <summary>Per-card-type count of cards taken into the hand — serialised <c>Dictionary&lt;CardType,uint&gt;</c>. Per-game only (null in the cross-game aggregate).</summary>
+    public string? CardsTakenByTypeJson { get; set; }
+
+    /// <summary>Per-card-type count of cards played — serialised <c>Dictionary&lt;CardType,uint&gt;</c>. Per-game only (null in the cross-game aggregate).</summary>
+    public string? CardsPlayedByTypeJson { get; set; }
+
+
+    /// <summary>Total cards taken into the hand (keep-until-needed) — count of <c>CardTakenReceipt</c>.</summary>
+    public uint TotalCardsTaken { get; set; }
+
+    /// <summary>Total cards played/resolved — count of <c>CardPlayedReceipt</c> (instant resolve-on-draw + held plays).</summary>
+    public uint TotalCardsPlayed { get; set; }
+
+    /// <summary>Cards taken but never played — taken-receipt occurrences whose CardId never appears in a played receipt.</summary>
+    public uint CardsNeverPlayed { get; set; }
+
+    /// <summary>Instant-play cards — played-receipt occurrences whose CardId never appears in a taken receipt (resolve-on-draw).</summary>
+    public uint InstantPlayCards { get; set; }
+
+    /// <summary>Number of immunity cards taken into the hand.</summary>
+    public uint ImmunityCardsTaken { get; set; }
+
+    /// <summary>Number of immunity cards played.</summary>
+    public uint ImmunityCardsPlayed { get; set; }
+
+
+    /// <summary>The trigger that most often fired a played card — each played receipt's AllTriggers split into individual flags and counted. Null when no triggered card was played.</summary>
+    public CardTrigger? MostPlayedTrigger { get; set; }
+
+    /// <summary>The most common engagement of played cards (Forced / Choice / ResolveOnDraw). Null when no card was played.</summary>
+    public CardEngagement? MostPlayedEngagement { get; set; }
+
+    #endregion
     
     
     //13.10 - Endgame & Outcome
@@ -413,14 +450,14 @@ public class PlayerStatRecord : AuditModel
         };
         LargestSinglePaymentReason = statisticView switch
         {
-            StatisticView.Average or StatisticView.Total => MathHelper.Median(records.Select(x => x.LargestSinglePaymentReason)),
+            StatisticView.Average or StatisticView.Total => MathHelper.Mode(records.Select(x => x.LargestSinglePaymentReason)),
             StatisticView.Min => minRecord?.LargestSinglePaymentReason,
             StatisticView.Max => maxRecord?.LargestSinglePaymentReason,
             _ => throw new ArgumentOutOfRangeException(nameof(statisticView), statisticView, null)
         };
         LargestSinglePaymentPropertyIndex = statisticView switch
         {
-            StatisticView.Average or StatisticView.Total => MathHelper.Median(records.Select(x => x.LargestSinglePaymentPropertyIndex)),
+            StatisticView.Average or StatisticView.Total => MathHelper.Mode(records.Select(x => x.LargestSinglePaymentPropertyIndex)),
             StatisticView.Min => minRecord?.LargestSinglePaymentPropertyIndex,
             StatisticView.Max => maxRecord?.LargestSinglePaymentPropertyIndex,
             _ => throw new ArgumentOutOfRangeException(nameof(statisticView), statisticView, null)
@@ -437,7 +474,7 @@ public class PlayerStatRecord : AuditModel
         };
         LargestRentPaymentPropertyIndex = statisticView switch
         {
-            StatisticView.Average or StatisticView.Total => MathHelper.Median(records.Select(x => x.LargestRentPaymentPropertyIndex)),
+            StatisticView.Average or StatisticView.Total => MathHelper.Mode(records.Select(x => x.LargestRentPaymentPropertyIndex)),
             StatisticView.Min => minRecord?.LargestRentPaymentPropertyIndex,
             StatisticView.Max => maxRecord?.LargestRentPaymentPropertyIndex,
             _ => throw new ArgumentOutOfRangeException(nameof(statisticView), statisticView, null)
@@ -551,6 +588,70 @@ public class PlayerStatRecord : AuditModel
             StatisticView.Total => (uint)records.Sum(x => x.MoneyFromCards),
             _ => throw new ArgumentOutOfRangeException(nameof(statisticView), statisticView, null)
         };
+
+        // 13.9 - Cards. Scalar counts aggregate like the other totals; the categoricals use Mode (avg/max/total)
+        // / LeastCommon (min) like the property categoricals; the per-type JSON dicts stay per-game (left null).
+        TotalCardsTaken = statisticView switch
+        {
+            StatisticView.Average => (uint)Math.Round(records.Average(x => x.TotalCardsTaken), MidpointRounding.AwayFromZero),
+            StatisticView.Min => (records.MinBy(x => x.TotalCardsTaken)?.TotalCardsTaken ?? 0),
+            StatisticView.Max => (records.MaxBy(x => x.TotalCardsTaken)?.TotalCardsTaken ?? 0),
+            StatisticView.Total => (uint)records.Sum(x => x.TotalCardsTaken),
+            _ => throw new ArgumentOutOfRangeException(nameof(statisticView), statisticView, null)
+        };
+        TotalCardsPlayed = statisticView switch
+        {
+            StatisticView.Average => (uint)Math.Round(records.Average(x => x.TotalCardsPlayed), MidpointRounding.AwayFromZero),
+            StatisticView.Min => (records.MinBy(x => x.TotalCardsPlayed)?.TotalCardsPlayed ?? 0),
+            StatisticView.Max => (records.MaxBy(x => x.TotalCardsPlayed)?.TotalCardsPlayed ?? 0),
+            StatisticView.Total => (uint)records.Sum(x => x.TotalCardsPlayed),
+            _ => throw new ArgumentOutOfRangeException(nameof(statisticView), statisticView, null)
+        };
+        CardsNeverPlayed = statisticView switch
+        {
+            StatisticView.Average => (uint)Math.Round(records.Average(x => x.CardsNeverPlayed), MidpointRounding.AwayFromZero),
+            StatisticView.Min => (records.MinBy(x => x.CardsNeverPlayed)?.CardsNeverPlayed ?? 0),
+            StatisticView.Max => (records.MaxBy(x => x.CardsNeverPlayed)?.CardsNeverPlayed ?? 0),
+            StatisticView.Total => (uint)records.Sum(x => x.CardsNeverPlayed),
+            _ => throw new ArgumentOutOfRangeException(nameof(statisticView), statisticView, null)
+        };
+        InstantPlayCards = statisticView switch
+        {
+            StatisticView.Average => (uint)Math.Round(records.Average(x => x.InstantPlayCards), MidpointRounding.AwayFromZero),
+            StatisticView.Min => (records.MinBy(x => x.InstantPlayCards)?.InstantPlayCards ?? 0),
+            StatisticView.Max => (records.MaxBy(x => x.InstantPlayCards)?.InstantPlayCards ?? 0),
+            StatisticView.Total => (uint)records.Sum(x => x.InstantPlayCards),
+            _ => throw new ArgumentOutOfRangeException(nameof(statisticView), statisticView, null)
+        };
+        ImmunityCardsTaken = statisticView switch
+        {
+            StatisticView.Average => (uint)Math.Round(records.Average(x => x.ImmunityCardsTaken), MidpointRounding.AwayFromZero),
+            StatisticView.Min => (records.MinBy(x => x.ImmunityCardsTaken)?.ImmunityCardsTaken ?? 0),
+            StatisticView.Max => (records.MaxBy(x => x.ImmunityCardsTaken)?.ImmunityCardsTaken ?? 0),
+            StatisticView.Total => (uint)records.Sum(x => x.ImmunityCardsTaken),
+            _ => throw new ArgumentOutOfRangeException(nameof(statisticView), statisticView, null)
+        };
+        ImmunityCardsPlayed = statisticView switch
+        {
+            StatisticView.Average => (uint)Math.Round(records.Average(x => x.ImmunityCardsPlayed), MidpointRounding.AwayFromZero),
+            StatisticView.Min => (records.MinBy(x => x.ImmunityCardsPlayed)?.ImmunityCardsPlayed ?? 0),
+            StatisticView.Max => (records.MaxBy(x => x.ImmunityCardsPlayed)?.ImmunityCardsPlayed ?? 0),
+            StatisticView.Total => (uint)records.Sum(x => x.ImmunityCardsPlayed),
+            _ => throw new ArgumentOutOfRangeException(nameof(statisticView), statisticView, null)
+        };
+        MostPlayedTrigger = statisticView switch
+        {
+            StatisticView.Average or StatisticView.Max or StatisticView.Total => MathHelper.Mode(records.Select(x => x.MostPlayedTrigger)),
+            StatisticView.Min => MathHelper.LeastCommon(records.Select(x => x.MostPlayedTrigger)),
+            _ => throw new ArgumentOutOfRangeException(nameof(statisticView), statisticView, null)
+        };
+        MostPlayedEngagement = statisticView switch
+        {
+            StatisticView.Average or StatisticView.Max or StatisticView.Total => MathHelper.Mode(records.Select(x => x.MostPlayedEngagement)),
+            StatisticView.Min => MathHelper.LeastCommon(records.Select(x => x.MostPlayedEngagement)),
+            _ => throw new ArgumentOutOfRangeException(nameof(statisticView), statisticView, null)
+        };
+
         MoneyFromMortgaging = statisticView switch
         {
             StatisticView.Average => (uint)Math.Round(records.Average(x => x.MoneyFromMortgaging), MidpointRounding.AwayFromZero),

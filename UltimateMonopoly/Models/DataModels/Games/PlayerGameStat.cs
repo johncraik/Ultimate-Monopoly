@@ -87,7 +87,19 @@ public class PlayerGameStat : PlayerStatRecord
         TotalPropertiesHandedInFP = record.TotalPropertiesHandedInFP;
         TotalPropertiesTakenFromFP = record.TotalPropertiesTakenFromFP;
         FPHandedInSetTypesJson = record.FPHandedInSetTypesJson;
-        
+
+        //13.9 - Cards
+        CardsTakenByTypeJson = record.CardsTakenByTypeJson;
+        CardsPlayedByTypeJson = record.CardsPlayedByTypeJson;
+        TotalCardsTaken = record.TotalCardsTaken;
+        TotalCardsPlayed = record.TotalCardsPlayed;
+        CardsNeverPlayed = record.CardsNeverPlayed;
+        InstantPlayCards = record.InstantPlayCards;
+        ImmunityCardsTaken = record.ImmunityCardsTaken;
+        ImmunityCardsPlayed = record.ImmunityCardsPlayed;
+        MostPlayedTrigger = record.MostPlayedTrigger;
+        MostPlayedEngagement = record.MostPlayedEngagement;
+
         TotalLoansTaken = record.TotalLoansTaken;
         TotalLoanAmountTaken = record.TotalLoanAmountTaken;
         TotalLoanRepayments = record.TotalLoanRepayments;

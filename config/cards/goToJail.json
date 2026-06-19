@@ -173,5 +173,20 @@
                 ]
             }
         ]
+    },
+    {
+        "RawText": "Immunity from returning a property to the bank. Keep until needed",
+        "CardType": "GoToJail",
+        "ConditionType": "ChoiceCardholderTurn",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Immunity",
+                        "Immunity": 4
+                    }
+                ]
+            }
+        ]
     }
 ]

@@ -100,8 +100,11 @@ public class CardService
         //suppress the drawing space's default (card-triggers.md §11.1): its SuppressDefault applies only
         //when it is later played / triggered (PlayCard returns it then). E.g. "no GO money for the next 5
         //landings" must NOT cancel the £200 on the very landing that drew it — the holder gets it this turn.
+        //Stamp the turn the card entered the hand so an OnNextMove card can't fire on the move that drew it
+        //("after your NEXT move") — MatchingCardForTrigger gates OnNextMove on a later turn number.
+        card.DrawnOnTurn = engine.Cache.Game.Metadata.TurnNumber;
         player.Cards.Add(card);
-        engine.EventEmitter.Emit(new CardTakenReceipt { PlayerId = player.PlayerId, CardType = card.CardType });
+        engine.EventEmitter.Emit(new CardTakenReceipt(card, engine.Cache, player.PlayerId));
         return new SuppressDefault(SuppressDefaultType.None);
     }
     
@@ -209,7 +212,7 @@ public class CardService
 
         //A play that didn't take effect isn't "played" — no receipt, and PlayCard keeps the card.
         if (applied)
-            engine.EventEmitter.Emit(new CardPlayedReceipt { PlayerId = player.PlayerId, CardType = card.CardType });
+            engine.EventEmitter.Emit(new CardPlayedReceipt(card, engine.Cache, player.PlayerId));
 
         return applied;
     }

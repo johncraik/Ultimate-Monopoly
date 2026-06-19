@@ -30,4 +30,16 @@ public class CardCondition
     /// while out; <see cref="JailFilter.None"/> (default) = no gate.
     /// </summary>
     public JailFilter JailFilter { get; set; }
+
+    public CardCondition()
+    {
+    }
+
+    public CardCondition(CardCondition condition)
+    {
+        ConditionId = condition.ConditionId;
+        Trigger = condition.Trigger;
+        RequiredDirection = condition.RequiredDirection;
+        JailFilter = condition.JailFilter;
+    }
 }

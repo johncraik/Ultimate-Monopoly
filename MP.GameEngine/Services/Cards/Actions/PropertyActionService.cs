@@ -22,15 +22,18 @@ public class PropertyActionService : ICardActionService<PropertyAction>
     private readonly PropertyTransferService _propertyTransferService;
     private readonly PurgingService _purgingService;
     private readonly PropertyService _propertyService;
+    private readonly CardImmunityService _immunityService;
 
     /// <summary>Creates the property-action handler over the title-transfer, purge and normalisation seams it routes through.</summary>
     public PropertyActionService(PropertyTransferService propertyTransferService,
         PurgingService purgingService,
-        PropertyService propertyService)
+        PropertyService propertyService,
+        CardImmunityService immunityService)
     {
         _propertyTransferService = propertyTransferService;
         _purgingService = purgingService;
         _propertyService = propertyService;
+        _immunityService = immunityService;
     }
 
     /// <summary>Dispatches by kind.</summary>
@@ -71,7 +74,18 @@ public class PropertyActionService : ICardActionService<PropertyAction>
     private async Task Relinquish(Framework.GameEngine engine, PlayerModel owner, PropertyAction action, CancellationToken ct)
     {
         var toFp = action.Kind == PropertyActionKind.HandInToFreeParking;
-
+        if (!toFp)
+        {
+            var result = await _immunityService.CheckReturningPropertyImmunity(engine, owner, ct);
+            if (result)
+            {
+                engine.Notifier.Notify(engine.Cache.GameId, owner.PlayerId, 
+                    "You played an immunity card. You will not return properties to the bank");
+                return;
+            }
+        }
+        
+        
         var indexes = action.Set
             ? await ChooseSetIndexes(engine, owner, ct)
             : await ChooseProperties(engine, owner, action.Count, toFp, ct);

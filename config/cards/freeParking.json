@@ -158,5 +158,35 @@
                 ]
             }
         ]
+    },
+    {
+        "RawText": "Immunity from triple bonus being cancelled. Keep until needed",
+        "CardType": "FreeParking",
+        "ConditionType": "ChoiceCardholderTurn",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Immunity",
+                        "Immunity": 2
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "RawText": "Immunity from being the target of purging properties. Keep until needed",
+        "CardType": "FreeParking",
+        "ConditionType": "ChoiceCardholderTurn",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Immunity",
+                        "Immunity": 3
+                    }
+                ]
+            }
+        ]
     }
 ]

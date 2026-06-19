@@ -24,12 +24,16 @@ public class DiceActionService : ICardActionService<DiceAction>
 {
     private readonly PlayerService _playerService;
     private readonly DiceService _diceService;
+    private readonly CardImmunityService _immunityService;
 
     /// <summary>Creates the dice-action handler over the triple-bonus resolution and dice seams.</summary>
-    public DiceActionService(PlayerService playerService, DiceService diceService)
+    public DiceActionService(PlayerService playerService, 
+        DiceService diceService,
+        CardImmunityService immunityService)
     {
         _playerService = playerService;
         _diceService = diceService;
+        _immunityService = immunityService;
     }
 
     /// <summary>Dispatches by kind.</summary>
@@ -89,6 +93,20 @@ public class DiceActionService : ICardActionService<DiceAction>
             factor = action.PayoutFactor ?? 1;
         }
 
+        if (factor == 0)
+        {
+            //Check immunity card and if played
+            var result = await _immunityService.CheckCancelledTripleBonusImmunity(engine, target, ct);
+            if (result)
+            {
+                engine.Notifier.Notify(engine.Cache.GameId, holder.PlayerId, 
+                    "Player played an immunity card. Triple bonus is not cancelled");
+                engine.Notifier.Notify(engine.Cache.GameId, target.PlayerId, 
+                    "You played an immunity card. Triple bonus is not cancelled");
+                return;
+            }
+        }
+        
         await _playerService.ApplyTripleBonus(engine, target, factor, recipient, ct);
     }
 }

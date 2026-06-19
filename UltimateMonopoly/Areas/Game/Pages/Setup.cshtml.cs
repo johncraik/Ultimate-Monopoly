@@ -17,16 +17,19 @@ namespace UltimateMonopoly.Areas.Game.Pages;
 public class SetupModel : PageModel
 {
     private readonly GameSetupService _gameSetup;
+    private readonly GameService _games;
     private readonly ProfileService _profiles;
     private readonly UrlLinkService _urlLinks;
     private readonly IUserInfo _userInfo;
 
     public SetupModel(GameSetupService gameSetup,
+        GameService games,
         ProfileService profiles,
         UrlLinkService urlLinks,
         IUserInfo userInfo)
     {
         _gameSetup = gameSetup;
+        _games = games;
         _profiles = profiles;
         _urlLinks = urlLinks;
         _userInfo = userInfo;
@@ -36,7 +39,7 @@ public class SetupModel : PageModel
     public string GameName { get; private set; } = string.Empty;
     public string RoundingRuleText { get; private set; } = string.Empty;
     public string BoardName { get; private set; } = "Default board";
-    public string JoinQrSvg { get; private set; } = string.Empty;
+    public string JoinQrImage { get; private set; } = string.Empty;
     public string JoinCode { get; private set; } = string.Empty;
     public List<PlayerCard> Players { get; private set; } = [];
 
@@ -51,12 +54,18 @@ public class SetupModel : PageModel
     public async Task<IActionResult> OnGetPlayerCardAsync(string id, string userId)
     {
         var game = await _gameSetup.GetSetupGame(id);
-        if (game is null) return NotFound();
+        if (game is null)
+        {
+            var inPlay = await _games.GameInPlay(id);
+            return inPlay 
+                ? RedirectToPage("/Play", new { gameId = id }) 
+                : NotFound();
+        }
 
         var player = game.Players.FirstOrDefault(p => !p.IsDeleted && p.UserId == userId);
         if (player is null) return NotFound();
 
-        var card = await BuildCard(player, game.CreatedById);
+        var card = await BuildCard(player, game.CreatedById!);
         return card is null ? NotFound() : Partial("_PlayerCard", card);
     }
 
@@ -147,7 +156,8 @@ public class SetupModel : PageModel
         }
 
         var joinLink = _urlLinks.GetUrlLink($"/Game/Setup/{game.Id}");
-        JoinQrSvg = new QrCodeHelper(QrCodeFormat.Svg, 10).GenerateQrCode(joinLink);
+        //Base64 PNG data URI (data:image/png;base64,…) rendered via an <img>, not inline SVG.
+        JoinQrImage = new QrCodeHelper(QrCodeFormat.Base64, 10).GenerateQrCode(joinLink);
 
         return true;
     }

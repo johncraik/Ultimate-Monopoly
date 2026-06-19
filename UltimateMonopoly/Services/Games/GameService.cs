@@ -198,6 +198,11 @@ public class GameService
     }
 
 
+    public async Task<bool> GameInPlay(string gameId)
+        => await QueryGames(true, false, false, false, 
+            false, null, GameState.InPlay)
+            .AnyAsync(g => g.Id == gameId);
+    
     public async Task<Game?> GetFinishedGame(string gameId)
         => await QueryGames(true, true, true, true, 
                 false, null, GameState.Finished)

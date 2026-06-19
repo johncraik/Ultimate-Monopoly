@@ -9,7 +9,11 @@
         <h1 class="mb-1">My Games</h1>
         <p class="text-body-secondary mb-0">Games you've created.</p>
     </div>
-    <a asp-page="/Games/Joined" class="btn btn-outline-primary">View Games Joined</a>
+    <div class="d-flex gap-2 flex-wrap">
+        <a asp-page="/Games/Index" class="btn btn-hero-success">Create Game</a>
+        <a asp-page="/Games/Join" class="btn btn-hero-info">Join Game</a>
+        <a asp-page="/Games/Joined" class="btn btn-hero-secondary">View Games Joined</a>
+    </div>
 </div>
 
 <partial name="_GameTabs" model="Model.Games" />

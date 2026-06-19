@@ -467,8 +467,8 @@ You get a GO card from landing on GO space.
   - **Building** purge 2 of the holder's own properties (chosen). Default GO runs.
   - ✅ Built — `BuildingActionService` (`Kind=Purge, Count=2`), written to `go.json`. Default GO runs.
 - Immunity from swapping all money with another player. Keep until needed
-  - **Immunity** card, keyed to the money-swap action. `ConditionType=ChoiceCardholderTurn` (counter window). Default GO runs.
-  - ⬜ Deferred — Immunity/NOPE substrate (§6, `cards-design.md` §6).
+  - **Immunity** card, keyed to the money-swap action. `ConditionType=ChoiceCardholderTurn`, no `CardTrigger` (so `CardTriggerService` never surfaces it — the immunity check is its only play path). Default GO runs.
+  - ✅ Built — written to `go.json` (`Immunity{Immunity=SwappingMoney}`). Hooked in `MoneyActionService.SwapCash` via `CardImmunityService.CheckSwappingMoneyImmunity` (subject = the swap target), short-circuiting the cash swap when played.
 - Receive £200 times one die
   - `MoneyAction{Receive, 200, Bank, DiceMultiplier=OneDie}` + `SuppressDefault{SuppressGoBonus}`.
   - ✅ Built — written to `go.json`.
@@ -508,9 +508,9 @@ You get a Just Visiting card from landing on Just Visiting space.
 - Former prisoner agrees to steal the £200 bonus for passing GO clockwise from other players. Valid for 10 occasions
   - Held `MoneyAction{Receive, Bank, AmountSource=TriggerAmount, Amount=1}` + card `SuppressDefault{SuppressGoBonus}`. `ConditionType=MetAnyPlayerTurn`, `Trigger=OnOtherPassGo` + `RequiredDirection=Forward` (clockwise), `TurnsActive/Remaining=10`.
   - ✅ Built — written to `justVisiting.json`. `GoService` already consumes `OnOtherPassGo`'s `SuppressGoBonus` (skips the passer's bonus); the holder receives the threaded pass amount, `RequiredDirection` gates to clockwise. (£200 hardcoded in the text — a money tag would show the ×1 factor, not the trigger amount.)
-- Immunity from any card drawn when landing on Go To Jail. Play once, keep until needed
-  - **Immunity** card, keyed to the Go-To-Jail draw. Play-once counter window.
-  - ⬜ Deferred — Immunity/NOPE substrate (§6).
+- Immunity from taking a Go To Jail card when landing on Go To Jail. Play once, keep until needed
+  - **Immunity** card, keyed to the Go-To-Jail draw. `ConditionType=ChoiceCardholderTurn`, no `CardTrigger`.
+  - ✅ Built — written to `justVisiting.json` (`Immunity{Immunity=GoToJailCard}`). Hooked at the top of `JailService.GoToJail` via `CheckGoToJailCardImmunity` (subject = the lander): the Go-To-Jail card is **not** drawn, but the player **still goes to jail** (the default `SendPlayerToJail` runs) — matching the re-worded "immunity from *taking the card*", not from jail itself.
 - Robbed by a prisoner who has escaped. £300 into free parking and return a property to the bank.
   - `MoneyAction{Pay, 300, FreeParking}` + **Property** return-to-bank (chosen). `ConditionType=None`.
   - ✅ Built — written to `justVisiting.json` (`Money{Pay, 300, FreeParking}` + `Property{ReturnToBank}`).
@@ -541,9 +541,9 @@ You get a Free Parking card from landing on Free Parking space.
 - ID check fails. Swap places with the player in front of you travelling in the same direction. The player now on free parking proceeds as normal
   - `MovementAction{Kind=Swap, Target=NearestPlayerAhead, ResolveLandedSpaceForTarget=true}` + card `SuppressDefault{SuppressAllFreeParking}`. `ConditionType=None`.
   - ✅ Built — written to `freeParking.json`. New `PlayerTarget.NearestPlayerAhead` (board-relative §4 selector, same-direction preferred) + `MovementAction.ResolveLandedSpaceForTarget` (the swapped-in player resolves FP — "proceeds as normal"); the departed holder's FP is cancelled via `SuppressAllFreeParking`.
-- Immunity from triple bonus being cancelled, or a triple being downgraded. Keep until needed
-  - **Immunity** card, keyed to two action types (triple-bonus-cancel + triple-downgrade).
-  - ⬜ Deferred — Immunity/NOPE substrate (§6).
+- Immunity from triple bonus being cancelled. Keep until needed
+  - **Immunity** card, keyed to the triple-bonus-cancel action (the re-worded text dropped the triple-downgrade clause, so downgrade is **not** covered).
+  - ✅ Built — written to `freeParking.json` (`Immunity{Immunity=CancelledTripleBonus}`). Hooked in `DiceActionService.ModifyTripleBonus` via `CheckCancelledTripleBonusImmunity` (subject = the bonus owner), **only when `factor == 0`** (the cancel); the bonus is left intact when played. `DowngradeTripleToDouble` is deliberately not hooked.
 - Pass any retained card you have to the player rolling the lowest number on one die.
   - `CardTransferAction{Kind=Pass, DiceOff={Highest=true}}` — the holder picks **one** of their held cards to give to the **highest** one-die roller (John's steer; the card text reads "highest"). `ConditionType=None`.
   - ✅ Built — written to `freeParking.json`. New **Card** action category: `CardTransferAction` + `CardTransferActionService` (Pass/Steal), card chosen via a mandatory `CardOptionPrompt` over the hand; recipient via the dice-off picker.
@@ -553,9 +553,9 @@ You get a Free Parking card from landing on Free Parking space.
 - Your lucky day! First take £3000 (% applies) from free parking, the bank pays any shortfall. Then proceed as normal.
   - `MoneyAction{Receive, 3000, Counterparty=FreeParking, PercentageApplies=true}`; then default FP runs. `ConditionType=None`.
   - ✅ Built — written to `freeParking.json`. The bank-shortfall backstop is now intrinsic: `TransactionService.ApplyBalances` floors the FP pot at 0 (`Max(0, pot − amount)`), so a fixed take exceeding the pot credits the player in full with the bank covering the rest (and the old `uint` underflow is gone). Normal pot-capped takes are unaffected.
-- Immunity from one property being purged. Keep until needed
-  - **Immunity** card, keyed to the purge action.
-  - ⬜ Deferred — Immunity/NOPE substrate (§6).
+- Immunity from being the target of purging properties. Keep until needed
+  - **Immunity** card, keyed to the (others-)purge action — immune the whole purge against you, not a single property.
+  - ✅ Built — written to `freeParking.json` (`Immunity{Immunity=PurgedProperty}`). Hooked in `PurgingService.PurgeOthersProperty` via `CheckPurgingPropertyImmunity` (subject = the chosen owner), cancelling the purge when played. The self-purge path (`PurgeOwnProperty`) is not hooked.
 - UNLUCKY! Someone else beat you to free parking while you were looking for a parking space. All money and properties in free parking are returned to the bank.
   - Clear the FP pot (money + properties) back to the bank. `SuppressDefault=true` (no fine/take/hand-in/purge).
   - ✅ Built — written to `freeParking.json` (`Property{ClearFreeParkingToBank}` — properties → bank + `FreeParkingAmount=0`); card `SuppressDefault{SuppressAllFreeParking}`.
@@ -593,4 +593,4 @@ You get a Go To Jail Card from landing on Go To Jail space.
   - ✅ Built — written to `goToJail.json`.
 - Immunity from returning a property to the bank. Keep until needed
   - **Immunity** card, keyed to the return-property-to-bank action.
-  - ⬜ Deferred — Immunity/NOPE substrate (§6).
+  - ✅ Built — written to `goToJail.json` (`Immunity{Immunity=ReturningProperty}`). Hooked in `PropertyActionService.Relinquish` via `CheckReturningPropertyImmunity` (subject = the owner being made to relinquish), guarded to `ReturnToBank` only (hand-in-to-Free-Parking is not covered).

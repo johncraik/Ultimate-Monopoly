@@ -216,6 +216,21 @@
                 ]
             }
         ]
+    },
+    {
+        "RawText": "Immunity from swapping all money with another player. Keep until needed",
+        "CardType": "Go",
+        "ConditionType": "ChoiceCardholderTurn",
+        "Groups": [
+            {
+                "Actions": [
+                    {
+                        "$type": "Immunity",
+                        "Immunity": 0
+                    }
+                ]
+            }
+        ]
     }
 ]
 

@@ -2,11 +2,13 @@
 @using System.Text.Json
 @using JC.Core.Extensions
 @using MP.GameEngine.Enums
+@using MP.GameEngine.Enums.Cards
 @using MP.GameEngine.Enums.Properties
 @using MP.GameEngine.Helpers
 @using MP.GameEngine.Models.Boards
 @using MP.GameEngine.Models.Statistics
 @using Microsoft.AspNetCore.Html
+@using UltimateMonopoly.Models.Statistics
 @using UltimateMonopoly.Services.Cache
 @model (PlayerStatRecord Stats, PlayerStatRecord? Comparison)
 @inject BoardCacheService BoardCache
@@ -17,6 +19,10 @@
     // movement vs Comparison — a coloured +/- for numbers (green/red by whether up is
     // good in that context, grey for no change), and a grey "was X" badge for
     // categoricals (enums / board indexes — no +/- makes sense there).
+    //
+    // Catalogue-driven: every section / tile is rendered from StatCatalogue (the same source
+    // the comparison table uses), so the two views can never drift. Section layout (full-width
+    // vs the 50/50 pairs, tile column count) rides StatSection.Half / LgCols.
     var s = Model.Stats;
     var cmp = Model.Comparison;
     var hasCmp = cmp is not null;
@@ -45,21 +51,12 @@
         return (cls, up ? "bi-arrow-up-short" : "bi-arrow-down-short", money ? Money(mag) : Num(mag));
     }
 
-    // ── board-index → space name / mini rectangle ──
+    // ── board-index → space name ──
     string? NameOf(ushort? index)
     {
         if (index is null) return null;
         try { return board.GetBoardSpace(index.Value).Name; }
         catch { return $"Space {index}"; }
-    }
-
-    string SpaceRectHtml(ushort? index)
-    {
-        if (index is null) return "<span class=\"text-body-secondary fs-5\">—</span>";
-        var set = PropertySetHelper.ResolveSet(index.Value);
-        var banner = set is { } ps ? $"bg-prop-{ps.ToDisplayName().ToSlug()}" : "bg-secondary";
-        var name = WebUtility.HtmlEncode(NameOf(index) ?? $"Space {index}");
-        return $"<span class=\"stat-space\"><span class=\"stat-space-banner {banner}\"></span><span class=\"stat-space-name\">{name}</span></span>";
     }
 
     // ── reusable tiles (all values here are app-controlled; board names are encoded) ──
@@ -88,28 +85,6 @@
             $"<span class=\"stat-label\">{label}</span></div><div class=\"mt-1\">{currentHtml}</div>{cmpHtml}</div>");
     }
 
-    IHtmlContent SpaceTile(string label, string icon, string tone, ushort? cur, ushort? old)
-        => CatTile(label, icon, tone, SpaceRectHtml(cur), NameOf(cur), NameOf(old), NameOf(old));
-
-    string SetBadgeHtml(PropertySet? set)
-        => set is { } ps
-            ? $"<span class=\"badge text-bg-prop-{ps.ToDisplayName().ToSlug()} fs-6\">{WebUtility.HtmlEncode(ps.ToDisplayName())}</span>"
-            : "<span class=\"text-body-secondary fs-5\">—</span>";
-
-    IHtmlContent SetTile(string label, string icon, string tone, PropertySet? cur, PropertySet? old)
-        => CatTile(label, icon, tone, SetBadgeHtml(cur), cur?.ToString(), old?.ToString(), old?.ToDisplayName());
-
-    string ReasonBadgeHtml(FinancialReason? r)
-        => r is { } reason
-            ? $"<span class=\"badge text-bg-secondary fs-6\">{WebUtility.HtmlEncode(reason.ToDisplayName())}</span>"
-            : "<span class=\"text-body-secondary fs-5\">—</span>";
-
-    IHtmlContent BoolTile(string label, string icon, string tone, Func<bool, bool> good, bool cur, bool? old)
-    {
-        var badge = $"<span class=\"badge text-bg-{(good(cur) ? "success" : "danger")} fs-6\">{(cur ? "Yes" : "No")}</span>";
-        return CatTile(label, icon, tone, badge, cur.ToString(), old?.ToString(), old is null ? null : old.Value ? "Yes" : "No");
-    }
-
     // Two related numbers in one tile, split down the middle ("you | someone", "taken | repaid"),
     // each with its own sub-label and (when comparing) its own delta.
     IHtmlContent SplitTile(string label, string icon, string tone, bool money,
@@ -130,6 +105,91 @@
             $"<div class=\"stat-split-divider\"></div>{Half(rightLabel, rCur, rOld, rHigher)}</div></div>");
     }
 
+    // ── catalogue-driven rendering: one descriptor → the right tile, reusing the chrome above ──
+    bool? Higher(StatSentiment sent) => sent switch
+    {
+        StatSentiment.HigherBetter => true,
+        StatSentiment.LowerBetter => false,
+        _ => (bool?)null
+    };
+
+    long? AsLong(StatPart part, PlayerStatRecord? rec)
+        => rec is null ? null : part.Value(rec) is { } v ? Convert.ToInt64(v) : (long?)null;
+
+    // A categorical part's comparison key (equality) and "was X" display text, by kind.
+    (string? Key, string? Text) Cat(StatPart part, PlayerStatRecord? rec)
+    {
+        if (rec is null) return (null, null);
+        var v = part.Value(rec);
+        return part.Kind switch
+        {
+            StatKind.BoardIndex => (((ushort?)v)?.ToString(), NameOf((ushort?)v)),
+            StatKind.PropertySet => ((v as PropertySet?)?.ToString(), (v as PropertySet?)?.ToDisplayName()),
+            StatKind.FinancialReason => ((v as FinancialReason?)?.ToString(), (v as FinancialReason?)?.ToDisplayName()),
+            StatKind.CardTrigger => ((v as CardTrigger?)?.ToString(), (v as CardTrigger?)?.ToDisplayName()),
+            StatKind.CardEngagement => ((v as CardEngagement?)?.ToString(),
+                (v as CardEngagement?) is { } e ? (e == CardEngagement.Forced ? "Forced" : e == CardEngagement.Choice ? "Choice" : "Instant") : null),
+            StatKind.TriBool => (((bool?)v)?.ToString() ?? "null", (bool?)v is { } tb ? (tb ? "Yes" : "No") : "N/A"),
+            StatKind.Bool => (((bool?)v)?.ToString(), (v as bool?) is { } b ? (b ? "Yes" : "No") : null),
+            _ => (v?.ToString(), v?.ToString())
+        };
+    }
+
+    IHtmlContent RenderDescriptor(StatDescriptor d)
+    {
+        var p = d.Primary;
+        var money = p.Kind == StatKind.Money;
+
+        // Two-number split (dice number, loans, per-type card boxes, immunity).
+        if (d.Secondary is { } q)
+            return SplitTile(d.Label, d.Icon, d.Tone, money,
+                p.Label ?? "", AsLong(p, s), AsLong(p, cmp), Higher(p.Sentiment),
+                q.Label ?? "", AsLong(q, s), AsLong(q, cmp), Higher(q.Sentiment));
+
+        // Categorical kinds — the rendered fragment (StatRender produces HTML identical to the old
+        // hand-coded helpers), in the categorical chrome with a "was X" note.
+        if (p.Kind is not (StatKind.Money or StatKind.Number))
+        {
+            var curHtml = StatRender.Value(p, s, board).ToString() ?? "";
+            var (curKey, _) = Cat(p, s);
+            var (oldKey, oldText) = Cat(p, cmp);
+            return CatTile(d.Label, d.Icon, d.Tone, curHtml, curKey, oldKey, oldText);
+        }
+
+        var cur = AsLong(p, s);
+
+        // Money / number with inline detail badges (largest payment → reason + property; largest rent → property).
+        if (d.Details is { } details)
+        {
+            var valStr = cur is null ? "—" : money ? Money(cur.Value) : Num(cur.Value);
+            var dlt = Delta(cur, AsLong(p, cmp), Higher(p.Sentiment), money);
+            var deltaHtml = dlt is null ? "" : $"<div class=\"stat-delta {dlt.Value.Cls}\"><i class=\"bi {dlt.Value.Icon}\"></i> {dlt.Value.Text}</div>";
+            var badges = string.Concat(details.Select(dp => StatRender.Value(dp, s, board).ToString()));
+            return new HtmlString(
+                $"<div class=\"stat-tile\"><div class=\"stat-tile-top\"><span class=\"stat-ico text-{d.Tone} bg-{d.Tone}-subtle\"><i class=\"bi {d.Icon}\"></i></span>" +
+                $"<span class=\"stat-label\">{d.Label}</span></div><div class=\"stat-value\">{valStr}</div>{deltaHtml}" +
+                $"<div class=\"d-flex flex-wrap align-items-center gap-2 mt-1\">{badges}</div></div>");
+        }
+
+        // Plain money / number tile (with optional sub-note).
+        return Tile(d.Label, d.Icon, d.Tone, Higher(p.Sentiment), money, cur, AsLong(p, cmp), d.Sub?.Invoke(s));
+    }
+
+    // One section card's inner (title + tile grid). lgCols only matters for full-width cards;
+    // half cards are always 2-up at sm and above.
+    IHtmlContent SectionCard(StatSection sec, bool half)
+    {
+        var cols = half ? "row-cols-1 row-cols-sm-2" : $"row-cols-1 row-cols-sm-2 row-cols-lg-{sec.LgCols}";
+        var tiles = string.Concat(sec.Stats
+            .Where(stat => stat.Visible is null || stat.Visible(s))
+            .Select(stat => $"<div class=\"col\">{RenderDescriptor(stat)}</div>"));
+        return new HtmlString(
+            $"<div class=\"card shadow-sm border-0 {(half ? "h-100" : "mb-4")}\"><div class=\"card-body\">" +
+            $"<h2 class=\"h5 stats-card-title mb-3\"><span class=\"stats-card-ico text-{sec.Tone} bg-{sec.Tone}-subtle\">" +
+            $"<i class=\"bi {sec.Icon}\"></i></span>{WebUtility.HtmlEncode(sec.Title)}</h2>" +
+            $"<div class=\"row {cols} g-3\">{tiles}</div></div></div>");
+    }
+
     // ── chart series (per-turn arrays serialised on the stat record) ──
     double[] Series(string? json)
         => string.IsNullOrWhiteSpace(json)
@@ -142,6 +202,8 @@
     // Unique per render — this partial can appear several times on one page (the profile's
     // avg/min/max/total tabs), so chart element ids must not collide.
     var uid = Guid.NewGuid().ToString("N")[..8];
+
+    var sections = StatCatalogue.Sections;
 }
 
 <link rel="stylesheet" href="~/css/player-stats.css" asp-append-version="true" />
@@ -165,235 +227,28 @@
         </div>
     </div>
 
-    @* ── 13.1 Cash flow — full width ── *@
-    <div class="card shadow-sm border-0 mb-4">
-        <div class="card-body">
-            <h2 class="h5 stats-card-title mb-3">
-                <span class="stats-card-ico text-success bg-success-subtle"><i class="bi bi-cash-coin"></i></span>
-                Cash flow
-            </h2>
-            <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3">
-                <div class="col">@Tile("Money earned", "bi-cash-stack", "success", true, true, s.MoneyEarned, cmp?.MoneyEarned)</div>
-                <div class="col">@Tile("Money spent", "bi-cart-dash", "danger", false, true, s.MoneySpent, cmp?.MoneySpent)</div>
-                <div class="col">@Tile("Net cash flow", "bi-graph-up-arrow", "primary", true, true, s.NetCashFlow, cmp?.NetCashFlow)</div>
-                <div class="col">
-                    @{
-                        var lspReason = ReasonBadgeHtml(s.LargestSinglePaymentReason);
-                        var lspProp = SpaceRectHtml(s.LargestSinglePaymentPropertyIndex);
-                    }
-                    <div class="stat-tile">
-                        <div class="stat-tile-top">
-                            <span class="stat-ico text-warning bg-warning-subtle"><i class="bi bi-arrow-down-circle"></i></span>
-                            <span class="stat-label">Largest payment</span>
-                        </div>
-                        <div class="stat-value">@Money(s.LargestSinglePayment)</div>
-                        @{ var lspD = Delta(s.LargestSinglePayment, cmp?.LargestSinglePayment, false, true); }
-                        @if (lspD is not null)
-                        {
-                            <div class="stat-delta @lspD.Value.Cls"><i class="bi @lspD.Value.Icon"></i> @lspD.Value.Text</div>
-                        }
-                        <div class="d-flex flex-wrap align-items-center gap-2 mt-1">
-                            @Html.Raw(lspReason)
-                            @Html.Raw(lspProp)
-                        </div>
-                    </div>
-                </div>
-                <div class="col">
-                    @{
-                        var lrpProp = SpaceRectHtml(s.LargestRentPaymentPropertyIndex);
-                    }
-                    <div class="stat-tile">
-                        <div class="stat-tile-top">
-                            <span class="stat-ico text-warning bg-warning-subtle"><i class="bi bi-house-down"></i></span>
-                            <span class="stat-label">Largest rent paid</span>
-                        </div>
-                        <div class="stat-value">@(s.LargestRentPayment is { } lr ? Money(lr) : "—")</div>
-                        @{ var lrpD = Delta((long?)s.LargestRentPayment, (long?)cmp?.LargestRentPayment, false, true); }
-                        @if (lrpD is not null)
-                        {
-                            <div class="stat-delta @lrpD.Value.Cls"><i class="bi @lrpD.Value.Icon"></i> @lrpD.Value.Text</div>
-                        }
-                        <div class="mt-1">@Html.Raw(lrpProp)</div>
-                    </div>
-                </div>
+    @* ── Sections (catalogue-driven). Full-width cards render alone; consecutive Half sections
+         pair into a 50/50 row (Spending+Income, Jail+Free Parking). ── *@
+    @for (var i = 0; i < sections.Count; i++)
+    {
+        var sec = sections[i];
+        if (!sec.Half)
+        {
+            @SectionCard(sec, false)
+        }
+        else
+        {
+            var right = i + 1 < sections.Count && sections[i + 1].Half ? sections[i + 1] : null;
+            <div class="row g-4 mb-4">
+                <div class="col-12 col-lg-6">@SectionCard(sec, true)</div>
+                @if (right is not null)
+                {
+                    <div class="col-12 col-lg-6">@SectionCard(right, true)</div>
+                }
             </div>
-        </div>
-    </div>
-
-    @* ── 13.2 / 13.3 — Spending + Income, 50/50 ── *@
-    <div class="row g-4 mb-4">
-        <div class="col-12 col-lg-6">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-body">
-                    <h2 class="h5 stats-card-title mb-3">
-                        <span class="stats-card-ico text-danger bg-danger-subtle"><i class="bi bi-wallet2"></i></span>
-                        Spending
-                    </h2>
-                    <div class="row row-cols-1 row-cols-sm-2 g-3">
-                        <div class="col">@Tile("Acquiring property", "bi-bag-plus", "info", null, true, s.SpentAcquiringProperty, cmp?.SpentAcquiringProperty)</div>
-                        <div class="col">@Tile("Building", "bi-houses", "info", null, true, s.SpentBuilding, cmp?.SpentBuilding)</div>
-                        <div class="col">@Tile("Unmortgaging", "bi-unlock", "secondary", null, true, s.SpentUnmortgaging, cmp?.SpentUnmortgaging)</div>
-                        <div class="col">@Tile("Fines & penalties", "bi-exclamation-triangle", "danger", false, true, s.SpentOnFines, cmp?.SpentOnFines)</div>
-                        <div class="col">@Tile("Leaving jail", "bi-lock", "danger", false, true, s.SpentOnLeavingJail, cmp?.SpentOnLeavingJail)</div>
-                        <div class="col">@Tile("Repaying loans", "bi-arrow-return-left", "secondary", null, true, s.SpentOnRepayingLoans, cmp?.SpentOnRepayingLoans)</div>
-                        <div class="col">@Tile("Rent paid", "bi-house-dash", "danger", false, true, s.RentPaid, cmp?.RentPaid)</div>
-                        <div class="col">@Tile("Given in deals", "bi-arrow-right", "secondary", null, true, s.MoneyGivenInDeals, cmp?.MoneyGivenInDeals)</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-12 col-lg-6">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-body">
-                    <h2 class="h5 stats-card-title mb-3">
-                        <span class="stats-card-ico text-success bg-success-subtle"><i class="bi bi-piggy-bank"></i></span>
-                        Income
-                    </h2>
-                    <div class="row row-cols-1 row-cols-sm-2 g-3">
-                        <div class="col">@Tile("Rent earned", "bi-house-heart", "success", true, true, s.RentEarned, cmp?.RentEarned)</div>
-                        <div class="col">@Tile("Collected from GO", "bi-flag", "success", true, true, s.MoneyCollectedFromGo, cmp?.MoneyCollectedFromGo, $"{Num(s.TimesPassedGo)}× passed GO")</div>
-                        <div class="col">@Tile("Building sell-backs", "bi-tag", "success", true, true, s.MoneyFromSelling, cmp?.MoneyFromSelling)</div>
-                        <div class="col">@Tile("Mortgage payouts", "bi-cash-coin", "success", true, true, s.MoneyFromMortgaging, cmp?.MoneyFromMortgaging)</div>
-                        <div class="col">@Tile("Free Parking", "bi-p-square", "success", true, true, s.MoneyFromFreeParking, cmp?.MoneyFromFreeParking)</div>
-                        <div class="col">@Tile("Triple bonuses", "bi-dice-3", "success", true, true, s.MoneyFromTriples, cmp?.MoneyFromTriples)</div>
-                        <div class="col">@Tile("Snake-eyes bonuses", "bi-dice-1", "success", true, true, s.MoneyFromSnakeEyes, cmp?.MoneyFromSnakeEyes)</div>
-                        <div class="col">@Tile("Dice-number bonuses", "bi-123", "success", true, true, s.MoneyFromDiceNumber, cmp?.MoneyFromDiceNumber)</div>
-                        <div class="col">@Tile("From deals", "bi-arrow-left-right", "success", true, true, s.MoneyFromDeals, cmp?.MoneyFromDeals)</div>
-                        <div class="col">@Tile("From bankruptcies", "bi-emoji-dizzy", "success", true, true, s.MoneyFromBankruptPlayers, cmp?.MoneyFromBankruptPlayers)</div>
-                        <div class="col">@Tile("From cards", "bi-card-heading", "success", true, true, s.MoneyFromCards, cmp?.MoneyFromCards)</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    @* ── 13.4 Property & set economics ── *@
-    <div class="card shadow-sm border-0 mb-4">
-        <div class="card-body">
-            <h2 class="h5 stats-card-title mb-3">
-                <span class="stats-card-ico text-warning bg-warning-subtle"><i class="bi bi-bank2"></i></span>
-                Property &amp; sets
-            </h2>
-            <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3">
-                <div class="col">@SpaceTile("Most profitable property", "bi-trophy", "success", s.MostProfitablePropertyIndex, cmp?.MostProfitablePropertyIndex)</div>
-                <div class="col">@SpaceTile("Least profitable property", "bi-emoji-frown", "danger", s.LeastProfitablePropertyIndex, cmp?.LeastProfitablePropertyIndex)</div>
-                <div class="col">@SetTile("Most profitable set", "bi-collection", "success", s.MostProfitablePropertySet, cmp?.MostProfitablePropertySet)</div>
-                <div class="col">@SetTile("Least profitable set", "bi-collection", "danger", s.LeastProfitablePropertySet, cmp?.LeastProfitablePropertySet)</div>
-                <div class="col">@Tile("Max complete sets", "bi-stack", "primary", true, false, s.MaxCompleteSets, cmp?.MaxCompleteSets, $"peaked on turn {Num(s.MaxCompleteSetsTurnNumber)}")</div>
-                <div class="col">@Tile("Properties acquired", "bi-plus-square", "success", true, false, s.TotalPropertiesAcquired, cmp?.TotalPropertiesAcquired)</div>
-                <div class="col">@Tile("Properties lost", "bi-dash-square", "danger", false, false, s.TotalPropertiesLost, cmp?.TotalPropertiesLost)</div>
-                <div class="col">@Tile("Properties purged", "bi-fire", "danger", false, false, s.PropertiesPurged, cmp?.PropertiesPurged)</div>
-            </div>
-        </div>
-    </div>
-
-    @* ── 13.5 Dice & movement ── *@
-    <div class="card shadow-sm border-0 mb-4">
-        <div class="card-body">
-            <h2 class="h5 stats-card-title mb-3">
-                <span class="stats-card-ico text-primary bg-primary-subtle"><i class="bi bi-dice-5"></i></span>
-                Dice &amp; movement
-            </h2>
-            <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3">
-                @* Row 1 — rolls *@
-                <div class="col">@Tile("Turn rolls", "bi-dice-5", "secondary", null, false, s.TotalTurnRolls, cmp?.TotalTurnRolls)</div>
-                <div class="col">@Tile("Doubles rolled", "bi-dice-2", "primary", true, false, s.DoublesRolled, cmp?.DoublesRolled)</div>
-                <div class="col">@Tile("Triples rolled", "bi-dice-3", "primary", true, false, s.TriplesRolled, cmp?.TriplesRolled)</div>
-                <div class="col">@SplitTile("Your dice number", "bi-123", "primary", false,
-                               "You rolled", s.TimesYouRolledYourDiceNumber, cmp?.TimesYouRolledYourDiceNumber, true,
-                               "Someone rolled", s.TimesSomeoneRolledYourDiceNumber, cmp?.TimesSomeoneRolledYourDiceNumber, null)</div>
-
-                @* Row 2 — movement *@
-                <div class="col">@Tile("Direction changes", "bi-arrow-repeat", "secondary", null, false, s.TimesChangedDirection, cmp?.TimesChangedDirection)</div>
-                <div class="col">@Tile("Distance clockwise", "bi-arrow-clockwise", "secondary", null, false, s.TotalDistanceTraveledClockwise, cmp?.TotalDistanceTraveledClockwise)</div>
-                <div class="col">@Tile("Distance anti-clockwise", "bi-arrow-counterclockwise", "secondary", null, false, s.TotalDistanceTraveledCounterClockwise, cmp?.TotalDistanceTraveledCounterClockwise)</div>
-                <div class="col">@Tile("Total distance", "bi-signpost-split", "secondary", null, false, s.TotalDistanceTraveled, cmp?.TotalDistanceTraveled)</div>
-
-                @* Row 3 — landings *@
-                <div class="col">@SpaceTile("Most landed-on space", "bi-geo-alt-fill", "info", s.MostLandedOnBoardIndex, cmp?.MostLandedOnBoardIndex)</div>
-                <div class="col">@Tile("Landed on GO", "bi-flag-fill", "success", true, false, s.TimesLandedOnGo, cmp?.TimesLandedOnGo)</div>
-                <div class="col">@Tile("Landed on Free Parking", "bi-p-circle-fill", "info", true, false, s.TimesLandedOnFreeParking, cmp?.TimesLandedOnFreeParking)</div>
-                <div class="col">@Tile("Landed on Tax", "bi-receipt", "danger", false, false, s.TimesLandedOnTax, cmp?.TimesLandedOnTax)</div>
-            </div>
-        </div>
-    </div>
-
-    @* ── 13.6 / 13.7 — Jail + Free Parking, 50/50 ── *@
-    <div class="row g-4 mb-4">
-        <div class="col-12 col-lg-6">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-body">
-                    <h2 class="h5 stats-card-title mb-3">
-                        <span class="stats-card-ico text-secondary bg-secondary-subtle"><i class="bi bi-lock-fill"></i></span>
-                        Jail
-                    </h2>
-                    <div class="row row-cols-1 row-cols-sm-2 g-3">
-                        <div class="col">@Tile("Times sent to jail", "bi-box-arrow-in-down", "danger", false, false, s.TimesSentToJail, cmp?.TimesSentToJail)</div>
-                        <div class="col">@Tile("Total turns in jail", "bi-hourglass-split", "danger", false, false, s.TotalJailTurns, cmp?.TotalJailTurns)</div>
-                        <div class="col">@Tile("Left by paying", "bi-cash", "danger", false, false, s.TimesLeftJailByPaying, cmp?.TimesLeftJailByPaying)</div>
-                        <div class="col">@Tile("Left by dice", "bi-dice-6", "success", true, false, s.TimesLeftJailByDice, cmp?.TimesLeftJailByDice)</div>
-                        <div class="col">@Tile("Left by card", "bi-card-text", "secondary", null, false, s.TimesLeftJailByPlayingCard, cmp?.TimesLeftJailByPlayingCard)</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-12 col-lg-6">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-body">
-                    <h2 class="h5 stats-card-title mb-3">
-                        <span class="stats-card-ico text-info bg-info-subtle"><i class="bi bi-p-square-fill"></i></span>
-                        Free Parking
-                    </h2>
-                    <div class="row row-cols-1 row-cols-sm-2 g-3">
-                        <div class="col">@Tile("Properties taken", "bi-box-arrow-down", "success", true, false, s.TotalPropertiesTakenFromFP, cmp?.TotalPropertiesTakenFromFP)</div>
-                        <div class="col">@Tile("Properties handed in", "bi-box-arrow-up", "danger", false, false, s.TotalPropertiesHandedInFP, cmp?.TotalPropertiesHandedInFP)</div>
-                        <div class="col">@Tile("Money taken", "bi-cash-coin", "success", true, true, s.MoneyFromFreeParking, cmp?.MoneyFromFreeParking)</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    @* ── 13.8 Loans & mortgages ── *@
-    <div class="card shadow-sm border-0 mb-4">
-        <div class="card-body">
-            <h2 class="h5 stats-card-title mb-3">
-                <span class="stats-card-ico text-warning bg-warning-subtle"><i class="bi bi-bank"></i></span>
-                Loans &amp; mortgages
-            </h2>
-            <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3">
-                <div class="col">@SplitTile("Loans", "bi-bank", "warning", false,
-                               "Taken", s.TotalLoansTaken, cmp?.TotalLoansTaken, false,
-                               "Repaid", s.TotalLoansRepaid, cmp?.TotalLoansRepaid, true)</div>
-                <div class="col">@Tile("Total borrowed", "bi-cash-stack", "danger", false, true, s.TotalLoanAmountTaken, cmp?.TotalLoanAmountTaken)</div>
-                <div class="col">@Tile("Loan repayments", "bi-arrow-repeat", "secondary", null, false, s.TotalLoanRepayments, cmp?.TotalLoanRepayments)</div>
-                <div class="col">@Tile("Outstanding debt", "bi-exclamation-circle", "danger", false, true, s.OutstandingLoanDebt, cmp?.OutstandingLoanDebt)</div>
-                <div class="col">@Tile("Times mortgaged", "bi-house-lock", "danger", false, false, s.TimesMortgaged, cmp?.TimesMortgaged)</div>
-                <div class="col">@Tile("Times unmortgaged", "bi-house-check", "success", true, false, s.TimesUnmortgaged, cmp?.TimesUnmortgaged)</div>
-                <div class="col">@Tile("Mortgage fees (GO)", "bi-percent", "danger", false, true, s.MortgageFeesPaid, cmp?.MortgageFeesPaid)</div>
-            </div>
-        </div>
-    </div>
-
-    @* ── 13.10 / 13.11 — Endgame + state-over-time ── *@
-    <div class="card shadow-sm border-0 mb-4">
-        <div class="card-body">
-            <h2 class="h5 stats-card-title mb-3">
-                <span class="stats-card-ico text-primary bg-primary-subtle"><i class="bi bi-flag-fill"></i></span>
-                Endgame &amp; peaks
-            </h2>
-            <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3">
-                <div class="col">@BoolTile("Bankrupted", "bi-x-octagon", "danger", b => !b, s.Bankrupted, cmp?.Bankrupted)</div>
-                <div class="col">@BoolTile("Voluntary bankruptcy", "bi-flag", "secondary", b => !b, s.VoluntaryBankruptcy, cmp?.VoluntaryBankruptcy)</div>
-                <div class="col">@Tile("Bankrupted by", "bi-cash-stack", "danger", false, true, (long?)s.BankruptedByAmount, (long?)cmp?.BankruptedByAmount)</div>
-                <div class="col">@Tile("Turns survived", "bi-clock-history", "primary", true, false, s.TurnsSurvived, cmp?.TurnsSurvived)</div>
-                <div class="col">@Tile("Final balance", "bi-wallet2", "success", true, true, s.FinalBalance, cmp?.FinalBalance)</div>
-                <div class="col">@Tile("Final net worth", "bi-piggy-bank-fill", "success", true, true, s.FinalNetWorth, cmp?.FinalNetWorth)</div>
-                <div class="col">@Tile("Peak net worth", "bi-graph-up-arrow", "success", true, true, s.PeakNetWorth, cmp?.PeakNetWorth, $"on turn {Num(s.PeakNetWorthTurnNumber)}")</div>
-                <div class="col">@Tile("Peak balance", "bi-cash-coin", "success", true, true, s.PeakBalance, cmp?.PeakBalance, $"on turn {Num(s.PeakBalanceTurnNumber)}")</div>
-            </div>
-        </div>
-    </div>
+            if (right is not null) { i++; }
+        }
+    }
 
     @* ── 13.12 Graphs ── *@
     <div class="card shadow-sm border-0 mb-4">

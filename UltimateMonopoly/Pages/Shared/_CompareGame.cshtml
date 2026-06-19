@@ -79,6 +79,12 @@
                     <tbody class="collapse show" id="@(pfx)-sec-@i">
                         @foreach (var stat in statSection.Stats)
                         {
+                            @* Conditional stats (per-type card boxes) hide when no player has the data —
+                               e.g. the per-type JSON is null in the cross-game aggregate view. *@
+                            if (stat.Visible is not null && !Model.Any(p => stat.Visible(p.Stat)))
+                            {
+                                continue;
+                            }
                             if (stat.Secondary is null)
                             {
                                 var part = stat.Primary;

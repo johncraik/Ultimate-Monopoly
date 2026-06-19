@@ -16,14 +16,17 @@ public class JailService
     private readonly MovementService _movementService;
     private readonly TransactionService _transactionService;
     private readonly CardTriggerService _triggerService;
+    private readonly CardImmunityService _immunityService;
 
     public JailService(MovementService movementService,
         TransactionService transactionService,
-        CardTriggerService triggerService)
+        CardTriggerService triggerService,
+        CardImmunityService immunityService)
     {
         _movementService = movementService;
         _transactionService = transactionService;
         _triggerService = triggerService;
+        _immunityService = immunityService;
     }
     
     public async Task<bool> SendPlayerToJail(Framework.GameEngine engine, PlayerModel player, CancellationToken ct)
@@ -61,6 +64,17 @@ public class JailService
         return sent;
     }
 
+
+    public void ResetPlayerJailFlags(PlayerModel player)
+    {
+        //Reset jail counter to 0
+        player.JailTurnCounter = 0;
+        player.MaxJailTurnsOverride = null;
+        player.MinJailTurns = null;
+        player.CollectRentInJail = false;
+    }
+    
+
     public async Task CheckAndLeaveJail(Framework.GameEngine engine, PlayerModel player, CancellationToken ct)
     {
         if(!player.IsInJail)
@@ -74,11 +88,7 @@ public class JailService
         
         _ = await _triggerService.OnInJail(engine, player, ct);
 
-        //Reset jail counter to 0
-        player.JailTurnCounter = 0;
-        player.MaxJailTurnsOverride = null;
-        player.MinJailTurns = null;
-        player.CollectRentInJail = false;
+        ResetPlayerJailFlags(player);
         engine.CiteRule(RuleCode.Jail_LeaveByDouble);
         
         //Direction of travel is no-op (moving from jail -> just visiting);
@@ -91,10 +101,7 @@ public class JailService
     public async Task ForcePlayerToLeaveJail(Framework.GameEngine engine, PlayerModel player, CancellationToken ct)
     {
         //Reset jail counter to 0
-        player.JailTurnCounter = 0;
-        player.MaxJailTurnsOverride = null;
-        player.MinJailTurns = null;
-        player.CollectRentInJail = false;
+        ResetPlayerJailFlags(player);
         engine.CiteRule(RuleCode.Jail_ThreeTurnLimit);
         
         _ = await _triggerService.OnInJail(engine, player, ct);
@@ -132,6 +139,8 @@ public class JailService
             return;
         }
 
+        ResetPlayerJailFlags(player);
+        
         if(!player.IsInJail)
             return;
 
@@ -139,10 +148,10 @@ public class JailService
         //the fee is charged — the other exit paths fire OnInJail already; this one is the command path.
         _ = await _triggerService.OnInJail(engine, player, ct);
 
+        await PayJailFee(engine, player, ct);
+
         await _movementService.AdvancePlayer(engine, player, IndexHelper.JustVisitingSpace,
             PlayerMovementDirection.CounterDirectionOfTravel, ct);
-
-        await PayJailFee(engine, player, ct);
     }
 
     private async Task PayJailFee(Framework.GameEngine engine, PlayerModel player, CancellationToken ct)
@@ -180,6 +189,8 @@ public class JailService
             return false;
         }
         
+        ResetPlayerJailFlags(player);
+        
         if(!player.IsInJail)
             return false;
         
@@ -191,8 +202,17 @@ public class JailService
 
     public async Task GoToJail(Framework.GameEngine engine, PlayerModel player, CancellationToken ct)
     {
-        var suppressDefault =  await engine.CardService.DrawCard(engine, player, CardType.GoToJail, ct);
-        if(suppressDefault.SuppressGoToJail) return;
+        var result = await _immunityService.CheckGoToJailCardImmunity(engine, player, ct);
+        if (result)
+        {
+            engine.Notifier.Notify(player.PlayerId, player.PlayerId, 
+                "You played an immunity card. You will not get a Go To Jail Card");
+        }
+        else
+        {
+            var suppressDefault =  await engine.CardService.DrawCard(engine, player, CardType.GoToJail, ct);
+            if(suppressDefault.SuppressGoToJail) return;
+        }
         
         engine.CiteRule(RuleCode.GoToJail_SendToJail);
         await SendPlayerToJail(engine, player, ct);

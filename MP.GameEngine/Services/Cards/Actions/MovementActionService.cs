@@ -74,12 +74,20 @@ public class MovementActionService : ICardActionService<MovementAction>
                     await _movementService.AdvancePlayer(engine, target, FindNearest(engine, target, action), MovementDirection(action), ct);
                     break;
                 case MovementKind.GoToJustVisiting:
-                    // Honour CollectGoBonus: a card that crosses GO en route to Just Visiting collects the
-                    // bonus and unlocks buying (DirectionOfTravel — e.g. "Mishandled evidence"); a "do not
-                    // pass GO" card (mass breakout, call a meeting) sets CollectGoBonus=false → counter-
-                    // direction, so no bonus and no initial-GO unlock.
-                    await _movementService.AdvancePlayer(engine, target, IndexHelper.JustVisitingSpace,
-                        MovementDirection(action), ct);
+                    if (target.IsInJail)
+                        // A jailed target is RELEASED, not teleported — route through JailService so the
+                        // jail-state flags are reset (the MinJailTurns forced-stay lock, JailTurnCounter,
+                        // CollectRentInJail), mirroring the SendPlayerToJail entry symmetry above. A bare
+                        // move would leave those stale, re-jailing the player with their counter intact
+                        // (mass breakout). LeaveJailByCard already advances them to Just Visiting.
+                        await _jailService.LeaveJailByCard(engine, target, ct);
+                    else
+                        // Honour CollectGoBonus: a card that crosses GO en route to Just Visiting collects
+                        // the bonus and unlocks buying (DirectionOfTravel — e.g. "Mishandled evidence"); a
+                        // "do not pass GO" card (call a meeting) sets CollectGoBonus=false → counter-
+                        // direction, so no bonus and no initial-GO unlock.
+                        await _movementService.AdvancePlayer(engine, target, IndexHelper.JustVisitingSpace,
+                            MovementDirection(action), ct);
                     continue;   // Just Visiting performs no space action
                 default:
                     continue;
@@ -128,9 +136,18 @@ public class MovementActionService : ICardActionService<MovementAction>
         if (context is not null)
             context.ContextPlayerId = target.PlayerId;
 
+        // Captured before the positions move (IsInJail is board-position derived): a "swap places with a
+        // jailed player" card pulls the target OUT of jail onto the holder's old space. If they were under a
+        // forced-stay lock (MinJailTurns) their jail flags must be reset to normal, else the stale lock /
+        // counter / collect-rent flag re-jails them — same release rule as mass breakout.
+        var targetWasJailed = target.IsInJail;
+
         var holderIndex = player.BoardIndex;
         player.BoardIndex = target.BoardIndex;
         target.BoardIndex = holderIndex;
+
+        if (targetWasJailed)
+            _jailService.ResetPlayerJailFlags(target);
 
         engine.EventEmitter.Emit(new PlayerSwappedReceipt
         {

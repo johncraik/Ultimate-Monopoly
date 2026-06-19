@@ -46,7 +46,13 @@ public class Lobby : PageModel
             return Forbid();
         
         var player = await _playerProfiles.GetPlayerForGameSetup(gameId, userId);
-        if (player is null) return NotFound();
+        if (player is null)
+        {
+            player = await _playerProfiles.GetPlayerForGamePlay(gameId, userId);
+            if (player is null) return NotFound();
+            
+            return RedirectToPage("/Index", new { gameId, userId });
+        }
 
         Profile = await _profiles.GetProfileViewModelAsync(userId);
         if (Profile is null) return NotFound();
