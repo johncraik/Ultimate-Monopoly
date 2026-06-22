@@ -38,6 +38,7 @@ public class LeaderboardService
         var blockedProfiles = await _blockAndReportService.CheckAndReportExistingBlocks(_userInfo.UserId, 
             userProfiles.Select(u => u.UserId));
         var friendProfiles = await _friendService.AreFriends(userProfiles.Select(u => u.UserId));
+        var hiddenUserIds = await _profileService.GetHiddenUserIds(userProfiles);
         
         var leaderboardRecords = new List<LeaderboardRecord>();
         foreach (var up in userProfiles)
@@ -45,9 +46,15 @@ public class LeaderboardService
             var blockCheck = blockedProfiles.FirstOrDefault(b => b.userId == up.UserId);
             var friendCheck = friendProfiles.FirstOrDefault(f => f.userId == up.UserId);
             
+            var hidden = hiddenUserIds.Contains(up.UserId);
+            
             if(blockCheck == default || !blockCheck.Blocked)
             {
-                var lr = new LeaderboardRecord(up, friendCheck.Firends);
+                var profile = up;
+                if(!friendCheck.Firends && hidden)
+                    profile = new UserProfileViewModel(up.NumberOfWins, up.NumberOfLosses, up.NumberOfDraws);
+                
+                var lr = new LeaderboardRecord(profile, friendCheck.Firends);
                 leaderboardRecords.Add(lr);
                 continue;
             }

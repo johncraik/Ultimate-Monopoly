@@ -1,6 +1,8 @@
+using JC.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using UltimateMonopoly.Data;
 using UltimateMonopoly.Models.ViewModels.BoardSkins;
 using UltimateMonopoly.Models.ViewModels.Social;
 using UltimateMonopoly.Services.BoardSkins;
@@ -14,14 +16,17 @@ public class Share : PageModel
     private readonly BoardSkinService _boardSkins;
     private readonly BoardSkinShareService _shareService;
     private readonly FriendService _friendService;
+    private readonly IUserInfo _userInfo;
 
     public Share(BoardSkinService boardSkins,
         BoardSkinShareService shareService,
-        FriendService friendService)
+        FriendService friendService,
+        IUserInfo userInfo)
     {
         _boardSkins = boardSkins;
         _shareService = shareService;
         _friendService = friendService;
+        _userInfo = userInfo;
     }
 
     public string Id { get; private set; } = string.Empty;
@@ -54,7 +59,13 @@ public class Share : PageModel
 
         var ok = await _shareService.TryShareBoardSkin(id, friendIds ?? []);
 
-        StatusMessage = ok ? "Board sharing saved." : "Could not save board sharing.";
+        StatusMessage = ok 
+            ? "Board sharing saved." 
+            : _userInfo.IsInRole(AppRoles.Restricted) 
+                ? "Your account is restricted and cannot share boards with new users. You can only remove existing board shares with friends."
+                : "Could not save board sharing.";
+        
+        
         StatusKind = ok ? "success" : "danger";
         return RedirectToPage(new { id });
     }

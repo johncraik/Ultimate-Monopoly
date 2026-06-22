@@ -57,10 +57,16 @@ public class FreeParkingService
         }
         
         var triggerSuppress = await _triggerService.OnLandFreeParking(engine, player, ct);
-        var suppressDefault = await engine.CardService.DrawCard(engine, player, CardType.FreeParking, ct);
+        SuppressDefault? suppressDefault = null;
+        
+        //Check if this player should be prevented from drawing a Free Parking card:
+        if(!engine.Cache.PreventBoardIndexCard(player.PlayerId, IndexHelper.FreeParkingSpace))
+            suppressDefault = await engine.CardService.DrawCard(engine, player, CardType.FreeParking, ct);
         
         var sd = new SuppressDefault(triggerSuppress.Type());
-        sd.Aggregate(suppressDefault);
+        if(suppressDefault is not null)
+            sd.Aggregate(suppressDefault);
+        
         if(sd.SuppressAllFreeParking)
             return;
         

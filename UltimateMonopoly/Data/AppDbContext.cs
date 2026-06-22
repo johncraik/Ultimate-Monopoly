@@ -26,7 +26,11 @@ public class AppDbContext : IdentityDataDbContext<AppUser, AppRole>,
 {
     public AppDbContext(DbContextOptions<AppDbContext> options, IUserInfo userInfo)
         : base(options, userInfo) { }
+    
+    //Blocked Words
+    public DbSet<BlockedWord> BlockedWords { get; set; }
 
+    //Board Skins
     public DbSet<BoardSkin> BoardSkins { get; set; }
     public DbSet<BoardSkinSpace> BoardSkinSpaces { get; set; }
     public DbSet<SharedBoardSkin> SharedBoardSkins { get; set; }

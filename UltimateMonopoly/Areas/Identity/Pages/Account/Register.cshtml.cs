@@ -20,6 +20,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
 using UltimateMonopoly.Data;
+using UltimateMonopoly.Services;
 
 namespace UltimateMonopoly.Areas.Identity.Pages.Account
 {
@@ -32,13 +33,15 @@ namespace UltimateMonopoly.Areas.Identity.Pages.Account
         private readonly IUserEmailStore<AppUser> _emailStore;
         private readonly ILogger<RegisterModel> _logger;
         private readonly IEmailService _emailService;
+        private readonly ProfanityService _profanityService;
 
         public RegisterModel(
             UserManager<AppUser> userManager,
             IUserStore<AppUser> userStore,
             SignInManager<AppUser> signInManager,
             ILogger<RegisterModel> logger,
-            IEmailService emailService)
+            IEmailService emailService,
+            ProfanityService profanityService)
         {
             _userManager = userManager;
             _userStore = userStore;
@@ -46,6 +49,7 @@ namespace UltimateMonopoly.Areas.Identity.Pages.Account
             _signInManager = signInManager;
             _logger = logger;
             _emailService = emailService;
+            _profanityService = profanityService;
         }
 
         /// <summary>
@@ -123,6 +127,15 @@ namespace UltimateMonopoly.Areas.Identity.Pages.Account
         {
             returnUrl ??= Url.Content("~/");
             ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
+            
+            var profanityResult = await _profanityService.Check(Input.Username);
+            if(profanityResult.IsProfane)
+            {
+                _logger.LogWarning("User tried to register with username '{Username}'", Input.Username);
+                ModelState.AddModelError(nameof(Input.Username),
+                    $"This username is not allowed. Please choose another.");
+            }
+            
             if (ModelState.IsValid)
             {
                 var user = CreateUser();

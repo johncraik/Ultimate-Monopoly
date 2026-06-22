@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -44,12 +45,22 @@ namespace UltimateMonopoly.Areas.Identity.Pages.Account.Manage
 
             _logger.LogInformation("User with ID '{UserId}' asked for their personal data.", _userManager.GetUserId(User));
 
-            // Only include personal data for download
-            var personalData = new Dictionary<string, string>();
-            var personalDataProps = typeof(AppUser).GetProperties().Where(
-                            prop => Attribute.IsDefined(prop, typeof(PersonalDataAttribute)));
-            foreach (var p in personalDataProps)
+            // Export every scalar column of the user row — base IdentityUser, JC.Identity's BaseUser, and
+            // this project's AppUser — not just the [PersonalData]-decorated ones (the scaffold default,
+            // which silently skipped DisplayName, the avatar fields, the W/L/D counts, etc.). Credential /
+            // security tokens are deliberately excluded.
+            var excluded = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             {
+                "PasswordHash", "SecurityStamp", "ConcurrencyStamp"
+            };
+
+            var personalData = new Dictionary<string, string>();
+            foreach (var p in typeof(AppUser).GetProperties(BindingFlags.Public | BindingFlags.Instance))
+            {
+                if (!p.CanRead || p.GetIndexParameters().Length > 0) continue;
+                if (excluded.Contains(p.Name)) continue;
+                if (!IsExportableColumn(p.PropertyType)) continue;
+
                 personalData.Add(p.Name, p.GetValue(user)?.ToString() ?? "null");
             }
 
@@ -63,6 +74,21 @@ namespace UltimateMonopoly.Areas.Identity.Pages.Account.Manage
 
             Response.Headers.TryAdd("Content-Disposition", "attachment; filename=PersonalData.json");
             return new FileContentResult(JsonSerializer.SerializeToUtf8Bytes(personalData), "application/json");
+        }
+
+        // A property maps to a single exportable column when it's a simple scalar — this filters out any
+        // navigation / collection properties so only real columns are serialised.
+        private static bool IsExportableColumn(Type type)
+        {
+            type = Nullable.GetUnderlyingType(type) ?? type;
+            return type.IsPrimitive
+                || type.IsEnum
+                || type == typeof(string)
+                || type == typeof(decimal)
+                || type == typeof(DateTime)
+                || type == typeof(DateTimeOffset)
+                || type == typeof(TimeSpan)
+                || type == typeof(Guid);
         }
     }
 }

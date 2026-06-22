@@ -35,106 +35,117 @@ dependency and risk. The arrows are *soft* dependencies, not hard blocks.
 
 ```
 A. Identity foundations   →   B. Content safety   →   C. Admin & moderation
-       (email, roles)            (names, blocking)        (the big build)
+       (roles)                   (names, blocking)        (the big build)
                                                               │
                               D. Gameplay & stats   ←─────────┘
                               E. Optional enhancements (any time after their deps)
+
+      ── then, immediately before launch ──────────────────────────────────
+      R. Release gate — A1 email confirmation (the one paid external prereq)
 ```
 
-- **A first** because roles + verified email are the substrate several later items lean on (the
-  `Restricted` role gates social/game actions; admin needs roles; moderation needs an audit trail
-  that already exists in JC.Core).
+- **A first** because roles are the substrate several later items lean on (the `Restricted` role
+  gates social/game actions; admin needs roles; moderation needs an audit trail that already exists
+  in JC.Core). *(Email confirmation — formerly A1 in this phase — has moved to the release gate R;
+  see below.)*
 - **B before launch** — names and blocking are the user-visible safety surface.
 - **C is the largest single piece** — it's where moderation is actually performed, so it follows
   the role model.
 - **D & E** are gameplay/feature polish that can slot in once their dependencies exist.
+- **R last** — email confirmation (A1) needs a **paid** Microsoft Entra tenant / app-registration
+  licence to send mail. There's no point provisioning (and paying for) it before we're actually
+  ready to ship, so it is deliberately the **final step before launch**, not a foundation. The code
+  change itself is small; only the external paid prerequisite gates it.
 
-**Priority key:** 🔴 must-have for V1 · 🟡 optional / stretch.
+**Priority key:** 🔴 must-have for V1 · 🟠 must-have, but deliberately **last** (an external *paid*
+prerequisite — provisioned only at release) · 🟡 optional / stretch · 🟢 **implemented** · ◐ **partially implemented**.
 
 | # | Item | Phase | Priority | Leans on |
 |---|---|---|---|---|
-| A1 | Email confirmation (tenant + app registration) | A | 🔴 | JC.Identity, JC.Communication.Email |
-| A2 | Roles + the `Restricted` level | A | 🔴 | JC.Identity |
-| B1 | Username & display-name validation + profanity filter | B | 🔴 | A2 |
+| A2 | Roles + the `Restricted` level | A | 🟢 | JC.Identity |
+| B1 | Username & display-name validation + profanity filter | B | 🟢 | A2 |
 | B2 | Friends / social blocking revisit | B | 🔴 | — |
 | C1 | Admin area — full stack | C | 🔴 | A2, JC.Core audit |
 | D1 | Most-landed-space frequency stat | D | 🔴 | — |
 | D2 | Money cap & turn tax (anti-snowball) | D | 🟡 | — |
 | E1 | Friend messaging + game invites | E | 🟡 | B2, JC.Communication |
-| E2 | Hidden profile / soft-block | E | 🟡 | B2 |
+| E2 | Hidden profile / soft-block | E | 🟡 ◐ | B2 |
 | E3 | Cards reference page | E | 🟡 | — |
+| A1 | Email confirmation (tenant + app registration) | R | 🟠 | JC.Identity, JC.Communication.Email |
 
 ---
 
 ## 3. Phase A — Identity foundations
 
-### A1. Email confirmation 🔴
-**What.** Stand up a **Microsoft Entra tenant + app registration** for outbound email, wire it into
-the app's email sender (JC.Communication.Email), and **enable the ConfirmEmail flow** in the
-register / ASP.NET Identity pages (currently disabled).
-
-**Why.** A public app needs verified email — for account recovery, to deter throwaway/abuse
-accounts, and as the baseline trust signal. It's also an external prerequisite (tenant + app
-registration provisioning), so it's worth starting early even though the code change is small.
-
-**Scope.**
-- Provision the tenant + app registration; obtain client id / secret (or certificate).
-- Configure the email sender against it. **Secrets live in env vars / user secrets, never committed
-  appsettings** (see config policy).
-- Turn on `RequireConfirmedAccount` (or equivalent) and un-stub the ConfirmEmail Identity pages;
-  ensure the confirmation email is sent on register and on email change.
-
-**Open questions.**
-- Graph API send vs SMTP relay — which does the tenant/app-registration support cleanly?
-- Grace behaviour: can an unconfirmed account do anything, or is it fully gated until confirmed?
-
-### A2. Roles & the `Restricted` level 🔴
+### A2. Roles & the `Restricted` level 🟢 — ✅ **IMPLEMENTED**
 **What.** Lean on JC.Identity's role system (`AppRole : BaseRole`, `RoleManager`, the
 `SystemRoles`-derived roles class seeded by `ConfigureAdminAndRolesAsync`) and add the main new
 application role: **`Restricted`**.
 
 **Why.** `Restricted` is the moderation lever — a soft penalty short of a ban — and the role system
-underpins the admin area (C1) and several gated actions. Defining it early lets later features
-check it as they're built.
+underpins the admin area (C1) and several gated actions.
 
-**Scope.**
-- Add `Restricted` (and confirm the full app role set) to the app's `SystemRoles`-derived class so
-  it's seeded.
-- Thread role checks into the gated actions (see open question for the boundary).
+**Boundary (decided).** A `Restricted` account **cannot**: send friend requests, send messages,
+create games, or create / share board skins. Everything else stays open — it can still **accept /
+decline / remove** friends, **join** games, **edit** its existing board skins, and **remove** its
+existing board-skin shares. The line is "neutralise a bad actor's outward/creative actions without
+breaking a borderline account." Recorded on `AppRoles.RestrictedDesc`.
 
-**Open question — the `Restricted` boundary (needs discussion).** Candidate restrictions, to be
-confirmed: **no sending friend requests**; possibly **no creating games or board skins**; possibly
-**no joining games at all**. The exact line is a product decision — it should be enough to neutralise
-a bad actor without silently breaking a borderline account. Each restriction needs a clear, friendly
-"you can't do this because your account is restricted" surface, not a silent failure.
+**Implemented.**
+- `AppRoles.Restricted` (+ `RestrictedDesc`) added and **seeded** automatically via
+  `ConfigureAdminAndRolesAsync<AppUser, AppRole, AppDbContext, AppRoles>` (`Program.cs`) — discovered
+  by JC.Identity's `{Name}` / `{Name}Desc` reflection convention.
+- **Authoritative server-side guards** (UI hiding is defence-in-depth only, never the sole gate):
+  - **Create game** — `GameSetupService.TryCreateNewGame` (+ `Pages/Games/Index.OnGetAsync` hides the UI).
+  - **Send friend request** — `FriendService.TrySendFriendRequest` (accept / decline / remove stay open).
+  - **Share board skin** — `BoardSkinShareService.TryShareBoardSkin` blocks *add / restore* but allows
+    *remove*; `Pages/Boards/Share` surfaces a friendly "your account is restricted" message.
+  - **Create board skin** — `BoardSkinService.TrySaveSkin` (create branch) (+ `Pages/Boards/Edit.OnGetAsync`
+    hides the UI). Editing an existing skin is intentionally still allowed.
+- **Send messages** is part of the declared boundary but has no surface yet — it is enforced when
+  messaging lands (E1 already records the `Restricted` + blocking guards it must honour).
+
+**Follow-up (minor, optional).** The create-board-skin guard returns a bare failure with no model
+error, so a crafted-POST bypass shows a generic "could not save" message rather than a
+restricted-specific one (the UI already hides create, so a normal user never reaches it). Add a
+`modelState.AddModelError` line if message parity with the Share page is wanted.
 
 ---
 
 ## 4. Phase B — Content safety
 
-### B1. Username & display-name validation + profanity filter 🔴
-**What.** Two parts:
-1. **Display names** — a new user-settable, user-**changeable** field (distinct from the login
-   username). Users can set and later change their display name.
-2. **Validation + profanity filtering** on **both** usernames (at register) and display names (set /
-   change) — reject explicit / sensitive / rude words and phrases.
+### B1. Username & display-name validation + profanity filter 🟢 — ✅ **IMPLEMENTED**
+**What.** Two parts: (1) a new user-settable, **changeable** display name (distinct from the login
+username); (2) profanity filtering on **both** usernames (at register) and display names (set/change).
 
-**Why.** Names are the most visible user-authored content (leaderboard, profiles, in-game). For a
-public launch they must be moderated up front, not after the fact.
+**Why.** Names are the most visible user-authored content (leaderboard, profiles, in-game) — moderated
+up front, not after the fact.
 
-**Scope.**
-- Display-name field on the user/profile model + the set/change UI; uniqueness is *not* required
-  (display names can collide; usernames stay unique).
-- A filtering layer applied to both: structural validation (length, allowed charset) **plus** a
-  profanity/blocklist check that normalises common evasions (case, leetspeak `a→@/4`, separators,
-  repeated chars) before matching, and catches multi-word phrases.
-- Apply on every write path: register, display-name set/change, and (defensively) any admin edit.
+**Implemented.**
+- **Display name** — editable on the **Account tab** (`Manage`), distinct from the username,
+  **collisions allowed** (not unique). Persisted to JC.Identity `BaseUser.DisplayName` + a
+  `RefreshSignInAsync` so the `display_name` claim refreshes immediately.
+- **Filter pipeline** (`ProfanityService.Check` → `ProfanityResult(IsProfane, MatchedTerm, Source)`):
+  - **`ProfanityNormaliser`** (static helper) canonicalises input — strip diacritics, leet-map
+    (`@→a`, `1→i`…), drop separators/whitespace (defeats `f.u.c.k` / `f u c k`), collapse runs of 3+
+    repeats (`fuuuck→fuck`). The same transform produces `BlockedWord.NormalisedWord`, so both sides
+    of a match are comparable.
+  - **`Profanity.Detector`** library (≈1.7M downloads) for the comprehensive list + its own
+    Scunthorpe allow-list, **plus** a DB-backed local list (`BlockedWord` table) for extra terms.
+  - **Local list infra:** `BlockedWordImportService` seeds additively from `BlockedWords_FilePath`
+    (one word/line, `#` comments, never deletes); `BlockedWordsCacheService` caches it (NeverRemove,
+    hydrate-on-miss, SystemAdmin-gated `Invalidate`).
+- **Write paths wired:** register (username) and display-name set/change. The user-facing message is
+  **generic** ("this name isn't allowed"); `MatchedTerm`/`Source` go to the audit/log only.
 
-**Open questions.**
-- Blocklist source — a curated list vs a library/service. Self-hosted list keeps it offline and
-  tweakable; weigh maintenance vs coverage.
-- False-positive handling (the "Scunthorpe problem") — tune toward fewer false rejects, with admin
-  override.
+**Decided.** Library + private local list (no separate allow-list table for V1 — lean on the
+library's own); bias to **under-block** with admin override.
+
+**Caveats / follow-ups.**
+- `Profanity.Detector` is **case-sensitive** (lowercase list) — input is lowercased before the library
+  call. The library check on the *normalised* (uppercase) string still needs lowercasing to catch
+  leet-evasions of common words via the library (small open fix).
+- Admin-edit write path is deferred to **C1** (no admin edit surface exists yet).
 
 ### B2. Friends / social blocking revisit 🔴
 **What.** A final hardening pass over the friends/social system, focused on **blocking**.
@@ -219,16 +230,31 @@ potentially an **invite-to-game** feature via **JC.Communication.Notifications**
 `Restricted` role (A2). Game invites ride the notifications channel. Confirm the JC.Communication
 Messaging/Notifications APIs against pckg-docs when picked up.
 
-### E2. Hidden profile / soft-block 🟡
-**What.** A profile toggle that **hides you from the public leaderboard** — you appear as
-"Unknown" there — while you can still add and be added as a friend. A **soft-block** on visibility,
-not interaction.
+### E2. Hidden profile / soft-block 🟡 — ◐ **PARTIAL** (most of it landed off A2's role infra)
+**What.** A profile toggle that **hides you from the public leaderboard** — non-friends see you as
+"Unknown" there — while you can still add and be added as a friend, and **you and your friends still
+see you normally**. A **soft-block** on visibility, not interaction.
 
 **Why.** Privacy for users who want to play without being publicly ranked.
 
-**Scope.** A `HiddenProfile` flag on the user; the leaderboard excludes hidden users from the public
-ranking (or renders them as "Unknown"); friends-facing views still show them normally. Decide whether
-hidden users still appear in friends' compare views (likely yes — it's friends-only there).
+**Implemented.**
+- Modelled as a **role** (`AppRoles.HiddenUser`), **not** the originally-sketched `HiddenProfile`
+  flag — reuses the seeded-role infra (no migration) and gives C1's admin role-management a toggle
+  for free. Seeded via `ConfigureAdminAndRolesAsync<…, AppRoles>`.
+- **Leaderboard hiding** (`LeaderboardService.GetLeaderboard` + `ProfileService.GetHiddenUserIds`):
+  a hidden user renders as the anonymised "Unknown" view-model (W/L/D kept, so still ranked) **only
+  to non-friends** — self and friends see them normally. Enforced by a fresh `UserRoles` DB query,
+  not auth claims, so a toggle takes effect immediately (no cookie refresh).
+- **Set / unset** (`ProfileService.TryHideUser` / `TryUnhideUser`): self-service for your own
+  account, **SystemAdmin-gated** to act on another user (a moderation seam for C1); idempotent.
+
+**Remaining.**
+- The hide/show toggle now lives on the **Account tab** (`Manage`, via `TryHideUser` /
+  `TryUnhideUser`). Still to do: add the **same toggle to `/Profile/Index`** so it's reachable from
+  the profile page too.
+
+**Decided.** Hidden users **do** still appear normally in friends' views (leaderboard hide is
+non-friends-only); this settles the old "do they show in friends' compare views?" open question — yes.
 
 ### E3. Cards reference page 🟡
 **What.** A public page listing **every card** with a description of **what it does in-game**.
@@ -243,7 +269,41 @@ working copy; the page reads descriptions straight from the DB records.
 
 ---
 
-## 8. Out of scope for V1 (noted, deferred)
+## 8. Release gate — A1, done last
+
+The one item deliberately sequenced **after** everything else, immediately before launch.
+
+### A1. Email confirmation 🟠
+**What.** Stand up a **Microsoft Entra tenant + app registration** for outbound email, wire it into
+the app's email sender (JC.Communication.Email), and **enable the ConfirmEmail flow** in the
+register / ASP.NET Identity pages (currently disabled).
+
+**Why.** A public app needs verified email — for account recovery, to deter throwaway/abuse
+accounts, and as the baseline trust signal.
+
+**Why last (not a foundation).** Provisioning the Entra tenant / app registration requires **buying
+a licence** — a real, recurring cost. There is no reason to pay for it before the app is actually
+ready to ship, so it is the **final step before launch**, not an early one. The *code* change is
+small (un-stub ConfirmEmail, turn on `RequireConfirmedAccount`, point the email sender at the
+tenant); only the paid external prerequisite gates it, and that cost should land as late as possible.
+
+**Scope.**
+- Provision the tenant + app registration; obtain client id / secret (or certificate).
+- Configure the email sender against it. **Secrets live in env vars / user secrets, never committed
+  appsettings** (see config policy).
+- Turn on `RequireConfirmedAccount` (or equivalent) and un-stub the ConfirmEmail Identity pages;
+  ensure the confirmation email is sent on register and on email change.
+
+**Open questions.**
+- Graph API send vs SMTP relay — which does the tenant/app-registration support cleanly?
+- Grace behaviour: can an unconfirmed account do anything, or is it fully gated until confirmed?
+- Does any earlier item (B/C/D) assume a *confirmed* email? Only **roles** (A2) are a true
+  dependency for later work — nothing built before R may hard-require confirmed email, or it would
+  be untestable for the whole pre-release build.
+
+---
+
+## 9. Out of scope for V1 (noted, deferred)
 
 - **NOPE cards** — the universal chainable counter (`cards-design.md` §6) remains a post-V1 card
   feature; immunity (its one-shot cousin) is done.
@@ -253,7 +313,7 @@ working copy; the page reads descriptions straight from the DB records.
 
 ---
 
-## 9. Related docs
+## 10. Related docs
 
 - `design-docs/game-design/game-engine.md`, `game-rules.md` — the engine D2 (money cap/turn tax)
   changes against (lockstep with the rules doc + tests).

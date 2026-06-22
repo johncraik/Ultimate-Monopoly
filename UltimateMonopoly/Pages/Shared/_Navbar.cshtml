@@ -60,7 +60,7 @@
                 var unreadCount = notifications.Count;
                 var badgeText = unreadCount > 99 ? "99+" : unreadCount.ToString();
 
-                <div class="d-flex align-items-center gap-2">
+                <div class="d-flex align-items-center gap-2 ms-auto justify-content-end">
                     <div class="dropdown" id="notification-dropdown">
                         <button class="btn p-0 border-0 rounded-circle bg-info text-white d-flex align-items-center justify-content-center position-relative" type="button"
                                 data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" aria-label="Notifications"
@@ -72,7 +72,7 @@
                                 <span class="visually-hidden">unread notifications</span>
                             </span>
                         </button>
-                        <div class="dropdown-menu dropdown-menu-end p-0 shadow-lg" style="width: 22rem;">
+                        <div class="dropdown-menu dropdown-menu-end p-0 shadow-lg" style="width: 22rem; max-width: 95vw;">
                             <div class="px-3 py-2 border-bottom d-flex align-items-center justify-content-between">
                                 <strong>Notifications</strong>
                                 <span class="badge text-bg-secondary @(unreadCount == 0 ? "d-none" : "")" data-notification-count>@unreadCount</span>
@@ -131,9 +131,9 @@
                                 data-bs-toggle="dropdown" aria-expanded="false" aria-label="My Account">
                             <profile-circle user="currentUser" size="Md" />
                         </button>
-                        <ul class="dropdown-menu dropdown-menu-lg-end">
+                        <ul class="dropdown-menu dropdown-menu-end" style="max-width: 95vw;">
                             <li><a class="dropdown-item" href="/profile">Profile</a></li>
-                            <li><a class="dropdown-item" href="/account">Settings</a></li>
+                            <li><a class="dropdown-item" href="/account">Account</a></li>
                             <li><hr class="dropdown-divider" /></li>
                             <li>
                                 <form asp-area="Identity" asp-page="/Account/Logout" method="post" class="m-0">

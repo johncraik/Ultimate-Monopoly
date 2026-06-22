@@ -100,8 +100,11 @@ public class BoardService
                     await _goService.LandOnGo(engine, player, ct);
                     break;
                 case BoardSpaceType.JustVisiting:
-                    //All just visiting does is draw a card (then its a no-op space)
-                    await engine.CardService.DrawCard(engine, player, CardType.JustVisiting, ct);
+                    //First check if player is prevented from drawing a just visiting card:
+                    if(!engine.Cache.PreventBoardIndexCard(player.PlayerId, space.Index))
+                        //All just visiting does is draw a card (then its a no-op space)
+                        await engine.CardService.DrawCard(engine, player, CardType.JustVisiting, ct);
+                    
                     break;
                 case BoardSpaceType.FreeParking:
                     await _fpService.ProcessFreeParking(engine, player, ct);

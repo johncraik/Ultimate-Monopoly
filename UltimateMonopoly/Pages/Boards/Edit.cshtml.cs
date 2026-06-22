@@ -1,3 +1,4 @@
+using JC.Core.Models;
 using JC.Web.UI.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -6,6 +7,7 @@ using MP.GameEngine.Enums;
 using MP.GameEngine.Enums.Properties;
 using MP.GameEngine.Helpers;
 using MP.GameEngine.Models.Boards;
+using UltimateMonopoly.Data;
 using UltimateMonopoly.Models;
 using UltimateMonopoly.Models.ViewModels;
 using UltimateMonopoly.Models.ViewModels.BoardSkins;
@@ -17,10 +19,13 @@ namespace UltimateMonopoly.Pages.Boards;
 public class EditModel : PageModel
 {
     private readonly BoardSkinService _boardSkins;
+    private readonly IUserInfo _userInfo;
 
-    public EditModel(BoardSkinService boardSkins)
+    public EditModel(BoardSkinService boardSkins,
+        IUserInfo userInfo)
     {
         _boardSkins = boardSkins;
+        _userInfo = userInfo;
     }
 
     public string? Id { get; private set; }
@@ -36,7 +41,12 @@ public class EditModel : PageModel
 
         // Creating a new skin — only the details card is shown until it has been saved.
         if (string.IsNullOrWhiteSpace(id))
+        {
+            if(_userInfo.IsInRole(AppRoles.Restricted))
+                return Unauthorized();
+            
             return Page();
+        }
 
         Skin = await _boardSkins.GetBoardSkin(id);
         if (Skin is null) return NotFound();
@@ -52,10 +62,10 @@ public class EditModel : PageModel
         return Page();
     }
 
-    public async Task<IActionResult> OnPostAsync(string? id, string? Name, string? Description, string? Action)
+    public async Task<IActionResult> OnPostAsync(string? id, string? name, string? description, string? action)
     {
         var modelState = new ModelStateWrapper(ModelState, ignorePrefix: true);
-        var result = await _boardSkins.TrySaveSkin(id, Name, Description, modelState);
+        var result = await _boardSkins.TrySaveSkin(id, name, description, modelState);
 
         if (!result.Success)
         {
@@ -67,12 +77,12 @@ public class EditModel : PageModel
         StatusMessage = string.IsNullOrWhiteSpace(id) ? "Board skin created." : "Board skin updated.";
         StatusKind = "success";
 
-        return string.Equals(Action, "close", StringComparison.OrdinalIgnoreCase)
+        return string.Equals(action, "close", StringComparison.OrdinalIgnoreCase)
             ? RedirectToPage("./Index")
             : RedirectToPage(new { id = result.Id });
     }
 
-    public async Task<IActionResult> OnPostSaveSpaceAsync(string? id, ushort Index, string? SpaceId, string? Name)
+    public async Task<IActionResult> OnPostSaveSpaceAsync(string? id, ushort index, string? spaceId, string? name)
     {
         if (string.IsNullOrWhiteSpace(id))
         {
@@ -82,25 +92,25 @@ public class EditModel : PageModel
         }
 
         var modelState = new ModelStateWrapper(ModelState, ignorePrefix: true);
-        var ok = await _boardSkins.TrySaveSpace(id, SpaceId, Index, Name, modelState);
+        var ok = await _boardSkins.TrySaveSpace(id, spaceId, index, name, modelState);
 
         StatusMessage = ok
-            ? (string.IsNullOrWhiteSpace(SpaceId) ? "Custom space created." : "Custom space updated.")
+            ? (string.IsNullOrWhiteSpace(spaceId) ? "Custom space created." : "Custom space updated.")
             : (FirstError() ?? "Could not save the space.");
         StatusKind = ok ? "success" : "danger";
         return RedirectToPage(new { id });
     }
 
-    public async Task<IActionResult> OnPostDeleteSpaceAsync(string? id, string? SpaceId)
+    public async Task<IActionResult> OnPostDeleteSpaceAsync(string? id, string? spaceId)
     {
-        if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(SpaceId))
+        if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(spaceId))
         {
             StatusMessage = "Missing skin or space reference.";
             StatusKind = "danger";
             return RedirectToPage(new { id });
         }
 
-        var ok = await _boardSkins.TryDeleteSpace(id, SpaceId);
+        var ok = await _boardSkins.TryDeleteSpace(id, spaceId);
         StatusMessage = ok ? "Customisation removed." : "Could not remove customisation.";
         StatusKind = ok ? "success" : "danger";
         return RedirectToPage(new { id });

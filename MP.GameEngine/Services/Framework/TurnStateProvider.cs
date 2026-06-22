@@ -213,9 +213,6 @@ public class TurnStateProvider(GameCacheModel cache, ISnapshotService snapshotSe
         
         ClearBuiltOnTurnFlags();
         UpdateMetadata(player.PlayerId);
-
-        cache.ClearRuleCodes();
-        cache.SetTurnState(TurnState.StartOfTurn);
         
         //Store the CURRENT turn ID (for event snapshot);
         //when snapshot is created, a new game turn is created, changing the ID
@@ -244,9 +241,6 @@ public class TurnStateProvider(GameCacheModel cache, ISnapshotService snapshotSe
 
         ClearBuiltOnTurnFlags();
         AdvancePlayer();
-
-        cache.ClearRuleCodes();
-        cache.SetTurnState(TurnState.StartOfTurn);
         
         //Store the CURRENT turn ID (for event snapshot);
         //when snapshot is created, a new game turn is created, changing the ID
@@ -270,7 +264,6 @@ public class TurnStateProvider(GameCacheModel cache, ISnapshotService snapshotSe
         
         UpdateMetadata(lastPlayer.PlayerId);
         
-        cache.ClearRuleCodes();
         cache.SetTurnState(TurnState.EndOfTurn);
         //Set to a finished state, so last snapshot (final turn snapshot) has a state of finished,
         //Final turn snapshot is just to save the outcome of the previous turn; and conclude the game
@@ -366,6 +359,11 @@ public class TurnStateProvider(GameCacheModel cache, ISnapshotService snapshotSe
     {
         //Clears dice roll:
         cache.ClearTurnDiceRoll();
+        
+        //Clear all rule codes, prevent cards, and set turn state to StartOfTurn
+        cache.ClearRuleCodes();
+        cache.ClearPrevent();
+        cache.SetTurnState(TurnState.StartOfTurn);
         
         // CurrentTurnId is not assigned here — the snapshot service
         // generates the new GameTurn id and writes it back to

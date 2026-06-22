@@ -10,6 +10,7 @@ using MP.GameEngine.Enums.Games;
 using MP.GameEngine.Helpers.RuleSet;
 using MP.GameEngine.Models;
 using MP.GameEngine.Models.DTOs;
+using UltimateMonopoly.Data;
 using UltimateMonopoly.Helpers;
 using UltimateMonopoly.Hubs;
 using UltimateMonopoly.Models.DataModels.Games;
@@ -96,6 +97,9 @@ public class GameSetupService
     public async Task<GameCreationResult> TryCreateNewGame(ModelStateWrapper modelState, string? name = null,
         string? boardSkinId = null, GameRoundingRule roundingRule = GameRoundingRule.To50)
     {
+        if(_userInfo.IsInRole(AppRoles.Restricted))
+            return new GameCreationResult(false);
+        
         var validSkin = true;
         if(!string.IsNullOrEmpty(boardSkinId))
             validSkin = await _boardSkinService.ValidBoardSkin(boardSkinId);

@@ -20,8 +20,8 @@ public class UserProfileViewModel
     public UserProfileViewModel(uint numberOfWins, uint numberOfLosses, uint numberOfDraws, bool hideStats = false)
     {
         UserId = string.Empty;
-        Username = "Unknown";
-        DisplayName = "Unknown";
+        Username = "User";
+        DisplayName = "User";
         Initial = "U";
         
         if (hideStats) return;

@@ -5,6 +5,7 @@ using JC.Core.Extensions;
 using JC.Core.Models;
 using JC.Core.Services.DataRepositories;
 using Microsoft.EntityFrameworkCore;
+using UltimateMonopoly.Data;
 using UltimateMonopoly.Models;
 using UltimateMonopoly.Models.DataModels.Social;
 using UltimateMonopoly.Models.ViewModels;
@@ -180,6 +181,9 @@ public class FriendService
     
     public async Task<FriendRequestResult> TrySendFriendRequest(string friendUsername)
     {
+        if(_userInfo.IsInRole(AppRoles.Restricted))
+            return new FriendRequestResult(false, "Your account is restricted and cannot send friend requests.");
+        
         //Get The user:
         var user = await _userService.GetUserByUsername(friendUsername);
         if (user == null) return new FriendRequestResult(false, "No user exists with this username.");

@@ -68,10 +68,10 @@ public class MovementActionService : ICardActionService<MovementAction>
                     await _jailService.SendPlayerToJail(engine, target, ct);
                     continue;   // jail performs no landed-space action
                 case MovementKind.AdvanceToIndex when action.TargetIndex is { } index:
-                    await _movementService.AdvancePlayer(engine, target, index, MovementDirection(action), ct);
+                    await _movementService.AdvancePlayer(engine, target, index, MovementDirection(action), ct, action.ResolveLandedSpace);
                     break;
                 case MovementKind.AdvanceToNearest:
-                    await _movementService.AdvancePlayer(engine, target, FindNearest(engine, target, action), MovementDirection(action), ct);
+                    await _movementService.AdvancePlayer(engine, target, FindNearest(engine, target, action), MovementDirection(action), ct, action.ResolveLandedSpace);
                     break;
                 case MovementKind.GoToJustVisiting:
                     if (target.IsInJail)
@@ -87,7 +87,7 @@ public class MovementActionService : ICardActionService<MovementAction>
                         // "do not pass GO" card (call a meeting) sets CollectGoBonus=false → counter-
                         // direction, so no bonus and no initial-GO unlock.
                         await _movementService.AdvancePlayer(engine, target, IndexHelper.JustVisitingSpace,
-                            MovementDirection(action), ct);
+                            MovementDirection(action), ct, false);
                     continue;   // Just Visiting performs no space action
                 default:
                     continue;

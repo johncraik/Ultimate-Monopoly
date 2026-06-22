@@ -1,27 +1,88 @@
 @page
 @model IndexModel
 @{
-    ViewData["Title"] = "Profile";
-    ViewData["ActivePage"] = ManageNavPages.Index;
+    ViewData["Title"] = "Account";
+    ViewData["ActivePage"] = ManageNavPages.Account;
 }
 
-<h3>@ViewData["Title"]</h3>
 <partial name="_StatusMessage" for="StatusMessage" />
 
-<div class="card">
+<div class="card mb-4">
     <div class="card-body">
-        <form id="profile-form" method="post">
+        <h5 class="card-title mb-3">Profile</h5>
+        <form id="profile-form" method="post" asp-page-handler="Profile">
             <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
-            <div class="form-floating mb-3">
-                <input asp-for="Username" class="form-control" disabled />
-                <label asp-for="Username">Username</label>
+            <div class="mb-3">
+                <label class="form-label">Username</label>
+                <input value="@Model.Username" class="form-control" disabled />
+                <div class="form-text">Your username can't be changed.</div>
             </div>
+            <div class="form-floating mb-1">
+                <input asp-for="Input.DisplayName" class="form-control" placeholder="Display name" />
+                <label asp-for="Input.DisplayName">Display name</label>
+                <span asp-validation-for="Input.DisplayName" class="text-danger"></span>
+            </div>
+            <div class="form-text mb-3">Shown to other players. Leave blank to use your username.</div>
             <div class="form-floating mb-3">
                 <input asp-for="Input.PhoneNumber" class="form-control" placeholder="Phone number" />
-                <label asp-for="Input.PhoneNumber">Phone Number</label>
+                <label asp-for="Input.PhoneNumber">Phone number</label>
                 <span asp-validation-for="Input.PhoneNumber" class="text-danger"></span>
             </div>
             <button type="submit" class="btn btn-primary">Save</button>
+        </form>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <h5 class="card-title mb-3">Email</h5>
+        <form id="email-form" method="post">
+            <div class="mb-3">
+                <label class="form-label">Current email</label>
+                <div class="input-group">
+                    <input value="@Model.Email" class="form-control" disabled />
+                    @if (Model.IsEmailConfirmed)
+                    {
+                        <span class="input-group-text text-success">Verified</span>
+                    }
+                    else
+                    {
+                        <button type="submit" asp-page-handler="SendVerificationEmail" class="btn btn-outline-warning">Verify</button>
+                    }
+                </div>
+            </div>
+            <div class="form-floating mb-3">
+                <input asp-for="EmailInput.NewEmail" class="form-control" autocomplete="email" placeholder="new@example.com" />
+                <label asp-for="EmailInput.NewEmail">New email</label>
+                <span asp-validation-for="EmailInput.NewEmail" class="text-danger"></span>
+            </div>
+            <button type="submit" asp-page-handler="ChangeEmail" class="btn btn-primary">Change email</button>
+        </form>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <h5 class="card-title mb-1">Leaderboard visibility</h5>
+        <p class="text-muted mb-3">
+            @if (Model.IsHidden)
+            {
+                <span>You're currently <strong>hidden</strong> — you show as "Unknown" on the public leaderboard. Friends still see you normally.</span>
+            }
+            else
+            {
+                <span>You're currently <strong>visible</strong> on the public leaderboard.</span>
+            }
+        </p>
+        <form method="post">
+            @if (Model.IsHidden)
+            {
+                <button type="submit" asp-page-handler="Show" class="btn btn-outline-secondary">Show me on the leaderboard</button>
+            }
+            else
+            {
+                <button type="submit" asp-page-handler="Hide" class="btn btn-outline-secondary">Hide me from the leaderboard</button>
+            }
         </form>
     </div>
 </div>

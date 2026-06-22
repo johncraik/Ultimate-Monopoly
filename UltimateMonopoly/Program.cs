@@ -17,6 +17,7 @@ using UltimateMonopoly.Extensions;
 using UltimateMonopoly.Hubs;
 using UltimateMonopoly.Services;
 using UltimateMonopoly.Services.Cache;
+using UltimateMonopoly.Services.Imports;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -185,7 +186,9 @@ async Task SetupDefaults()
     await using var scope = app.Services.CreateAsyncScope();
     var boardCache = scope.ServiceProvider.GetRequiredService<BoardCacheService>();
     var cardCache = scope.ServiceProvider.GetRequiredService<CardCacheService>();
-    
+    var blockedWordImport = scope.ServiceProvider.GetRequiredService<BlockedWordImportService>();
+
     await boardCache.GetDefaultBoard();
     await cardCache.GetCards();
+    await blockedWordImport.SeedFromFileAsync();
 }

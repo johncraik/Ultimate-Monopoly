@@ -42,7 +42,7 @@ public class MovementService
     }
 
     public async Task AdvancePlayer(Framework.GameEngine engine, PlayerModel player, ushort boardIndex, PlayerMovementDirection direction,
-        CancellationToken ct)
+        CancellationToken ct, bool willResolveSpace = true)
     {
         switch (player.IsInJail)
         {
@@ -82,6 +82,15 @@ public class MovementService
             Direction = direction,
             IsAdvance = true
         });
+        
+        //Prevent card if specific space:
+        if(willResolveSpace &&  
+           (newIndex == IndexHelper.GoSpace 
+           || newIndex == IndexHelper.JustVisitingSpace
+           || newIndex == IndexHelper.FreeParkingSpace
+           || newIndex == IndexHelper.GoToJailSpace
+           || IndexHelper.TaxIndexes.Contains(newIndex)))
+            engine.Cache.Prevent(player.PlayerId, newIndex);
     }
 
     public async Task SendPlayerToJail(Framework.GameEngine engine, PlayerModel player, CancellationToken ct)

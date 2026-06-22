@@ -1,6 +1,7 @@
 using MP.GameEngine.Enums;
 using MP.GameEngine.Enums.Cards;
 using MP.GameEngine.Enums.Players;
+using MP.GameEngine.Helpers;
 using MP.GameEngine.Helpers.RuleSet;
 using MP.GameEngine.Models.Cards;
 using MP.GameEngine.Models.Snapshot;
@@ -62,10 +63,16 @@ public class GoService
     public async Task LandOnGo(Framework.GameEngine engine, PlayerModel player, CancellationToken ct)
     {
         var triggerSuppress = await _triggerService.OnLandGo(engine, player, RuleDictionary.LandOnGoBonus, ct);
-        var suppressDefault = await engine.CardService.DrawCard(engine, player, CardType.Go, ct);
+        SuppressDefault? suppressDefault = null;
+        
+        //Check if this player should be prevented from drawing a GO card:
+        if(!engine.Cache.PreventBoardIndexCard(player.PlayerId, IndexHelper.GoSpace))
+            suppressDefault = await engine.CardService.DrawCard(engine, player, CardType.Go, ct);
 
         var sd = new SuppressDefault(triggerSuppress.Type());
-        sd.Aggregate(suppressDefault);
+        if(suppressDefault is not null)
+            sd.Aggregate(suppressDefault);
+        
         if(sd.SuppressGoBonus) return;
         
         //Cite rule and notify user:

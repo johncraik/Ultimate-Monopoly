@@ -3,6 +3,7 @@ using JC.Core.Extensions;
 using JC.Core.Models;
 using JC.Core.Services.DataRepositories;
 using Microsoft.EntityFrameworkCore;
+using UltimateMonopoly.Data;
 using UltimateMonopoly.Models.DataModels.Boards;
 using UltimateMonopoly.Models.DataModels.Social;
 using UltimateMonopoly.Models.ViewModels.BoardSkins;
@@ -108,6 +109,9 @@ public class BoardSkinShareService
         var toAdd = userIds.Where(u => !existingUserIds.Contains(u))
             .Select(u => new SharedBoardSkin(skinId, u))
             .ToList();
+
+        if (_userInfo.IsInRole(AppRoles.Restricted) && (toAdd.Count > 0 || toRestore.Count > 0))
+            return false;
 
         if(toAdd.Count == 0 && toRestore.Count == 0 && toDelete.Count == 0)
             return true;
