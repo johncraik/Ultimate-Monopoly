@@ -594,3 +594,13 @@ You get a Go To Jail Card from landing on Go To Jail space.
 - Immunity from returning a property to the bank. Keep until needed
   - **Immunity** card, keyed to the return-property-to-bank action.
   - ✅ Built — written to `goToJail.json` (`Immunity{Immunity=ReturningProperty}`). Hooked in `PropertyActionService.Relinquish` via `CheckReturningPropertyImmunity` (subject = the owner being made to relinquish), guarded to `ReturnToBank` only (hand-in-to-Free-Parking is not covered).
+
+---
+
+## Implementation status & drift
+
+> The per-card **build markers** (✅ / 🟢 / 🟡 / ⬜) above were accurate when
+> written, but the implementation has since moved on — some markers may now be
+> stale. Verify against the current code and `cards-dev-changes.md`. Where this
+> doc and the code disagree, the **code (and the developer) win**
+> (`docs/development/README.md`).

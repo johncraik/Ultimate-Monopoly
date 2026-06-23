@@ -50,6 +50,39 @@ rule set.
 
 ---
 
+## Turn Tax
+
+An optional anti-snowball mechanic that bleeds off hoarded cash. When enabled, a
+player pays a tax on the money in their account at the **start of their turn,
+before they roll** — and the money is removed from the game (paid to the bank,
+not into Free Parking). It is a global setting, the same for every game.
+
+1. **Progressive, stacking brackets.** The tax has up to three brackets, each with
+   a cash threshold and a rate. Every bracket whose threshold the player's cash
+   exceeds charges its rate on the **whole amount above that threshold**, and the
+   brackets **stack** — their amounts are added together. Only the cash in a
+   player's account is taxed; property and buildings are not.
+
+   *Default brackets:* 10% on cash over £5,000, **plus** 30% on cash over £10,000,
+   **plus** 50% on cash over £20,000.
+
+   *Worked example — a £25,000 balance:* 10% × (25,000 − 5,000) = £2,000, plus
+   30% × (25,000 − 10,000) = £4,500, plus 50% × (25,000 − 20,000) = £2,500, for a
+   total of **£9,000** — leaving £16,000.
+
+2. **Paid before the roll.** The tax is taken at the very start of the turn, before
+   the player rolls or acts. Because only cash is taxed, spending or investing cash
+   beforehand (buying property, building) leaves less for the tax to take.
+
+3. **Paid from cash on hand only.** The tax is a fraction of the cash the player
+   holds, so it never exceeds their balance and cannot, on its own, bankrupt a
+   player — there is no shortfall or forced sale to cover it.
+
+4. **Configurable, and off by default.** The brackets and rates are a deployment
+   setting; with every bracket at zero the tax is disabled and nothing is charged.
+
+---
+
 ## Dice Rolls
 
 At game setup, every player rolls the two main dice. This roll sets the turn

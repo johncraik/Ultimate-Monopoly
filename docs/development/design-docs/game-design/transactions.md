@@ -6,9 +6,9 @@ this service is the *mechanism*.
 
 **Status:** built and live. Public surface complete and driven by real
 callers — the turn orchestrator and the `Property` / `Jail` / `Go` / `Player`
-sub-services route every money movement through here. The five shortfall
-sub-services it dispatches to (Loan, Mortgage, sell-building, settling-deal,
-Bankruptcy) are still TODO-stubbed inside `ResolveShortfall`.
+sub-services route every money movement through here. The shortfall paths it
+dispatches to (loan, mortgage, sell-building, settling-deal, bankruptcy) are
+implemented. See the drift note at the foot of this document.
 
 ---
 
@@ -270,3 +270,15 @@ receipt stream — there is no balance to query.
   one public method per value.
 - **`MP.GameEngine/Enums/TransactionCounterparty.cs`** — Bank /
   FreeParking / Player.
+
+---
+
+## Implementation status & drift
+
+> This document records the **agreed design**, not the live state of the code.
+> Since it was written the implementation has moved on — much of what is
+> described here is built, and some details have changed. Any status, "TODO",
+> "not yet built", or "pre-implementation" note above may be out of date.
+>
+> Where this doc and the code disagree, the **code (and the developer) win**
+> (`docs/development/README.md`). Verify specifics against the current code.

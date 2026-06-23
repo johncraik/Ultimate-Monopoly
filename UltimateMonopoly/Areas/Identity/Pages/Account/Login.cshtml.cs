@@ -73,8 +73,8 @@ namespace UltimateMonopoly.Areas.Identity.Pages.Account
             if (ModelState.IsValid)
             {
                 // Resolve username — if input contains @ treat as email lookup
-                var loginInput = Input.Login.Trim();
-                string userName = loginInput;
+                var loginInput = Input.Login?.Trim().ToLowerInvariant() ?? string.Empty;
+                var userName = loginInput;
 
                 if (loginInput.Contains('@'))
                 {
@@ -85,6 +85,12 @@ namespace UltimateMonopoly.Areas.Identity.Pages.Account
                     }
                 }
 
+                if (string.IsNullOrEmpty(userName))
+                {
+                    ModelState.AddModelError(string.Empty, "Invalid username/email or password.");
+                    return Page();
+                }
+                
                 var result = await _signInManager.PasswordSignInAsync(userName, Input.Password, Input.RememberMe, lockoutOnFailure: true);
                 if (result.Succeeded)
                 {

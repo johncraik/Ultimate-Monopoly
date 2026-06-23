@@ -6,8 +6,9 @@ unavoidable outcome, a free-form input (e.g. a dice roll), or any other place
 the engine has to stop and wait. The framework is one mechanism for all of
 them.
 
-**Status:** design, pre-implementation. The pieces this depends on
-(`GameCacheModel`, `EventReceipt`, the snapshot loop) already exist.
+**Status:** implemented — the prompt framework and every prompt type in §15 are
+built. The original "pre-implementation" status is stale; see the drift note at
+the foot of this document.
 
 > The filename is `choice-events.md` for legacy reasons. The framework covers
 > prompts in general; a choice is one kind of prompt.
@@ -1122,3 +1123,15 @@ Future prompt types are listed here as they are designed. Status moves from
 `[JsonDerivedType]` discriminators are landed.
 
 — *(none currently planned; the next is added when discussed)*
+
+---
+
+## Implementation status & drift
+
+> This document records the **agreed design**, not the live state of the code.
+> Since it was written the implementation has moved on — much of what is
+> described here is built, and some details have changed. Any status, "TODO",
+> "not yet built", or "pre-implementation" note above may be out of date.
+>
+> Where this doc and the code disagree, the **code (and the developer) win**
+> (`docs/development/README.md`). Verify specifics against the current code.

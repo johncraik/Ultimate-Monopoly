@@ -212,12 +212,6 @@ public class IndexModel : PageModel
     public async Task<IActionResult> OnPostHideAsync()
     {
         var ok = await _profileService.TryHideUser();
-        if (ok)
-        {
-            var user = await _userManager.GetUserAsync(User);
-            if (user != null) await _signInManager.RefreshSignInAsync(user);
-        }
-
         StatusMessage = ok
             ? "You are now hidden from the public leaderboard."
             : "Error: could not update your visibility.";
@@ -227,12 +221,6 @@ public class IndexModel : PageModel
     public async Task<IActionResult> OnPostShowAsync()
     {
         var ok = await _profileService.TryUnhideUser();
-        if (ok)
-        {
-            var user = await _userManager.GetUserAsync(User);
-            if (user != null) await _signInManager.RefreshSignInAsync(user);
-        }
-
         StatusMessage = ok
             ? "You are now visible on the public leaderboard."
             : "Error: could not update your visibility.";

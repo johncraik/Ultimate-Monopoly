@@ -5,9 +5,9 @@ the game does; this one defines *how* the application implements it. Decisions
 recorded here are the agreed design — it is an authoritative document, not a
 sketch.
 
-**Status:** design, pre-implementation. No game engine exists yet — the app is
-currently a configuration and social platform (board skins, friends, profiles).
-This doc is the plan for building the engine on top of it.
+**Status:** the engine described here is **built** and in active use; this doc
+captures the agreed design it was built from. The original "pre-implementation"
+status is stale — see the drift note at the foot of this document.
 
 ---
 
@@ -417,3 +417,15 @@ Tracked here until resolved; resolutions fold back into this doc.
 
 A change to the game starts in `game-rules.md`, then propagates to the engine
 and its tests in the same change.
+
+---
+
+## Implementation status & drift
+
+> This document records the **agreed design**, not the live state of the code.
+> Since it was written the implementation has moved on — much of what is
+> described here is built, and some details have changed. Any status, "TODO",
+> "not yet built", or "pre-implementation" note above may be out of date.
+>
+> Where this doc and the code disagree, the **code (and the developer) win**
+> (`docs/development/README.md`). Verify specifics against the current code.

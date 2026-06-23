@@ -6,13 +6,13 @@ gated by the prompt framework — they pair with `AuctionBidPrompt`
 (`choice-events.md` §15.8), which owns the per-bid contract while this doc
 owns the *flow*.
 
-**Status:** partial. `AuctionService.RunAuction` — the bid loop and settlement
-described here — is built (`MP.GameEngine/Services/SubSystems/AuctionService.cs`),
-on top of `AuctionBidPrompt`, `MoneyHelper.MinAuctionBid` / `AuctionIncrements`,
+**Status:** built. `AuctionService.RunAuction` — the bid loop and settlement
+described here — is in `MP.GameEngine/Services/SubSystems/AuctionService.cs`, on
+top of `AuctionBidPrompt`, `MoneyHelper.MinAuctionBid` / `AuctionIncrements`,
 `TransactionService.WinAuction`, `GameModel.GetPlayers` and
-`PropertyModel.OwnProperty`. Not yet built: the `BoardService` landing hook
-that triggers it (the `NotOwned` branch in `ResolveBoardSpaceForPlayer` is
-still a TODO), and `PropertyService.NormaliseRentLevels` (called at settlement).
+`PropertyModel.OwnProperty`, and is wired into `BoardService`'s landed-space
+resolution with `PropertyService`'s rent normalisation. See the drift note at
+the foot of this document.
 
 ---
 
@@ -267,3 +267,15 @@ auctions run purely on the rules above.
    `Models/Prompts/PromptTypes/AuctionBidPrompt.cs`,
    `Services/SubSystems/BoardService.cs` (trigger),
    `Services/TransactionService.cs` (`WinAuction`).
+
+---
+
+## Implementation status & drift
+
+> This document records the **agreed design**, not the live state of the code.
+> Since it was written the implementation has moved on — much of what is
+> described here is built, and some details have changed. Any status, "TODO",
+> "not yet built", or "pre-implementation" note above may be out of date.
+>
+> Where this doc and the code disagree, the **code (and the developer) win**
+> (`docs/development/README.md`). Verify specifics against the current code.

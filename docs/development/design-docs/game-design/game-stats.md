@@ -6,8 +6,10 @@ brittle, pre-decided projection schema. Pairs with `event-receipts.md` (the
 receipts this consumes) and `game-engine.md` §8–§9 (the snapshot timeline it
 rides on).
 
-**Status:** design, pre-implementation. The receipt framework
-(`event-receipts.md`) is built; nothing in this doc is. This is the agreed plan.
+**Status:** substantially built. The `GameTurnEvents` persistence, the stats
+services / `StatisticsOrchestrator`, `PlayerGameStat`, and the projection job
+described here are implemented (the doc's own §15 lists what landed). See the
+drift note at the foot of this document.
 
 ---
 
@@ -490,3 +492,15 @@ building *sell* value); cancelled games (contribute nothing, §11.C).
    `ClearEvents` seam. To build: `PlayerGameStat` model + migration,
    `GameStatsService.ComputeForGameAsync`, the `ConcludeGame` enqueue, the
    `MissingGameStatsJob` recurring safety-net, and the stat screens.
+
+---
+
+## Implementation status & drift
+
+> This document records the **agreed design**, not the live state of the code.
+> Since it was written the implementation has moved on — much of what is
+> described here is built, and some details have changed. Any status, "TODO",
+> "not yet built", or "pre-implementation" note above may be out of date.
+>
+> Where this doc and the code disagree, the **code (and the developer) win**
+> (`docs/development/README.md`). Verify specifics against the current code.

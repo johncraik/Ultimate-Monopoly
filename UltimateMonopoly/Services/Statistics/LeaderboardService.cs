@@ -25,12 +25,9 @@ public class LeaderboardService
         _friendService = friendService;
     }
     
-    //TODO: Decide if profiles should be public facing (lean yes) or friends only.
-    //If public facing:
-    // - Only show colour, profile img, and username/display name
-    // - Respect BLOCKED users (both ways) with "unknown" profile view model (not hidden, but displayed as unknown)
-    // - Compare stats (side by side compare of 2 players) is available to friends only - only friends can see detailed stats
-    // - Only visible stats are win/draw/loss, games played, and win rate.
+    // Public-facing leaderboard: ranks all qualifying players by overall score (see PlayerScore),
+    // showing colour, avatar, and name plus W/D/L, games played, and win rate. Detailed side-by-side
+    // stats (the Compare page) are friends-only.
 
     public async Task<List<LeaderboardRecord>> GetLeaderboard()
     {
@@ -45,7 +42,6 @@ public class LeaderboardService
         {
             var blockCheck = blockedProfiles.FirstOrDefault(b => b.userId == up.UserId);
             var friendCheck = friendProfiles.FirstOrDefault(f => f.userId == up.UserId);
-            
             var hidden = hiddenUserIds.Contains(up.UserId);
             
             if(blockCheck == default || !blockCheck.Blocked)

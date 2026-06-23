@@ -17,7 +17,7 @@ namespace UltimateMonopoly.Data.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.17")
+                .HasAnnotation("ProductVersion", "9.0.11")
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
@@ -1115,6 +1115,37 @@ namespace UltimateMonopoly.Data.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("UltimateMonopoly.Areas.Admin.Models.AdminActionLog", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(38)
+                        .HasColumnType("varchar(38)");
+
+                    b.Property<int>("Action")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CreatedById")
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime>("CreatedUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Detail")
+                        .HasMaxLength(2048)
+                        .HasColumnType("varchar(2048)");
+
+                    b.Property<string>("TargetId")
+                        .HasMaxLength(38)
+                        .HasColumnType("varchar(38)");
+
+                    b.Property<int>("TargetType")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("AdminActionLogs");
+                });
+
             modelBuilder.Entity("UltimateMonopoly.Data.AppRole", b =>
                 {
                     b.Property<string>("Id")
@@ -1864,6 +1895,9 @@ namespace UltimateMonopoly.Data.Migrations
                     b.Property<ushort>("MostLandedOnBoardIndex")
                         .HasColumnType("smallint unsigned");
 
+                    b.Property<uint>("MostLandedOnBoardIndexCount")
+                        .HasColumnType("int unsigned");
+
                     b.Property<int?>("MostPlayedEngagement")
                         .HasColumnType("int");
 
@@ -1931,6 +1965,9 @@ namespace UltimateMonopoly.Data.Migrations
                         .HasColumnType("int unsigned");
 
                     b.Property<uint>("SpentOnRepayingLoans")
+                        .HasColumnType("int unsigned");
+
+                    b.Property<uint>("SpentOnTurnTax")
                         .HasColumnType("int unsigned");
 
                     b.Property<uint>("SpentUnmortgaging")

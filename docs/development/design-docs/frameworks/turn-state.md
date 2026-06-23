@@ -6,14 +6,11 @@ framework (`choice-events.md`) — together they cover both sides of the
 engine I/O loop. The prompt framework handles *engine pauses mid-execution*;
 turn-state handles *what the player can initiate when the engine is idle*.
 
-**Status:** built (foundation layer). The provider is implemented in
-`Services/Framework/TurnStateProvider.cs` — capability checks, transitions,
-snapshot writes via `ISnapshotService`, and basic player advancement all
-landed. 106 unit tests green in `MP.GameEngine.Tests/FrameworkTests/`.
-The harder cases of player advancement (skip bankrupt, decrement
-`TurnsToMiss`) are still open and will likely extract into a helper class
-above the provider — see §9. No turn-loop orchestration consumes the
-provider yet — that's the next layer up (rule services).
+**Status:** built and in use. The provider lives in
+`Services/Framework/TurnStateProvider.cs` (capability checks, transitions,
+snapshot writes via `ISnapshotService`, and player advancement) and is driven
+by `PlayerTurnOrchestrator`. Some progress notes below were written before that
+wiring landed — see the drift note at the foot of this document.
 
 ---
 
@@ -395,4 +392,16 @@ Tracked here until resolved.
 4. **`turn-state.md`** (this doc) — the gating and transition semantics
    commands use.
 5. **`MP.GameEngine/Services/Framework/TurnStateProvider.cs`** — the
-   skeleton implementation.
+   implementation.
+
+---
+
+## Implementation status & drift
+
+> This document records the **agreed design**, not the live state of the code.
+> Since it was written the implementation has moved on — much of what is
+> described here is built, and some details have changed. Any status, "TODO",
+> "not yet built", or "pre-implementation" note above may be out of date.
+>
+> Where this doc and the code disagree, the **code (and the developer) win**
+> (`docs/development/README.md`). Verify specifics against the current code.

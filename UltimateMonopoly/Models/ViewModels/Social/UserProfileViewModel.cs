@@ -20,7 +20,7 @@ public class UserProfileViewModel
     public UserProfileViewModel(uint numberOfWins, uint numberOfLosses, uint numberOfDraws, bool hideStats = false)
     {
         UserId = string.Empty;
-        Username = "User";
+        Username = "user";
         DisplayName = "User";
         Initial = "U";
         

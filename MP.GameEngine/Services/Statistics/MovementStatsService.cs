@@ -130,11 +130,19 @@ public class MovementStatsService : IStatsService
         
         //Guard the empty case: MaxBy on an empty sequence throws for a value-type element (KeyValuePair),
         //so a player with no counted landings (finished / cancel-edge / drawn / early-bankrupt / no-move)
-        //would otherwise throw and sink the WHOLE game's stats projection (H-03). Default to GO (index 0);
-        //its land count is 0 below, so the record stays internally consistent.
-        record.MostLandedOnBoardIndex = landOnIndexes.Count > 0
-            ? landOnIndexes.MaxBy(kv => kv.Value).Key
-            : IndexHelper.GoSpace;
+        //would otherwise throw and sink the WHOLE game's stats projection (H-03). Default to GO (index 0)
+        //with a 0 count, so the record stays internally consistent.
+        if (landOnIndexes.Count > 0)
+        {
+            var mostLanded = landOnIndexes.MaxBy(kv => kv.Value);
+            record.MostLandedOnBoardIndex = mostLanded.Key;
+            record.MostLandedOnBoardIndexCount = mostLanded.Value;
+        }
+        else
+        {
+            record.MostLandedOnBoardIndex = IndexHelper.GoSpace;
+            record.MostLandedOnBoardIndexCount = 0;
+        }
         record.TimesLandedOnGo = landOnIndexes.TryGetValue(IndexHelper.GoSpace, out var goCount) ? goCount : 0;
         record.TimesLandedOnFreeParking = landOnIndexes.TryGetValue(IndexHelper.FreeParkingSpace, out var fpCount) ? fpCount : 0;
         

@@ -3,6 +3,7 @@
 @using UltimateMonopoly.Models.Statistics
 @using UltimateMonopoly.Services.Cache
 @inject BoardCacheService BoardCache
+@inject MP.GameEngine.Abstractions.ITurnTaxService TurnTaxService
 @model (List<UltimateMonopoly.Pages.Games.CompareModel.ComparePlayer> Players, MP.GameEngine.Models.Boards.Board Board)
 
 @{
@@ -79,6 +80,11 @@
                     <tbody class="collapse show" id="@(pfx)-sec-@i">
                         @foreach (var stat in statSection.Stats)
                         {
+                            @* Turn-tax stats are hidden entirely when the turn-tax feature is disabled. *@
+                            if (stat.RequiresTurnTax && !TurnTaxService.Enabled)
+                            {
+                                continue;
+                            }
                             @* Conditional stats (per-type card boxes) hide when no player has the data —
                                e.g. the per-type JSON is null in the cross-game aggregate view. *@
                             if (stat.Visible is not null && !Model.Players.Any(p => stat.Visible(p.Stat)))

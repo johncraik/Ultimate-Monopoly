@@ -35,6 +35,7 @@ public class PlayerGameStat : PlayerStatRecord
         SpentAcquiringProperty = record.SpentAcquiringProperty;
         SpentBuilding = record.SpentBuilding;
         SpentUnmortgaging = record.SpentUnmortgaging;
+        SpentOnTurnTax = record.SpentOnTurnTax;
         SpentOnFines = record.SpentOnFines;
         SpentOnLeavingJail = record.SpentOnLeavingJail;
         SpentOnRepayingLoans = record.SpentOnRepayingLoans;
@@ -74,6 +75,7 @@ public class PlayerGameStat : PlayerStatRecord
         TotalDistanceTraveledClockwise = record.TotalDistanceTraveledClockwise;
         TotalDistanceTraveledCounterClockwise = record.TotalDistanceTraveledCounterClockwise;
         MostLandedOnBoardIndex = record.MostLandedOnBoardIndex;
+        MostLandedOnBoardIndexCount = record.MostLandedOnBoardIndexCount;
         TimesLandedOnGo = record.TimesLandedOnGo;
         TimesLandedOnFreeParking = record.TimesLandedOnFreeParking;
         TimesLandedOnTax = record.TimesLandedOnTax;

@@ -47,7 +47,10 @@ public class IndexModel : PageModel
     public PagedList<UserProfileViewModel>? BlockedUsers { get; private set; }
 
     public UserProfileViewModel? CurrentUser { get; private set; }
-    
+
+    /// <summary>Whether the current user is hidden from non-friends (E2). Drives the profile privacy toggle.</summary>
+    public bool IsHidden { get; private set; }
+
     public (PlayerStatRecord Stats, PlayerStatRecord? Comparission, Board board)? AvgStats { get; private set; }
     public (PlayerStatRecord Stats, PlayerStatRecord? Comparission, Board board)? MinStats { get; private set; }
     public (PlayerStatRecord Stats, PlayerStatRecord? Comparission, Board board)? MaxStats { get; private set; }
@@ -88,6 +91,8 @@ public class IndexModel : PageModel
 
         if (PageNumber < 1) PageNumber = 1;
         BlockedUsers = await _blockAndReport.GetBlockedUsers(PageNumber, BlockedPageSize);
+
+        IsHidden = await _profile.IsHidden();
     }
 
     public async Task<IActionResult> OnPostAsync()
@@ -135,6 +140,21 @@ public class IndexModel : PageModel
         StatusMessage = ok ? "User unblocked." : "Could not unblock user.";
         StatusKind = ok ? "success" : "danger";
         return RedirectToPage(new { tab = "blocked" });
+    }
+
+    public async Task<IActionResult> OnPostToggleVisibilityAsync()
+    {
+        var hidden = await _profile.IsHidden();
+        var ok = hidden ? await _profile.TryUnhideUser() : await _profile.TryHideUser();
+
+        StatusMessage = ok
+            ? (hidden
+                ? "Your profile is now public — everyone can see your name on the leaderboard."
+                : "Your profile is now private — only you and your friends can see your name on the leaderboard.")
+            : "Could not update your profile visibility.";
+        StatusKind = ok ? "success" : "danger";
+
+        return RedirectToPage(new { tab = "stats" });
     }
 
     public IActionResult OnGetAvatarImage(string name)

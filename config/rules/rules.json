@@ -1,6 +1,6 @@
 [
   {
-    "Section": 1,
+    "Section": 0,
     "Rule": 1,
     "Point": null,
     "Title": "Buying requires passing GO",
@@ -8,7 +8,7 @@
     "RawRuleCode": "Default_BuyRequiresPassingGo"
   },
   {
-    "Section": 1,
+    "Section": 0,
     "Rule": 2,
     "Point": null,
     "Title": "No rent while the owner is in jail",
@@ -16,7 +16,7 @@
     "RawRuleCode": "Default_NoRentWhileOwnerJailed"
   },
   {
-    "Section": 1,
+    "Section": 0,
     "Rule": 3,
     "Point": null,
     "Title": "One house level per property, per turn",
@@ -24,7 +24,7 @@
     "RawRuleCode": "<NONE>"
   },
   {
-    "Section": 1,
+    "Section": 0,
     "Rule": 4,
     "Point": null,
     "Title": "Building requires a complete set",
@@ -32,7 +32,7 @@
     "RawRuleCode": "<NONE>"
   },
   {
-    "Section": 1,
+    "Section": 0,
     "Rule": 5,
     "Point": null,
     "Title": "Fines go to Free Parking",
@@ -40,7 +40,7 @@
     "RawRuleCode": "Default_FinesToFreeParking"
   },
   {
-    "Section": 1,
+    "Section": 0,
     "Rule": 6,
     "Point": null,
     "Title": "Declined or unaffordable purchases go to auction",
@@ -48,7 +48,7 @@
     "RawRuleCode": "<NONE>"
   },
   {
-    "Section": 1,
+    "Section": 0,
     "Rule": 7,
     "Point": null,
     "Title": "No raising funds to buy or bid",
@@ -56,12 +56,28 @@
     "RawRuleCode": "<NONE>"
   },
   {
-    "Section": 1,
+    "Section": 0,
     "Rule": 8,
     "Point": null,
     "Title": "Bankruptcy ends a player's game",
     "RuleDescription": "A player who cannot pay what they owe and has nothing left to mortgage goes bankrupt and is out of the game.",
     "RawRuleCode": "<NONE>"
+  },
+  {
+    "Section": 1,
+    "Rule": 1,
+    "Point": null,
+    "Title": "Wealth is taxed at the start of your turn",
+    "RuleDescription": "At the start of your turn, before you roll, the cash in your account is taxed and the money leaves the game. The brackets stack: 10% on everything over £5,000, plus 30% on everything over £10,000, plus 50% on everything over £20,000. A £25,000 balance therefore pays £2,000 + £4,500 + £2,500 = £9,000.",
+    "RawRuleCode": "TurnTax_Pay"
+  },
+  {
+    "Section": 1,
+    "Rule": 2,
+    "Point": null,
+    "Title": "Spend before you roll to pay less",
+    "RuleDescription": "Only the cash in your account is taxed — buildings and property are not. Investing or spending your cash before you roll leaves less for the turn tax to take.",
+    "RawRuleCode": "TurnTax_Spend"
   },
   {
     "Section": 2,
@@ -331,13 +347,21 @@
     "Section": 6,
     "Rule": 4,
     "Point": null,
+    "Title": "No Card when Advancing",
+    "RuleDescription": "You do not collect a card from the space you advanced to, unless it is Chance or Community Chest.",
+    "RawRuleCode": "Card_Advance"
+  },
+  {
+    "Section": 6,
+    "Rule": 5,
+    "Point": null,
     "Title": "Cards may have multiple actions",
     "RuleDescription": "A card may have multiple actions, and each action may offer different options.",
     "RawRuleCode": "<NONE>"
   },
   {
     "Section": 6,
-    "Rule": 5,
+    "Rule": 6,
     "Point": null,
     "Title": "Keeping and playing cards",
     "RuleDescription": "Cards may be kept in hand and played later. Each card defines when it may be played: at any time on your own turn, whenever the card's condition applies, at any time at all, or a combination of these.",
@@ -345,7 +369,7 @@
   },
   {
     "Section": 6,
-    "Rule": 6,
+    "Rule": 7,
     "Point": "a",
     "Title": "A NOPE cancels a card",
     "RuleDescription": "A NOPE card cancels another card — for example, a Go To Jail card cancelled by a NOPE.",
@@ -353,7 +377,7 @@
   },
   {
     "Section": 6,
-    "Rule": 6,
+    "Rule": 7,
     "Point": "b",
     "Title": "NOPE chaining",
     "RuleDescription": "Another player may NOPE a NOPE, and this can be chained without limit.",
@@ -361,7 +385,7 @@
   },
   {
     "Section": 6,
-    "Rule": 6,
+    "Rule": 7,
     "Point": "c",
     "Title": "NOPE hand limit",
     "RuleDescription": "A player may hold a maximum of two NOPE cards.",
@@ -369,7 +393,7 @@
   },
   {
     "Section": 6,
-    "Rule": 6,
+    "Rule": 7,
     "Point": "d",
     "Title": "NOPE is not a card type of its own",
     "RuleDescription": "NOPE cards are not a separate card type — they occur within several card sets (Third, GO, and so on).",
@@ -377,7 +401,7 @@
   },
   {
     "Section": 6,
-    "Rule": 7,
+    "Rule": 8,
     "Point": "a",
     "Title": "A card can lock you in jail",
     "RuleDescription": "A card can keep you in jail so you cannot leave — by a double, by paying the fee, or by a release card — even though you still roll each turn, until the card's lock expires.",
@@ -385,7 +409,7 @@
   },
   {
     "Section": 6,
-    "Rule": 7,
+    "Rule": 8,
     "Point": "b",
     "Title": "A card can let you collect rent in jail",
     "RuleDescription": "A card can let you collect rent on your properties while you are in jail, overriding the usual rule that a jailed owner collects no rent.",
@@ -393,7 +417,7 @@
   },
   {
     "Section": 6,
-    "Rule": 7,
+    "Rule": 8,
     "Point": "c",
     "Title": "A card can waive your jail fee",
     "RuleDescription": "A card can waive the fee for your next jail exit, so you leave jail without paying — your leave cost (and its 50%-per-turn escalation) is otherwise unchanged.",

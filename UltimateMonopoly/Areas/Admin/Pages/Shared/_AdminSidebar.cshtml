@@ -1,0 +1,102 @@
+@{
+    var currentPage = ViewContext.RouteData.Values["page"]?.ToString();
+    string DashActive() => currentPage == "/Index" ? "active" : "";
+    var usersOpen = currentPage?.StartsWith("/Users") == true;
+}
+@*
+    Admin sidebar — Bootstrap list-group blocks; blocks with sub-items collapse like an accordion.
+    Item links are placeholders (#) until each feature phase lands (design-docs/c1-admin-area.md §13).
+*@
+<nav class="admin-sidebar">
+    @* Dashboard — single link, no dropdown *@
+    <div class="admin-nav-block">
+        <a asp-area="Admin" asp-page="/Index" class="list-group-item list-group-item-action admin-nav-header @DashActive()">
+            <i class="bi bi-speedometer2 me-2 text-primary"></i> Dashboard
+        </a>
+    </div>
+
+    @* User Management *@
+    <div class="admin-nav-block">
+        <button type="button" class="list-group-item list-group-item-action admin-nav-header"
+                data-bs-toggle="collapse" data-bs-target="#nav-users" aria-expanded="@(usersOpen ? "true" : "false")" aria-controls="nav-users">
+            <i class="bi bi-people me-2 text-info"></i> User Management
+            <i class="bi bi-chevron-down admin-nav-chevron"></i>
+        </button>
+        <div class="collapse @(usersOpen ? "show" : "")" id="nav-users">
+            <div class="list-group list-group-flush">
+                <a asp-area="Admin" asp-page="/Users/Index" class="list-group-item list-group-item-action admin-nav-item">All Users</a>
+                <a asp-area="Admin" asp-page="/Users/Index" asp-route-RestrictedFilter="Restricted" class="list-group-item list-group-item-action admin-nav-item">Restricted Users</a>
+                <a asp-area="Admin" asp-page="/Users/Index" asp-route-DisabledFilter="Disabled" class="list-group-item list-group-item-action admin-nav-item">Disabled Users</a>
+            </div>
+        </div>
+    </div>
+
+    @* Report Management *@
+    <div class="admin-nav-block">
+        <button type="button" class="list-group-item list-group-item-action admin-nav-header"
+                data-bs-toggle="collapse" data-bs-target="#nav-reports" aria-expanded="false" aria-controls="nav-reports">
+            <i class="bi bi-flag me-2 text-danger"></i> Report Management
+            <i class="bi bi-chevron-down admin-nav-chevron"></i>
+        </button>
+        <div class="collapse" id="nav-reports">
+            <div class="list-group list-group-flush">
+                <a href="#" class="list-group-item list-group-item-action admin-nav-item">Open Reports</a>
+                <a href="#" class="list-group-item list-group-item-action admin-nav-item">Handled Reports</a>
+            </div>
+        </div>
+    </div>
+
+    @* Game Management *@
+    <div class="admin-nav-block">
+        <button type="button" class="list-group-item list-group-item-action admin-nav-header"
+                data-bs-toggle="collapse" data-bs-target="#nav-games" aria-expanded="false" aria-controls="nav-games">
+            <i class="bi bi-controller me-2 text-success"></i> Game Management
+            <i class="bi bi-chevron-down admin-nav-chevron"></i>
+        </button>
+        <div class="collapse" id="nav-games">
+            <div class="list-group list-group-flush">
+                <a href="#" class="list-group-item list-group-item-action admin-nav-item">All Games</a>
+                <a href="#" class="list-group-item list-group-item-action admin-nav-item">Setup Games</a>
+                <a href="#" class="list-group-item list-group-item-action admin-nav-item">In Play Games</a>
+                <a href="#" class="list-group-item list-group-item-action admin-nav-item">Finished Games</a>
+                <a href="#" class="list-group-item list-group-item-action admin-nav-item">Cancelled Games</a>
+                <div class="admin-nav-divider"></div>
+                <a href="#" class="list-group-item list-group-item-action admin-nav-item">Game Rules</a>
+                <a href="#" class="list-group-item list-group-item-action admin-nav-item">Game Turn Tax</a>
+            </div>
+        </div>
+    </div>
+
+    @* Audit Trail *@
+    <div class="admin-nav-block">
+        <button type="button" class="list-group-item list-group-item-action admin-nav-header"
+                data-bs-toggle="collapse" data-bs-target="#nav-audit" aria-expanded="false" aria-controls="nav-audit">
+            <i class="bi bi-clipboard-data me-2 text-warning"></i> Audit Trail
+            <i class="bi bi-chevron-down admin-nav-chevron"></i>
+        </button>
+        <div class="collapse" id="nav-audit">
+            <div class="list-group list-group-flush">
+                <a href="#" class="list-group-item list-group-item-action admin-nav-item">Data Trail</a>
+                <a href="#" class="list-group-item list-group-item-action admin-nav-item">User Trail</a>
+            </div>
+        </div>
+    </div>
+
+    @* Application Logs *@
+    <div class="admin-nav-block">
+        <button type="button" class="list-group-item list-group-item-action admin-nav-header"
+                data-bs-toggle="collapse" data-bs-target="#nav-logs" aria-expanded="false" aria-controls="nav-logs">
+            <i class="bi bi-journal-text me-2 text-secondary"></i> Application Logs
+            <i class="bi bi-chevron-down admin-nav-chevron"></i>
+        </button>
+        <div class="collapse" id="nav-logs">
+            <div class="list-group list-group-flush">
+                <a href="#" class="list-group-item list-group-item-action admin-nav-item">Admin Logs</a>
+                <div class="admin-nav-divider"></div>
+                <a href="#" class="list-group-item list-group-item-action admin-nav-item">Notification Logs</a>
+                <a href="#" class="list-group-item list-group-item-action admin-nav-item">Email Logs</a>
+                <a href="#" class="list-group-item list-group-item-action admin-nav-item">Messaging Logs</a>
+            </div>
+        </div>
+    </div>
+</nav>

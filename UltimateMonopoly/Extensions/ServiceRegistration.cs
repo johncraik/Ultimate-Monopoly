@@ -4,6 +4,7 @@ using JC.Core.Extensions;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using MP.GameEngine.Abstractions;
 using MP.GameEngine.Extensions;
+using UltimateMonopoly.Areas.Admin.Models;
 using UltimateMonopoly.Data;
 using UltimateMonopoly.Models.DataModels;
 using UltimateMonopoly.Models.DataModels.Boards;
@@ -33,6 +34,7 @@ public static class ServiceRegistration
             typeof(FriendRequest),
             typeof(BlockedUser),
             typeof(ReportedUser),
+            typeof(AdminActionLog),
             typeof(Game),
             typeof(GamePlayer),
             typeof(GameTurn),
@@ -89,6 +91,7 @@ public static class ServiceRegistration
         services.TryAddScoped<IGameEngineFactory, GameEngineFactory>();
         services.TryAddSingleton<IEngineNotifier, SignalrEngineNotifier>();
         services.TryAddSingleton<IGameExecutor, GameExecutor>();
+        services.TryAddSingleton<ITurnTaxService, TurnTaxService>();
         services.AddGameEngine();
 
         // Statistics — the per-game projection. Enqueued fire-and-forget by GameStatsService when

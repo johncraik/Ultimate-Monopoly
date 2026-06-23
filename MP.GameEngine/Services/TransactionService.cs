@@ -84,6 +84,12 @@ public class TransactionService
             counterparty: TransactionCounterparty.FreeParking,
             allowShortfall: true,
             ct: ct);
+    
+    public Task PayTurnTax(Framework.GameEngine engine, PlayerModel player, uint amount, CancellationToken ct)
+        => Move(engine, player, -amount, FinancialReason.TurnTax,
+            counterparty: TransactionCounterparty.Bank,
+            allowShortfall: false,  //Should never shortfall anyway
+            ct: ct);
 
     /// <summary>Pays the player's current jail fee into Free Parking. Shortfall allowed.</summary>
     public Task PayJailFee(Framework.GameEngine engine, PlayerModel player, CancellationToken ct)
@@ -469,13 +475,14 @@ public class TransactionService
             _ => "the bank"
         };
         var forProperty = string.IsNullOrWhiteSpace(propertyName) ? "" : $" for {propertyName}";
-        return $"{verb} {RuleDictionary.Currency}{amount} {preposition} {who}{forProperty} ({ReasonText(reason)}).";
+        return $"{verb} {RuleDictionary.Currency}{amount:N0} {preposition} {who}{forProperty} ({ReasonText(reason)}).";
     }
 
     /// <summary>A short, player-facing phrase for each <see cref="FinancialReason"/> (the "why").</summary>
     private static string ReasonText(FinancialReason reason) => reason switch
     {
         FinancialReason.Rent => "rent",
+        FinancialReason.TurnTax => "wealth tax",
         FinancialReason.Tax => "tax",
         FinancialReason.GoBonus => "GO bonus",
         FinancialReason.DiceNumBonus => "dice-number bonus",

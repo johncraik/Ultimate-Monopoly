@@ -7,8 +7,10 @@ The architecture doc for the card sub-system — the cards counterpart to
 The raw action/condition inventory lives in
 `config/Monopoly Cards and Types.xlsx`.
 
-**Status:** early design — taking shape. Nothing here is built. The framework
-pieces it leans on already exist:
+**Status:** the card sub-system described here is substantially **built** (see
+`cards.md` and `cards-dev-changes.md` for the per-card / per-mechanic state, and
+the drift note at the foot of this document). The framework pieces it leans on
+already exist:
 
 | Need | Existing piece |
 |---|---|
@@ -382,3 +384,15 @@ TriggerEvent`; root `Actions` dropped (they live in groups).
    `Services/SubSystems/GlobalEventService.cs`, `GameModel.PlayerPercentCap`, and the
    `BoardService` / `GoService` / `TaxService` / `JailService` / `FreeParkingService`
    `// TODO take card` stubs.
+
+---
+
+## Implementation status & drift
+
+> This document records the **agreed design**, not the live state of the code.
+> Since it was written the implementation has moved on — much of what is
+> described here is built, and some details have changed. Any status, "TODO",
+> "not yet built", or "nothing built" note above may be out of date.
+>
+> Where this doc and the code disagree, the **code (and the developer) win**
+> (`docs/development/README.md`). Verify specifics against the current code.

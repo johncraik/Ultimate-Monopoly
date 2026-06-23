@@ -1,0 +1,1 @@
+# All admin related services, helpers, and models are in the Admin AREA - NEVER outside

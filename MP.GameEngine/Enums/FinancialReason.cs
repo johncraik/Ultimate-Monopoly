@@ -14,6 +14,9 @@ public enum FinancialReason
 
     /// <summary>Tax space payout.</summary>
     Tax,
+    
+    /// <summary>Turn tax paid.</summary>
+    TurnTax,
 
     /// <summary>Passing or landing on GO.</summary>
     GoBonus,

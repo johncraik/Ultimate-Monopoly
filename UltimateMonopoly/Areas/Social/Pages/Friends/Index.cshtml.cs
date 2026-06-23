@@ -84,6 +84,14 @@ public class IndexModel : PageModel
         return RedirectToPage(new { tab = "requests" });
     }
 
+    public async Task<IActionResult> OnPostCancelAsync(string requestId)
+    {
+        var ok = await _friendService.TryCancelFriendRequest(requestId);
+        StatusMessage = ok ? "Friend request cancelled." : "Could not cancel friend request.";
+        StatusKind = ok ? "success" : "danger";
+        return RedirectToPage(new { tab = "requests" });
+    }
+
     public async Task<IActionResult> OnPostRemoveAsync(string userId)
     {
         var ok = await _friendService.TryRemoveFriend(userId);

@@ -27,6 +27,7 @@ public class ProfileService
     private readonly UserService _userService;
     private readonly AppDbContext _context;
     private readonly UserManager<AppUser> _userManager;
+    private readonly SignInManager<AppUser> _signInManager;
 
     public ProfileService(
         FilePathProvider filePathProvider,
@@ -35,7 +36,8 @@ public class ProfileService
         UrlLinkService urlLinkService,
         UserService userService,
         AppDbContext context,
-        UserManager<AppUser> userManager)
+        UserManager<AppUser> userManager,
+        SignInManager<AppUser> signInManager)
     {
         _filePathProvider = filePathProvider;
         _userInfo = userInfo;
@@ -44,6 +46,7 @@ public class ProfileService
         _userService = userService;
         _context = context;
         _userManager = userManager;
+        _signInManager = signInManager;
     }
 
     public List<string> GetAvatarImagePaths()
@@ -88,7 +91,7 @@ public class ProfileService
 
     public async Task<bool> TryHideUser(string? userId = null)
     {
-        if(!string.IsNullOrEmpty(userId) && !_userInfo.IsInRole(SystemRoles.SystemAdmin))
+        if(!string.IsNullOrEmpty(userId) && !_userInfo.IsInRole(SystemRoles.SystemAdmin) && !_userInfo.IsInRole(SystemRoles.Admin))
             return false;
         
         userId ??= _userInfo.UserId;
@@ -99,12 +102,16 @@ public class ProfileService
         if (alreadyHidden) return true;
         
         var result = await _userManager.AddToRoleAsync(user, AppRoles.HiddenUser);
-        return result.Succeeded;
+        if(!result.Succeeded) return false;
+        
+        if(user.Id == _userInfo.UserId)
+            await _signInManager.RefreshSignInAsync(user);
+        return true;
     }
     
     public async Task<bool> TryUnhideUser(string? userId = null)
     {
-        if(!string.IsNullOrEmpty(userId) && !_userInfo.IsInRole(SystemRoles.SystemAdmin))
+        if(!string.IsNullOrEmpty(userId) && !_userInfo.IsInRole(SystemRoles.SystemAdmin) && !_userInfo.IsInRole(SystemRoles.Admin))
             return false;
         
         userId ??= _userInfo.UserId;
@@ -115,7 +122,25 @@ public class ProfileService
         if (!alreadyHidden) return true;
         
         var result = await _userManager.RemoveFromRoleAsync(user, AppRoles.HiddenUser);
-        return result.Succeeded;
+        if(!result.Succeeded) return false;
+        
+        if(user.Id == _userInfo.UserId)
+            await _signInManager.RefreshSignInAsync(user);
+        return true;       
+    }
+
+    /// <summary>
+    /// Whether the user (defaults to the current user) is hidden from the public leaderboard — i.e.
+    /// in the <see cref="AppRoles.HiddenUser"/> role. DB-queried (not claims) so a freshly-applied
+    /// toggle is reflected immediately, with no cookie refresh.
+    /// </summary>
+    public async Task<bool> IsHidden(string? userId = null)
+    {
+        userId ??= _userInfo.UserId;
+        if (string.IsNullOrEmpty(userId)) return false;
+
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+        return user != null && await _userManager.IsInRoleAsync(user, AppRoles.HiddenUser);
     }
 
     #endregion
@@ -127,7 +152,8 @@ public class ProfileService
 
     public async Task<UserProfileViewModel?> GetUserProfileViewModelAsync(string userId)
     {
-        var user = await _userService.GetUserById(userId);
+        bool? enabled = userId == _userInfo.UserId ? null : true;
+        var user = await _userService.GetUserById(userId, enabled);
         if (user == null) return null;
 
         var imgUrl = _urlLinkService.GetImgUrl(user.AvatarImageName);

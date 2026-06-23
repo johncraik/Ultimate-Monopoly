@@ -117,13 +117,23 @@ public class BlockAndReportService
             return true;
 
         Friend? friend = null;
+        List<FriendRequest> pendingRequests = [];
         if (blockedUser != null)
         {
             friend = await _repos.GetRepository<Friend>()
                 .AsQueryable().FilterDeleted(DeletedQueryType.OnlyActive)
-                .FirstOrDefaultAsync(f => (f.CreatedById == _userInfo.UserId && f.FriendUserId == userId) 
+                .FirstOrDefaultAsync(f => (f.CreatedById == _userInfo.UserId && f.FriendUserId == userId)
                                           || (f.FriendUserId == _userInfo.UserId && f.CreatedById == userId));
             friend?.Remove();
+
+            // A block clears any still-pending friend request between the two users, both
+            // directions — a block must leave no live request behind to accept later.
+            pendingRequests = await _repos.GetRepository<FriendRequest>()
+                .AsQueryable().FilterDeleted(DeletedQueryType.OnlyActive)
+                .Where(r => r.IsAccepted == null
+                            && ((r.CreatedById == _userInfo.UserId && r.ToUserId == userId)
+                                || (r.CreatedById == userId && r.ToUserId == _userInfo.UserId)))
+                .ToListAsync();
         }
         
         await _repos.BeginTransactionAsync();
@@ -142,7 +152,11 @@ public class BlockAndReportService
                 //Relationship now has removed timestamp, and is soft deleted.
                 await _repos.GetRepository<Friend>()
                     .SoftDeleteAsync(friend, saveNow: false);
-            
+
+            foreach (var pendingRequest in pendingRequests)
+                await _repos.GetRepository<FriendRequest>()
+                    .SoftDeleteAsync(pendingRequest, saveNow: false);
+
             await _repos.SaveChangesAsync();
             await _repos.CommitTransactionAsync();
             return true;

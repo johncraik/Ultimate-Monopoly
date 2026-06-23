@@ -12,6 +12,7 @@
 @using UltimateMonopoly.Services.Cache
 @model PlayerProfilePlayViewModel
 @inject PlayerCacheService PlayerCache
+@inject MP.GameEngine.Abstractions.ITurnTaxService TurnTaxService
 @{
     // The live player-profile body. Rendered on first load (Player/Index) and
     // re-rendered on every SignalR StateChanged frame (Index.OnGetStateAsync →
@@ -358,9 +359,18 @@
                                 <dd class="col-5 text-end mb-2">@cur@player.TripleBonus.ToString("N0")</dd>
 
                                 <dt class="col-7 text-body-secondary fw-normal"><i class="bi bi-percent me-1"></i> Card %cap</dt>
-                                <dd class="col-5 text-end mb-0">
+                                <dd class="col-5 text-end mb-@(TurnTaxService.Enabled ? "2" : "0")">
                                     <span class="badge text-bg-secondary">@(game.PlayerPercentCap(playerId))%</span>
                                 </dd>
+
+                                @* Turn tax (D2) — only when enabled. The tax the player would pay on their
+                                   current cash at the start of their next roll; routed through Cost() so the
+                                   figure matches the (rounded) charge. *@
+                                @if (TurnTaxService.Enabled)
+                                {
+                                    <dt class="col-7 text-body-secondary fw-normal"><i class="bi bi-bank me-1"></i> Wealth tax on roll</dt>
+                                    <dd class="col-5 text-end mb-0">@Cost(TurnTaxService.TotalTax(player.Money), FinancialReason.TurnTax)</dd>
+                                }
                             </dl>
                         </div>
                     </div>

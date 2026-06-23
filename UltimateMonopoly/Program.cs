@@ -11,6 +11,7 @@ using JC.Web.Extensions;
 using JC.Web.RateLimiting;
 using Microsoft.AspNetCore.Authorization;
 using JC.Web.Security.Models;
+using MP.GameEngine.Abstractions;
 using UltimateMonopoly.Authorization;
 using UltimateMonopoly.Data;
 using UltimateMonopoly.Extensions;
@@ -26,7 +27,11 @@ Syncfusion.Licensing.SyncfusionLicenseProvider.RegisterLicense(
     builder.Configuration["SYNCFUSION_KEY"]);
 
 // Razor Pages + API controllers
-builder.Services.AddRazorPages();
+builder.Services.AddRazorPages(options =>
+{
+    // Gate the whole Admin area to the AdminArea policy (Admin or SystemAdmin) — see below.
+    options.Conventions.AuthorizeAreaFolder("Admin", "/", "AdminArea");
+});
 builder.Services.AddControllers();
 
 // Antiforgery — expose a header so AJAX calls can send the token
@@ -49,8 +54,14 @@ builder.Services.AddMySqlDatabase<AppDbContext>(builder.Configuration, migration
 // Core
 builder.Services.AddCore<AppDbContext>();
 
-// Identity
-builder.Services.AddIdentity<AppUser, AppRole, AppDbContext>();
+// Identity. Disabled (but still signed-in) users are redirected to a dedicated page — distinct from the
+// generic 403 AccessDenied — that explains the disable and offers log out / self-delete. AccessDeniedRoute
+// is auto-added to the middleware's ExcludedPaths, so a disabled user can actually load it.
+builder.Services.AddIdentity<AppUser, AppRole, AppDbContext>(
+    configureMiddleware: options =>
+    {
+        options.AccessDeniedRoute = "/Identity/Account/Disabled";
+    });
 
 // Global authorisation — every page requires an authenticated user by default.
 // Pages that must be public (Login, Register, password reset, etc.) opt out with [AllowAnonymous].
@@ -59,6 +70,11 @@ builder.Services.AddAuthorization(options =>
     options.FallbackPolicy = new AuthorizationPolicyBuilder()
         .RequireAuthenticatedUser()
         .Build();
+
+    // Admin area — Admin or SystemAdmin (read + moderation). SystemAdmin-only pages/actions take the
+    // SystemAdminOnly policy on top. See design-docs/c1-admin-area.md §4.
+    options.AddPolicy("AdminArea", p => p.RequireRole(AppRoles.Admin, AppRoles.SystemAdmin));
+    options.AddPolicy("SystemAdminOnly", p => p.RequireRole(AppRoles.SystemAdmin));
 });
 
 // Web (security headers, cookies, client profiling). TrustProxyHeaders so the real client IP is
@@ -111,6 +127,7 @@ builder.Services.AddNotifications<AppDbContext>();
 builder.Services.AddHangfireSqlServer(builder.Configuration);
 
 builder.Services.AddServices();
+builder.Services.AddAdminServices();
 
 var app = builder.Build();
 
@@ -191,4 +208,7 @@ async Task SetupDefaults()
     await boardCache.GetDefaultBoard();
     await cardCache.GetCards();
     await blockedWordImport.SeedFromFileAsync();
+    
+    var taxService = scope.ServiceProvider.GetRequiredService<ITurnTaxService>();
+    await taxService.Import();
 }

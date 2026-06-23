@@ -35,9 +35,21 @@
     .lb-rank { font-variant-numeric:tabular-nums; }
     .leaderboard-table td, .leaderboard-table th { vertical-align:middle; }
     .lb-stat { font-variant-numeric:tabular-nums; }
+
+    /* "How is the score calculated?" disclosure — strip the default marker, keep it tidy. */
+    .lb-score-help > summary { cursor:pointer; list-style:none; display:inline-flex; align-items:center; }
+    .lb-score-help > summary::-webkit-details-marker { display:none; }
 </style>
 
 <div class="container-lg py-4">
+
+@if (!string.IsNullOrEmpty(Model.StatusMessage))
+{
+    <div class="alert alert-@(Model.StatusKind ?? "info") alert-dismissible fade show" role="alert">
+        @Model.StatusMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
 
 @if (!Model.ShowLeaderboard)
 {
@@ -78,10 +90,38 @@ else
             <h1 class="h2 fw-bold mb-1">
                 <i class="bi bi-trophy-fill text-warning me-2"></i>Leaderboard
             </h1>
-            <p class="text-body-secondary mb-0">
-                Every player ranked by wins. Win/draw/loss records, games played and win rate are public —
-                blocked players show as <em>Unknown</em>.
+            <p class="text-body-secondary mb-3">
+                Every player ranked by overall score. Win/draw/loss records, games played and win
+                rate are public.
             </p>
+
+            <details class="lb-score-help">
+                <summary class="text-body-secondary small fw-semibold">
+                    <i class="bi bi-info-circle me-1"></i>How is the score calculated?
+                </summary>
+                <div class="mt-2 p-3 rounded border bg-body-tertiary small">
+                    <p class="mb-2">
+                        Your score rewards <strong>winning often</strong> and
+                        <strong>winning consistently</strong>:
+                    </p>
+                    <ul class="mb-2">
+                        <li>Everyone starts at <strong>1000</strong> points.</li>
+                        <li>
+                            <span class="text-success fw-semibold">Win +30</span>,
+                            <span class="text-secondary fw-semibold">draw +10</span>,
+                            <span class="text-danger fw-semibold">loss −15</span>.
+                        </li>
+                        <li>A <strong>win-rate bonus</strong> of up to <strong>+200</strong> rewards a high win percentage.</li>
+                        <li>
+                            New players get a small <strong>−20 per game</strong> until they've played
+                            <strong>10 games</strong>, so the top spots are earned over time.
+                        </li>
+                    </ul>
+                    <p class="mb-0 text-body-secondary">
+                        Ties are broken by most wins, then win rate, then fewest losses.
+                    </p>
+                </div>
+            </details>
         </div>
 
         <div class="card-body p-0">
@@ -180,9 +220,28 @@ else
                                     </div>
                                 </td>
 
-                                @* Compare — only against friends (blank otherwise). *@
+                                @* Actions — friends get Compare; your own row gets the privacy toggle (E2). *@
                                 <td class="text-end pe-4">
-                                    @if (r.AreFriends && !self)
+                                    @if (self)
+                                    {
+                                        <form method="post" asp-page-handler="ToggleVisibility" class="d-inline m-0">
+                                            @if (Model.IsHidden)
+                                            {
+                                                <button type="submit" class="btn btn-sm btn-outline-secondary text-nowrap"
+                                                        title="Show your name on the leaderboard to everyone.">
+                                                    <i class="bi bi-eye me-1"></i>Make Profile Public
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <button type="submit" class="btn btn-sm btn-outline-secondary text-nowrap"
+                                                        title="Hide your name on the leaderboard from players who aren't your friends.">
+                                                    <i class="bi bi-eye-slash me-1"></i>Make Profile Private
+                                                </button>
+                                            }
+                                        </form>
+                                    }
+                                    else if (r.AreFriends)
                                     {
                                         <a asp-area="" asp-page="/Leaderboard/Compare" asp-route-userId="@up.UserId"
                                            class="btn btn-sm btn-outline-primary text-nowrap" title="Compare stats with @up.DisplayName">

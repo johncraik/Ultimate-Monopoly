@@ -64,12 +64,12 @@ prerequisite — provisioned only at release) · 🟡 optional / stretch · 🟢
 |---|---|---|---|---|
 | A2 | Roles + the `Restricted` level | A | 🟢 | JC.Identity |
 | B1 | Username & display-name validation + profanity filter | B | 🟢 | A2 |
-| B2 | Friends / social blocking revisit | B | 🔴 | — |
+| B2 | Friends / social blocking revisit | B | 🟢 | — |
 | C1 | Admin area — full stack | C | 🔴 | A2, JC.Core audit |
-| D1 | Most-landed-space frequency stat | D | 🔴 | — |
-| D2 | Money cap & turn tax (anti-snowball) | D | 🟡 | — |
+| D1 | Most-landed-space frequency stat | D | 🟢 | — |
+| D2 | Turn tax (anti-snowball) | D | 🟢 | — |
 | E1 | Friend messaging + game invites | E | 🟡 | B2, JC.Communication |
-| E2 | Hidden profile / soft-block | E | 🟡 ◐ | B2 |
+| E2 | Hidden profile / soft-block | E | 🟢 | B2 |
 | E3 | Cards reference page | E | 🟡 | — |
 | A1 | Email confirmation (tenant + app registration) | R | 🟠 | JC.Identity, JC.Communication.Email |
 
@@ -142,79 +142,132 @@ up front, not after the fact.
 library's own); bias to **under-block** with admin override.
 
 **Caveats / follow-ups.**
-- `Profanity.Detector` is **case-sensitive** (lowercase list) — input is lowercased before the library
-  call. The library check on the *normalised* (uppercase) string still needs lowercasing to catch
-  leet-evasions of common words via the library (small open fix).
+- `Profanity.Detector` is **case-sensitive** (lowercase list), so the service lowercases **both** library
+  passes before calling it — the raw input (`ToLowerInvariant`) and the normalised form
+  (`Normalise(...).ToLowerInvariant()`), the latter catching leet-evasions of common words. No
+  outstanding case-sensitivity work.
 - Admin-edit write path is deferred to **C1** (no admin edit surface exists yet).
 
-### B2. Friends / social blocking revisit 🔴
+### B2. Friends / social blocking revisit 🟢 — ✅ **IMPLEMENTED**
 **What.** A final hardening pass over the friends/social system, focused on **blocking**.
 
 **Why.** Blocking is a safety primitive; it must be airtight before a public launch.
 
-**Scope.**
-- **Audit every surface** for block-respect: profile view, leaderboard/compare, friend search,
-  friend lists, and (if built) messaging/invites — a block must hide and prevent interaction in
-  both directions.
-- **A block clears pending friend requests** between the two users (both directions), and prevents
-  new ones while the block stands.
-- Confirm the request lifecycle (send / accept / decline / cancel / remove) has no gaps the block
-  pass should close.
+**Implemented.**
+- **Block-respect on every built surface, both directions** (the `BlockAndReportService` checks are
+  symmetric):
+  - Leaderboard anonymises blocked users to the "User" view-model (`LeaderboardService`) — not
+    hidden, so ranks stay stable.
+  - The Compare page **and** the `Friends/Profile` detailed-stat page are both **friends-only +
+    block-gated** → `NotFound`. (The profile page previously had **no** friend/block gate at all —
+    the main hole this pass closed.)
+  - Add-friend-by-username already rejects a block with a deliberately ambiguous "no user exists"
+    message (doesn't reveal the block).
+  - The friends list and friend-request lists now also **defensively filter** blocked users, so a
+    block is airtight even against any stale relationship/request row.
+- **A block clears pending friend requests** between the two users (both directions), inside the
+  block transaction (`ProcessBlockAndReport`), and **bars new ones** while the block stands
+  (`TrySendFriendRequest`). `TryAcceptFriendRequest` also re-checks for a block, so a request that
+  predates a block can't be accepted into a friendship.
+- **Request lifecycle completed:** added **cancel outgoing request** (`FriendService.TryCancelFriendRequest`
+  + the `Cancel` page handler/button) — the lifecycle is now send / accept / decline / cancel / remove.
+
+**Decided.**
+- The detailed-stat profile (`Friends/Profile`) is **friends-only** (not public) and block-gated —
+  the same gate as the Compare page.
+- A block **soft-deletes** the pending request rows (consistent with how it soft-deletes the friend
+  relationship), rather than marking them declined.
+
+**Deferred.** Messaging / game invites are **mocks** today (the `Friends/Chat` page is dummy data),
+so they have no live block surface yet; the block / `Restricted` guards they must honour land with
+**E1**, when messaging is actually built.
 
 ---
 
 ## 5. Phase C — Admin & moderation
 
-### C1. Admin area — full stack 🔴
-**What.** The entire admin UI + services stack. This is the **single largest piece of V1 work** and
-the operational backbone for running a public app.
+### C1. Admin area — full stack 🔴 — 📐 **DESIGNED** (`c1-admin-area.md`)
+**What.** The entire admin UI + services stack. The **single largest piece of V1 work** and the
+operational backbone for running a public app.
 
-**Why.** Once real users are on the app, it has to be *operable*: see what's happening and act on
-it. JC.Core already writes a full **audit trail** (`AuditEntries` — user id, table, action,
-timestamp, JSON snapshot), so the read/operate surface is what's missing.
+**Why.** Once real users are on the app, it has to be *operable*: see what's happening and act on it.
 
-**Scope (break into sub-areas, each its own slice).**
-- **Audit-trail viewing** — browse/filter `AuditEntries` (by user, entity, action, time).
-- **Analytics** — app/usage dashboards (signups, active games, completions, etc.).
-- **User management** — view users, assign/remove roles (notably apply/lift `Restricted` from A2),
-  enable/disable accounts, edit moderated fields.
-- **Game management** — inspect, cancel, or remove games (the host controls already exist as a
-  starting seam).
-- **Board management** — review/moderate board skins (names are user-authored → moderation target).
-- Gated to the `Admin` / `SystemAdmin` roles; every admin action is itself audited (it already is,
-  via JC.Core).
+**Design.** Settled in **`c1-admin-area.md`** — a new `Areas/Admin` under two-tier `Admin` /
+`SystemAdmin` auth, built in **phases**:
+1. **Shell** + auth + **`AdminActionLog`** — an immutable log of *every* admin action. (Correction to
+   the old assumption: admin actions are **not** auto-audited — `AppUser`/`AppRole` aren't `AuditModel`
+   and rules/config are files — so this log fills the gap, not JC.Core's audit trail.)
+2. **User management** — roles / disable / delete; a singleton refresh-registry + middleware to
+   propagate role changes to live sessions; a separate `OrphanCleanupJob` for the orphaned-by-id
+   records a hard delete leaves.
+3. **Reports** — a `ReportResolution` `[Flags]` enum on `ReportedUser`; quick restrict / disable /
+   delete actions on the reported user.
+4. **Game management** — `config/rules/settings.json` retention + a `GameRetentionJob`; an admin game
+   list with state-gated draw / cancel / delete.
+5. **Rules + Turn Tax** editors — over `RuleCatalog.TryUpdateRules` + a new `TurnTaxService.Save`.
+6. **Audit trail** — *deferred*, blocked on a JC.Core `AuditEntry.EntityKey` column (John) that
+   unblocks the per-record data trail; the user trail is already supported.
+7. **Log viewers** — *deferred* (read-only): the `AdminActionLog` page + notifications now, email with
+   **A1**, messaging with **E1**.
 
-**Note.** This warrants its **own design doc** once started — it's big enough that planning it
-inline here would unbalance this roadmap. This entry just fixes its place and dependencies.
+See the doc for the full design, the auth matrix, and the open points.
 
 ---
 
 ## 6. Phase D — Gameplay & stats
 
-### D1. Most-landed-space frequency stat 🔴
+### D1. Most-landed-space frequency stat 🟢 — ✅ **IMPLEMENTED**
 **What.** Alongside `MostLandedOnBoardIndex`, store and show **how many times** the player landed on
 that most-landed space.
 
 **Why.** Small, completes an existing stat — "your most-landed space" reads oddly without the count.
 
-**Scope.**
-- The count is already computed during the movement projection (the max value of the land-on
-  tally). Add a `MostLandedOnBoardIndexCount` (or similar) to the stat record + a migration, and
-  surface it on the stat catalogue / render alongside the existing field. Define its cross-game
-  aggregation (avg/total/min/max) consistently with the other numeric stats.
+**Implemented.**
+- New `PlayerStatRecord.MostLandedOnBoardIndexCount` (`uint`). `PlayerGameStat` inherits the record,
+  so it's a DB column there too (the copy-ctor copies it).
+- `MovementStatsService` sets it from the max of the existing land-on tally (the same `MaxBy` that
+  picks the index now also reads `.Value`); 0 in the guarded no-landings case (H-03).
+- Cross-game aggregation in `PlayerStatRecord` is a **plain numeric** (avg/total → average, min/max →
+  MinBy/MaxBy), mirroring `TimesLandedOnGo` — deliberately decoupled from the aggregated mode index
+  (the "consistent with the other numeric stats" choice this item called for).
+- Surfaced on the catalogue: the "Most landed-on space" tile/row carries a `Sub` note
+  ("landed N times"), so both the single-game and comparison views show it with no layout change.
 
-### D2. Money cap & turn tax (anti-snowball) 🟡
-**What.** Cap player cash (proposed **£20,000**) to stop runaway leaders, and optionally a **global
-turn tax** — e.g. **20% on anything above £5,000** at a turn boundary — to bleed off hoarded cash.
+**Remaining.** Scaffold + apply the EF migration for the new `MostLandedOnBoardIndexCount` column
+(the repo's global `dotnet ef` is 5.0.17, too old for net9 — add it from the IDE, e.g.
+`Add-Migration MostLandedOnBoardIndexCount`). Stats fill in on the next recompute; pre-existing rows
+read 0 until rebuilt.
 
-**Why.** Prevents the snowball that drags games past 10 hours; a hard ceiling + a soft drain keeps
-games finite and competitive. Directly improves first-session UX.
+### D2. Turn tax (anti-snowball) 🟢 — ✅ **IMPLEMENTED**
+**What.** A **global turn tax** that bleeds off hoarded cash to stop runaway leaders. (The originally-
+paired hard cash cap was **dropped** — see below.)
 
-**Open questions (a balance discussion — flagged optional for that reason).**
-- Is a hard £20K cap right, or does it create weird edge cases (e.g. a sale that would exceed it)?
-- Turn-tax mechanics: threshold (£5K?), rate (20%?), where it's paid (bank? Free Parking?), and
-  which turn boundary it fires on. Needs playtesting, and it touches the turn loop + a new rule
-  citation, so it's a deliberate rules change (lockstep with `game-rules.md`), not a quick tweak.
+**Why.** Prevents the snowball that drags games past 10 hours; a soft, escalating drain on idle cash
+keeps games finite and competitive without a blunt ceiling. Directly improves first-session UX.
+
+**Implemented.**
+- A **progressive, stacking** wealth tax (`TurnTax` model + `ITurnTaxService` / `TurnTaxService`),
+  applied at the **start of each player's turn, before they roll** (top of
+  `PlayerTurnOrchestrator.StartPlayerTurn`), on the **cash** in the player's account → **bank**
+  (removed from the game) via `TransactionService.PayTurnTax` (`FinancialReason.TurnTax`, no
+  shortfall — paid from cash on hand only, so it never bankrupts).
+- Each bracket's rate applies to the whole amount above its threshold, and the brackets **stack**
+  (default 10% / 30% / 50% over £5k / £10k / £20k → a £25,000 balance pays £9,000).
+- **Global config** (`config/rules/turnTax.json`, loaded once at startup via `ITurnTaxService.Import()`)
+  — chosen over a per-game snapshot for simplicity; disabled when every bracket is zero. Trade-off:
+  a config change isn't pinned per game (it affects in-progress games' future turns).
+- Rules lockstep: new `FinancialReason.TurnTax`, `RuleCode.TurnTax_Pay` / `TurnTax_Spend`, `rules.json`
+  entries (admin-editable, so the description can track the configured brackets), and a `game-rules.md`
+  "Turn Tax" section. Taxed on **every** turn-start (incl. extra rolls); only cash is taxed, so spending
+  before the roll lowers the bill (cited as `TurnTax_Spend`).
+
+- **Stat:** a `SpentOnTurnTax` spending stat wired full-stack (compute → aggregate → `PlayerGameStat`
+  → catalogue), gated on `ITurnTaxService.Enabled` so the row/card only shows when the tax is on.
+
+**Dropped — money cap.** The originally-proposed **£20,000 cash ceiling** was cut: on reflection a hard
+cap is a blunt, unsatisfying way to curb snowballing, and it spawns awkward edge cases (a sale or rent
+that would breach it — cap at the receipt, or lose the excess?). The progressive turn tax does the job
+better, so the cap is **out of scope** for V1.
 
 ---
 
@@ -230,7 +283,7 @@ potentially an **invite-to-game** feature via **JC.Communication.Notifications**
 `Restricted` role (A2). Game invites ride the notifications channel. Confirm the JC.Communication
 Messaging/Notifications APIs against pckg-docs when picked up.
 
-### E2. Hidden profile / soft-block 🟡 — ◐ **PARTIAL** (most of it landed off A2's role infra)
+### E2. Hidden profile / soft-block 🟢 — ✅ **IMPLEMENTED**
 **What.** A profile toggle that **hides you from the public leaderboard** — non-friends see you as
 "Unknown" there — while you can still add and be added as a friend, and **you and your friends still
 see you normally**. A **soft-block** on visibility, not interaction.
@@ -248,10 +301,9 @@ see you normally**. A **soft-block** on visibility, not interaction.
 - **Set / unset** (`ProfileService.TryHideUser` / `TryUnhideUser`): self-service for your own
   account, **SystemAdmin-gated** to act on another user (a moderation seam for C1); idempotent.
 
-**Remaining.**
-- The hide/show toggle now lives on the **Account tab** (`Manage`, via `TryHideUser` /
-  `TryUnhideUser`). Still to do: add the **same toggle to `/Profile/Index`** so it's reachable from
-  the profile page too.
+**Surfaced everywhere.** The hide/show toggle now lives on the **Account tab** (`Manage`), the
+**Leaderboard** (your own row), and the **Profile page** (`/Profile/Index` → Statistics tab, above the
+W/L/D summary) — all via `ProfileService.IsHidden` + `TryHideUser` / `TryUnhideUser`.
 
 **Decided.** Hidden users **do** still appear normally in friends' views (leaderboard hide is
 non-friends-only); this settles the old "do they show in friends' compare views?" open question — yes.

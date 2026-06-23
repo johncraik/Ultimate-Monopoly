@@ -7,18 +7,15 @@ deal (or talk it out around the table). This is the *helper, not simulator*
 principle (`game-engine.md` §1) applied to trading: the app records and enforces
 the agreed exchange; the haggling is a human conversation.
 
-**Status:** partial / design. Built: the engine primitives this rides on —
-`PropertyTransferService.Transfer`, `TransactionService.ProcessDealPayment`
-(`FinancialReason.Deal`), `GameModel.CheckReservationRuleSetObtained`,
-`PropertyService.NormaliseRentLevels`, the `TurnStateProvider.CanDeal` gate, and
-the `ShortfallOutcome.DebtSettled` contract. Stubbed: `DealService`
-(`DealForShortfall` returns `true` and applies nothing). Wired: the
-`ShortfallService` `ProposeDeal` branch hands off to `DealService` and maps an
-accepted deal to `DebtSettled`. Not built: the `DealService` core (`RunDeal` /
-apply), the `BuildDealPrompt` / `DealPrompt` pair (+ responses, validator
-branches, discriminators), the turn-boundary `ProposeDeal` command
-(payload / hub / enqueue), the `DealableProperties` eligibility filter, the
-`Deal_*` rule codes, and the front-end deal-builder partial.
+**Status:** built (with some pieces still settling). `DealService`
+(`RunDeal`, `DealForShortfall`, `ProposeDealCommand`), the
+`BuildDealPrompt` / `DealPrompt` pair, and the shortfall `ProposeDeal`
+hand-off are implemented, on top of the engine primitives
+(`PropertyTransferService.Transfer`, `TransactionService.ProcessDealPayment`,
+`CheckReservationRuleSetObtained`, `CanDeal`, `ShortfallOutcome.DebtSettled`).
+Some items called out below (e.g. the `Deal_*` rule codes, the front-end
+builder) may still be outstanding. See the drift note at the foot of this
+document.
 
 ---
 
@@ -431,3 +428,15 @@ discharge (Default rule 7 / `transactions.md` §6), and the reserve break-throug
    (`CheckReservationRuleSetObtained`, the `DealableProperties` filter),
    `MP.GameEngine/Services/SubSystems/PropertyService.cs`
    (`NormaliseRentLevels`).
+
+---
+
+## Implementation status & drift
+
+> This document records the **agreed design**, not the live state of the code.
+> Since it was written the implementation has moved on — much of what is
+> described here is built, and some details have changed. Any status, "TODO",
+> "not yet built", or "pre-implementation" note above may be out of date.
+>
+> Where this doc and the code disagree, the **code (and the developer) win**
+> (`docs/development/README.md`). Verify specifics against the current code.

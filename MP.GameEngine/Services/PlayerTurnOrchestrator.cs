@@ -23,6 +23,7 @@ public class PlayerTurnOrchestrator
     private readonly GlobalEventService _globalEventService;
     private readonly CardTriggerService _triggerService;
     private readonly IGameCompletionService _completionService;
+    private readonly ITurnTaxService _turnTaxService;
 
     public PlayerTurnOrchestrator(DiceService diceService,
         TransactionService transactionService,
@@ -32,7 +33,8 @@ public class PlayerTurnOrchestrator
         BoardService boardService,
         GlobalEventService globalEventService,
         CardTriggerService triggerService,
-        IGameCompletionService completionService)
+        IGameCompletionService completionService,
+        ITurnTaxService turnTaxService)
     {
         _diceService = diceService;
         _transactionService = transactionService;
@@ -43,6 +45,7 @@ public class PlayerTurnOrchestrator
         _globalEventService = globalEventService;
         _triggerService = triggerService;
         _completionService = completionService;
+        _turnTaxService = turnTaxService;
     }
 
 
@@ -63,6 +66,12 @@ public class PlayerTurnOrchestrator
         if (engine.Cache.TurnState != TurnState.StartOfTurn)
             return;
         
+        var player = engine.Cache.Game.CurrentPlayer();
+        if (player == null) throw new InvalidOperationException("Current player not found in game players list.");
+        
+        //Apply Turn tax:
+        await _turnTaxService.ApplyTax(engine, player, ct);
+        
         //Roll dice
         //var 'dice' IS the modified dice roll, if any, otherwise the original
         //var 'suppressDefault' is the result of suppressed defaults from triggers
@@ -70,8 +79,9 @@ public class PlayerTurnOrchestrator
         
         //Start roll movement phase for player
         engine.TurnStateProvider.TransitionToRollMovementPhase();
-
-        var player = engine.Cache.Game.CurrentPlayer();
+        
+        //RE-GET player since turn state transition saved changes and broke reference
+        player = engine.Cache.Game.CurrentPlayer();
         if (player == null) throw new InvalidOperationException("Current player not found in game players list.");
         
         //Existing player is not included, and list is ordered by clockwise from player POV by default

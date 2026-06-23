@@ -8,11 +8,11 @@ to game history and the (future) statistical-snapshot projection. It does
 (`choice-events.md`) and the turn-state provider (`turn-state.md`) to round
 out the foundation layer.
 
-**Status:** built (foundation layer). The taxonomy described in §3, the
-enriched `FinancialTransactionReceipt` (§4), the `IEventEmitter` seam (§5),
-and the base-field bookkeeping (§7) are all landed in `MP.GameEngine`. No
-rule services consume the seam yet — they don't exist — but the framework
-is ready for them. Remaining items are listed in §9.
+**Status:** built and in use. The taxonomy (§3), the enriched
+`FinancialTransactionReceipt` (§4), the `IEventEmitter` seam (§5), and the
+base-field bookkeeping (§7) are landed in `MP.GameEngine`, and the rule
+services emit through the seam throughout. See the drift note at the foot of
+this document.
 
 ---
 
@@ -372,3 +372,15 @@ frame entirely. Receipts never reach the client over the live channel.
 - **`MP.GameEngine/Abstractions/IEventEmitter.cs`** — the producer seam.
 - **`MP.GameEngine/Services/Framework/EventEmitter.cs`** — the concrete
   emitter, forwards to `cache.AddEvent`.
+
+---
+
+## Implementation status & drift
+
+> This document records the **agreed design**, not the live state of the code.
+> Since it was written the implementation has moved on — much of what is
+> described here is built, and some details have changed. Any status, "TODO",
+> "not yet built", or "pre-implementation" note above may be out of date.
+>
+> Where this doc and the code disagree, the **code (and the developer) win**
+> (`docs/development/README.md`). Verify specifics against the current code.

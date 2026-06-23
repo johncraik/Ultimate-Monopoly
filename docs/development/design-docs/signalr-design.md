@@ -106,3 +106,15 @@ Player Cards:
 | [Dice Numbers] ("Not Set" if null) |
 ---------------------------------------
 
+---
+
+## Implementation status & drift
+
+> This document records the **agreed design**, not the live state of the code.
+> Since it was written the implementation has moved on — much of what is
+> described here is built, and some details have changed. Any status, "TODO",
+> "not yet built", "deferred", or "open item" note above may be out of date.
+>
+> Where this doc and the code disagree, the **code (and the developer) win**
+> (`docs/development/README.md`). Verify specifics against the current code.
+

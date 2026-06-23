@@ -202,6 +202,10 @@
                                         <div class="fw-semibold text-truncate">@r.DisplayName</div>
                                         <div class="small text-body-secondary">@r.Username · sent @r.RequestDate</div>
                                     </div>
+                                    <form method="post" asp-page-handler="Cancel" class="m-0">
+                                        <input type="hidden" name="requestId" value="@r.RequestId" />
+                                        <button class="btn btn-sm btn-outline-secondary" type="submit">Cancel</button>
+                                    </form>
                                 </div>
                             </div>
                         }

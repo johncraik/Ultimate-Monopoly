@@ -128,6 +128,7 @@ namespace UltimateMonopoly.Areas.Identity.Pages.Account
             returnUrl ??= Url.Content("~/");
             ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
             
+            Input.Username = Input.Username.Trim().ToLowerInvariant();
             var profanityResult = await _profanityService.Check(Input.Username);
             if(profanityResult.IsProfane)
             {

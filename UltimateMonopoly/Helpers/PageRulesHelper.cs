@@ -5,6 +5,7 @@ public record RuleSection(string Section, int SectionNumber);
 public static class PageRulesHelper
 {
     private const string DefaultSection = "Standard Monopoly Rules/Convensions";
+    private const string TurnTaxSection = "Player Turn Tax";
     private const string DiceSection = "Dice Rolls";
     private const string MovementSection = "Movement";
     private const string DoubleDiceSection = "Double Dice Rolls";
@@ -28,7 +29,8 @@ public static class PageRulesHelper
     public static List<RuleSection> GetSections()
         =>
         [
-            new(DefaultSection, 1),
+            new(DefaultSection, 0),
+            new(TurnTaxSection, 1),
             new(DiceSection, 2),
             new(MovementSection, 3),
             new(DoubleDiceSection, 4),

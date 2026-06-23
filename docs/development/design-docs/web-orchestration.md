@@ -7,12 +7,12 @@ which owns the *prompt* (engine-initiated, mid-execution) side. `choice-events.m
 §2 explicitly defers the command pipeline to "a separate system, not covered by
 this doc" — this is that doc.
 
-**Status:** partial implementation. Built: the per-game executor
-(`IGameExecutor`/`GameExecutor`), `IEngineNotifier` (prompt + state broadcast),
-the host-bypass capability gates on `TurnStateProvider`, `GameService` (queries +
-`EnqueueTurn`), and `PlayerProfileService` (per-player queries). Not yet written:
-the game-lifecycle/action methods on `GameService` (load / delete / cancel / end
-turn) and the player-specific command methods on `PlayerProfileService`.
+**Status:** implemented (and still evolving). The per-game executor
+(`IGameExecutor`/`GameExecutor`), the `IEngineNotifier` broadcast, the
+host-bypass gates on `TurnStateProvider`, and the command/query services
+described here are built. Some items the original status listed as "not yet
+written" (game lifecycle, end turn, player commands) have since landed. See the
+drift note at the foot of this document.
 
 ---
 
@@ -147,3 +147,15 @@ Driving the engine is only half the loop; clients also need to see the result.
 5. **Code** — `Services/Games/GameService.cs`, `Services/Games/PlayerProfileService.cs`,
    `Services/GameEngine/GameExecutor.cs`, `Services/GameEngine/SignalrEngineNotifier.cs`,
    `Hubs/GamePlayHub.cs`, `Services/Framework/TurnStateProvider.cs`.
+
+---
+
+## Implementation status & drift
+
+> This document records the **agreed design**, not the live state of the code.
+> Since it was written the implementation has moved on — much of what is
+> described here is built, and some details have changed. Any status, "TODO",
+> "not yet built", or "pre-implementation" note above may be out of date.
+>
+> Where this doc and the code disagree, the **code (and the developer) win**
+> (`docs/development/README.md`). Verify specifics against the current code.

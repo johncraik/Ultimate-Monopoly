@@ -10,9 +10,13 @@ This is the *rule-provenance* counterpart to `event-receipts.md`: receipts recor
 **what changed**; citations record **which rule explains it**. The two are sibling
 streams, deliberately kept apart (§3).
 
-**Status:** design, pre-implementation. The pieces it mirrors (`EventReceipt` /
-`IEventEmitter` / `GameCacheModel.AddEvent` / `ClearEvents`, the `StateChanged`
-broadcast) already exist. Nothing in this doc is built.
+**Status:** partly built. The engine-side citation seam exists — `RuleCode`,
+`GameEngine.CiteRule`, and `GameCacheModel.RuleCodes` (the rule codes ship in
+the `StateChanged` frame) — and rule services cite as they run. The web-side
+catalogue / rules page may not all be in place. (Note: the code names differ
+from this doc — `GameEngine.CiteRule` / `cache.AddRuleCode` rather than the
+`IRuleEmitter.Cite` sketched below.) See the drift note at the foot of this
+document.
 
 ---
 
@@ -457,3 +461,15 @@ resolves them, the text is static.
    `MP.GameEngine/Abstractions/IRuleEmitter.cs`,
    `MP.GameEngine/Services/Framework/RuleEmitter.cs`, the `GameCacheModel`
    citation hooks, and web-side `Services/.../RuleCatalog.cs` + `rules.json`.
+
+---
+
+## Implementation status & drift
+
+> This document records the **agreed design**, not the live state of the code.
+> Since it was written the implementation has moved on — much of what is
+> described here is built, and some details have changed. Any status, "TODO",
+> "not yet built", or "pre-implementation" note above may be out of date.
+>
+> Where this doc and the code disagree, the **code (and the developer) win**
+> (`docs/development/README.md`). Verify specifics against the current code.

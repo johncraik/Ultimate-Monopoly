@@ -8,15 +8,14 @@ the card sub-system — `cards-design.md` settled the *model* (groups → action
 the two interaction modes); this doc settles the *evaluation hook* that drives interaction
 mode (a) (active/held play) and the override pipeline of mode (b).
 
-**Status:** design, pre-implementation. The architecture below is agreed. The pieces it
-leans on are built — `CardService` (`DrawCard` / `ResolveCard` / `PlayCard`), the per-action
-`ICardActionService<T>` handlers, `CardActionHelper.ResolveTargets`, `CardTrigger` (`[Flags]`),
-`CardConditionType`, the prompt framework (`CardOptionPrompt` / `AcknowledgePrompt` /
-`TargetPlayer`/`TargetProperty`), and the `CiteRule` branch map. **Data blocker:** the exact
-trigger set, each card's `CardConditionType`, and each card's suppress metadata depend on the
-**finalised card list** (the `config` Excel is stale and being reworked — the real list lands
-separately). The *architecture* here is independent of that; only the per-card *tagging* waits
-on it.
+**Status:** built. `CardTriggerService` and the held-card evaluation / override
+pipeline described here are implemented, on top of `CardService`
+(`DrawCard` / `ResolveCard` / `PlayCard`), the per-action `ICardActionService<T>`
+handlers, `CardActionHelper.ResolveTargets`, `CardTrigger` (`[Flags]`),
+`CardConditionType`, the prompt framework, and the `CiteRule` branch map. The
+card list is finalised (`cards.md`), so the per-card tagging the original
+"data blocker" waited on is in place. See the drift note at the foot of this
+document.
 
 ---
 
@@ -439,3 +438,16 @@ drawn** (§12), GO bonus paid, and `OnLandGo` fired per player (§13) — so eac
    (`Go`/`Tax`/`FreeParking`/`Jail`/`Board`/`Movement`) where the trigger calls and the
    Advance-vs-Move draw flag land. **To build:** `Services/Cards/CardTriggerService.cs` + the
    `CardTriggerResult` hierarchy.
+
+---
+
+## Implementation status & drift
+
+> This document records the **agreed design**, not the live state of the code.
+> Since it was written the implementation has moved on — much of what is
+> described here is built, and some details have changed. Any status, "TODO",
+> "not yet built", "to build", or "pre-implementation" note above may be out of
+> date.
+>
+> Where this doc and the code disagree, the **code (and the developer) win**
+> (`docs/development/README.md`). Verify specifics against the current code.

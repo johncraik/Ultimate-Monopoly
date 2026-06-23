@@ -1,0 +1,42 @@
+@page
+@model UltimateMonopoly.Areas.Admin.Pages.IndexModel
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="d-flex align-items-center gap-3 mb-4">
+    <span class="admin-page-ico bg-primary-subtle text-primary"><i class="bi bi-speedometer2"></i></span>
+    <div>
+        <h1 class="h3 mb-1">Admin Dashboard</h1>
+        <p class="text-body-secondary mb-0">Manage users, reports, and games, edit the rules, and review the audit trail.</p>
+    </div>
+</div>
+
+@* Section overview cards. Links land as each feature phase ships (design-docs/c1-admin-area.md §13). *@
+<div class="row g-3">
+    @{
+        (string Title, string Desc, string Icon, string Tone)[] sections =
+        {
+            ("User Management",   "View users, manage roles, disable or remove accounts.",        "bi-people",         "primary"),
+            ("Report Management", "Review block-reports and act on the reported user.",            "bi-flag",           "danger"),
+            ("Game Management",   "Browse every game and draw, cancel, or delete it.",             "bi-controller",     "info"),
+            ("Rules & Turn Tax",  "Edit the player-facing rule text and the turn-tax config.",     "bi-journal-richtext","secondary"),
+            ("Audit Trail",       "Trace who changed what — by table and by user.",                "bi-clipboard-data", "warning"),
+            ("Application Logs",  "Admin actions plus email, notification, and messaging logs.",   "bi-journal-text",   "success")
+        };
+    }
+    @foreach (var s in sections)
+    {
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="card h-100">
+                <div class="card-body d-flex align-items-start gap-3">
+                    <span class="admin-page-ico bg-@(s.Tone)-subtle text-@s.Tone"><i class="bi @s.Icon"></i></span>
+                    <div class="min-w-0">
+                        <h2 class="h6 mb-1">@s.Title</h2>
+                        <p class="small text-body-secondary mb-0">@s.Desc</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>

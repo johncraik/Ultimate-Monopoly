@@ -29,6 +29,8 @@ public sealed record StatPart(StatKind Kind, StatSentiment Sentiment, Func<Playe
 /// <param name="Sub">Free-text note shown in the same cell (e.g. "peaked on turn 23").</param>
 /// <param name="Details">Categorical badges shown in the same cell (the largest-payment reason / property).</param>
 /// <param name="Secondary">When set, the stat is a "split" of two values (dice number, loans).</param>
+/// <param name="RequiresTurnTax">Gated on the turn-tax feature — the render layer hides this stat when
+/// <c>ITurnTaxService.Enabled</c> is false (a global toggle, not a per-record one like <paramref name="Visible"/>).</param>
 public sealed record StatDescriptor(
     string Label,
     string Icon,
@@ -37,7 +39,8 @@ public sealed record StatDescriptor(
     Func<PlayerStatRecord, string?>? Sub = null,
     IReadOnlyList<StatPart>? Details = null,
     StatPart? Secondary = null,
-    Func<PlayerStatRecord, bool>? Visible = null);
+    Func<PlayerStatRecord, bool>? Visible = null,
+    bool RequiresTurnTax = false);
 
 /// <summary>
 /// A titled group of stats — a card in the single view, an accordion section in the table.
@@ -125,6 +128,7 @@ public static class StatCatalogue
             new("Building", "bi-houses", "info", Money(r => r.SpentBuilding, StatSentiment.Neutral)),
             new("Unmortgaging", "bi-unlock", "secondary", Money(r => r.SpentUnmortgaging, StatSentiment.Neutral)),
             new("Fines & penalties", "bi-exclamation-triangle", "danger", Money(r => r.SpentOnFines, StatSentiment.LowerBetter)),
+            new("Turn tax", "bi-percent", "danger", Money(r => r.SpentOnTurnTax, StatSentiment.LowerBetter), RequiresTurnTax: true),
             new("Leaving jail", "bi-lock", "danger", Money(r => r.SpentOnLeavingJail, StatSentiment.LowerBetter)),
             new("Repaying loans", "bi-arrow-return-left", "secondary", Money(r => r.SpentOnRepayingLoans, StatSentiment.Neutral)),
             new("Rent paid", "bi-house-dash", "danger", Money(r => r.RentPaid, StatSentiment.LowerBetter)),
@@ -172,7 +176,11 @@ public static class StatCatalogue
             new("Distance clockwise", "bi-arrow-clockwise", "secondary", Num(r => r.TotalDistanceTraveledClockwise, StatSentiment.Neutral)),
             new("Distance anti-clockwise", "bi-arrow-counterclockwise", "secondary", Num(r => r.TotalDistanceTraveledCounterClockwise, StatSentiment.Neutral)),
             new("Total distance", "bi-signpost-split", "secondary", Num(r => r.TotalDistanceTraveled, StatSentiment.Neutral)),
-            new("Most landed-on space", "bi-geo-alt-fill", "info", new StatPart(StatKind.BoardIndex, StatSentiment.Neutral, r => r.MostLandedOnBoardIndex)),
+            new("Most landed-on space", "bi-geo-alt-fill", "info",
+                new StatPart(StatKind.BoardIndex, StatSentiment.Neutral, r => r.MostLandedOnBoardIndex),
+                Sub: r => r.MostLandedOnBoardIndexCount > 0
+                    ? $"landed {r.MostLandedOnBoardIndexCount:N0} time{(r.MostLandedOnBoardIndexCount == 1 ? "" : "s")}"
+                    : null),
             new("Landed on GO", "bi-flag-fill", "success", Num(r => r.TimesLandedOnGo, StatSentiment.HigherBetter)),
             new("Landed on Free Parking", "bi-p-circle-fill", "info", Num(r => r.TimesLandedOnFreeParking, StatSentiment.HigherBetter)),
             new("Landed on Tax", "bi-receipt", "danger", Num(r => r.TimesLandedOnTax, StatSentiment.LowerBetter))

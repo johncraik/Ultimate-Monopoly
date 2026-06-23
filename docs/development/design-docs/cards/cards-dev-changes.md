@@ -208,3 +208,13 @@ and one deliberately-deferred area:
   `TransactionService.ReceiveSnakeEyes`); the Third card redirects that bonus (§2.13).
 - **Loans / Dice / Turns primitives exist** — `PlayerModel.Loans`/`LoanModel`, `TripleBonus`,
   `TurnsToMiss`/`ExtraTurns`; **global-event store** = `EventInfo` / `GlobalEvent` (§1, §3a).
+
+---
+
+## Implementation status & drift
+
+> This is a **living worklist** — its ⬜ / 🟡 / ✅ markers track build deltas and
+> were accurate when written. The implementation has since moved on, so some
+> items still marked outstanding may now be done; verify against the current
+> code (and `cards.md`). Where this doc and the code disagree, the **code (and
+> the developer) win** (`docs/development/README.md`).

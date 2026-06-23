@@ -119,6 +119,9 @@ public class GameCacheModel(GameDTO gameDto, GameModel game, Board board)
 
     internal void AddRuleCode(RuleCode ruleCode)
     {
+        if(_ruleCodes.Contains(ruleCode))
+            return;
+        
         _ruleCodes.Add(ruleCode);
         StampConcurrency();
     }
@@ -172,9 +175,10 @@ public class GameCacheModel(GameDTO gameDto, GameModel game, Board board)
     internal bool PreventBoardIndexCard(string playerId, ushort boardIndex)
     {
         var prevent = _suppressBoardIndexCard.Contains((playerId, boardIndex));
-        if(prevent)
-            _suppressBoardIndexCard.Remove((playerId, boardIndex));
+        if (!prevent) return prevent;
         
+        AddRuleCode(RuleCode.Card_Advance);
+        _suppressBoardIndexCard.Remove((playerId, boardIndex));
         return prevent;
     }
 

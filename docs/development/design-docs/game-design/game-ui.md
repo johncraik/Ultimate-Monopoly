@@ -1,11 +1,11 @@
 
 # HOST Play Page (/Game/Play/{gameId})
 
-**Status:** design, pre-implementation. This is the in-game tablet/host view. It
-is the concrete consumer that requires a **live game-state projection** (a
-per-tablet state broadcast — not yet built) to drive the board, the current-player
-quick-stats pane, the Free Parking centre, and the card-% list. The mobile player
-profile it reuses inside its drawer (`/player-profile/{gameId}/{userId}`) is built.
+**Status:** partly built. The live game-state broadcast this view consumes is in
+place (`IEngineNotifier.StateChanged`), and the mobile player profile reused in
+its drawer (`/player-profile/{gameId}/{userId}`) is built; the host play page
+itself is described here as a design and is being built out. See the drift note
+at the foot of this document.
 
 ## Page Split
 - Left: 'Sidebar' - col-4
@@ -212,4 +212,16 @@ This is defered for now, just put a blank page with "You have no cards" bootstra
 ## Deal Page
 
 Stub for now, just a blank with "coming soon"
+
+---
+
+## Implementation status & drift
+
+> This document records the **agreed design**, not the live state of the code.
+> Since it was written the implementation has moved on — much of what is
+> described here is built, and some details have changed. Any status, "TODO",
+> "not yet built", or "pre-implementation" note above may be out of date.
+>
+> Where this doc and the code disagree, the **code (and the developer) win**
+> (`docs/development/README.md`). Verify specifics against the current code.
 

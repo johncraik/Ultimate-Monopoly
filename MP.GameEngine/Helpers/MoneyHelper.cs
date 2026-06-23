@@ -43,8 +43,10 @@ public static class MoneyHelper
             case FinancialReason.Rent:
             case FinancialReason.TripleBonus:
             case FinancialReason.GoBonus:
+            case FinancialReason.TurnTax:
                 //Rent that resolves to 0, is 0. All others round UP to minimum value
                 //Triple or GO bonus that is 0, stays 0 (receive no bonus cards)
+                //Turn tax that is 0, stays 0 (no tax)
                 return value;
             case FinancialReason.LoanTake:
                 //Loan take is always rounded UP

@@ -13,6 +13,7 @@ public class SpendingStatsService : IStatsService
         uint spentAcqProp = 0;
         uint spentBuilding = 0;
         uint spentUnmortgaging = 0;
+        uint spentOnTurnTax = 0;
         uint spentOnFines = 0;
         uint spentLeavingJail = 0;
         uint spentRepayingLoans = 0;
@@ -47,6 +48,9 @@ public class SpendingStatsService : IStatsService
                     case FinancialReason.Unmortgage:
                         spentUnmortgaging += amount;
                         break;
+                    case FinancialReason.TurnTax:
+                        spentOnTurnTax += amount;
+                        break;
                     case FinancialReason.JailFee:
                         spentLeavingJail += amount;
                         break;
@@ -71,6 +75,7 @@ public class SpendingStatsService : IStatsService
         record.SpentAcquiringProperty = spentAcqProp;
         record.SpentBuilding = spentBuilding;
         record.SpentUnmortgaging = spentUnmortgaging;
+        record.SpentOnTurnTax = spentOnTurnTax;
         record.SpentOnFines = spentOnFines;
         record.SpentOnLeavingJail = spentLeavingJail;
         record.SpentOnRepayingLoans = spentRepayingLoans;

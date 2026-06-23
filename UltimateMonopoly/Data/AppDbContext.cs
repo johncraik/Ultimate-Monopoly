@@ -13,6 +13,7 @@ using JC.Github.Extensions;
 using JC.Github.Models;
 using JC.Identity.Data;
 using Microsoft.EntityFrameworkCore;
+using UltimateMonopoly.Areas.Admin.Models;
 using UltimateMonopoly.Models;
 using UltimateMonopoly.Models.DataModels;
 using UltimateMonopoly.Models.DataModels.Boards;
@@ -51,7 +52,10 @@ public class AppDbContext : IdentityDataDbContext<AppUser, AppRole>,
     public DbSet<FriendRequest> FriendRequests { get; set; }
     public DbSet<BlockedUser> BlockedUsers { get; set; }
     public DbSet<ReportedUser> ReportedUsers { get; set; }
-    
+
+    // Admin (the entity lives in the Admin area; the DbSet must sit on the one shared context)
+    public DbSet<AdminActionLog> AdminActionLogs { get; set; }
+
     // Github
     public DbSet<ReportedIssue> ReportedIssues { get; set; }
     public DbSet<IssueComment> IssueComments { get; set; }

@@ -1,0 +1,253 @@
+/* ============================================================================
+   Admin Centre — shell layout (design-docs/c1-admin-area.md §3; layout per John).
+   A flat-card top bar, a full-height flat sidebar with two vertical borders, and a
+   scrollable content pane, centred within container-xxl. Bootstrap does the rest;
+   only the shell chrome and the sidebar accordion live here.
+   ============================================================================ */
+
+/* Full-viewport app shell: top bar fixed, body fills the rest, internal scrolling. */
+.admin-shell {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Top bar — flat card: border all round, rounded only at the top; its bottom border
+   is the line the sidebar's verticals hang from. */
+.admin-topbar {
+    position: relative;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: .6rem .9rem;
+    background: var(--bs-tertiary-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius-lg) var(--bs-border-radius-lg) 0 0;
+}
+
+/* Centred title, independent of the left (back) / right (notif, profile) items. Made to pop —
+   uppercase, gradient text, a glowing shield icon. Hidden on very small screens to avoid overlap. */
+.admin-topbar-title {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    display: inline-flex;
+    align-items: center;
+    gap: .55rem;
+    font-size: 1.3rem;
+    font-weight: 800;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    pointer-events: none;
+}
+.admin-topbar-title i {
+    font-size: 1.25rem;
+    color: var(--bs-primary);
+    filter: drop-shadow(0 0 10px rgba(var(--bs-primary-rgb), .45));
+}
+.admin-topbar-title .admin-title-text {
+    background: linear-gradient(90deg, var(--bs-primary), var(--bs-info));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+@media (max-width: 576px) {
+    .admin-topbar-title { display: none; }
+}
+
+/* Body row — fills the remaining height; min-height:0 lets the children scroll. */
+.admin-main {
+    flex: 1 1 auto;
+    display: flex;
+    min-height: 0;
+}
+
+/* Sidebar — flat: left + right borders running from the top bar down to the screen
+   bottom; no top/bottom border, no radius. Scrolls independently. */
+.admin-sidebar {
+    flex: 0 0 16.5rem;
+    overflow-y: auto;
+    padding: .75rem;
+    background: var(--bs-tertiary-bg);
+    border-left: 1px solid var(--bs-border-color);
+    border-right: 1px solid var(--bs-border-color);
+}
+
+/* Content pane — scrolls independently of the sidebar. */
+.admin-content {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-y: auto;
+    padding: 1.5rem;
+}
+
+/* ---- Sidebar nav: list-group accordion blocks ---- */
+.admin-nav-block + .admin-nav-block {
+    margin-top: .35rem;
+}
+
+.admin-nav-header {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: .7rem .85rem;
+    font-weight: 600;
+    text-align: left;
+    border: 0;
+    border-radius: var(--bs-border-radius);
+}
+
+.admin-nav-chevron {
+    margin-left: auto;
+    font-size: .8rem;
+    transition: transform .15s ease;
+}
+.admin-nav-header[aria-expanded="true"] .admin-nav-chevron {
+    transform: rotate(180deg);
+}
+
+/* The collapsible panel under a header is ONE uniform darker surface — not per-item shading. */
+.admin-sidebar .list-group {
+    background: var(--bs-body-bg);
+    border-radius: var(--bs-border-radius);
+    margin-top: .2rem;
+    padding: .25rem;
+    overflow: hidden;
+}
+
+.admin-nav-item {
+    background-color: transparent; /* let the panel's colour show through uniformly */
+    border: 0;
+    border-radius: var(--bs-border-radius);
+    padding-left: 2.15rem; /* indent sub-items under the block's icon */
+    font-size: .92rem;
+}
+
+/* A '|' separator between groups of items inside one block. */
+.admin-nav-divider {
+    height: 0;
+    margin: .35rem .9rem;
+    border-top: 1px solid var(--bs-border-color);
+}
+
+/* ---- Page chrome (dashboard header / section cards) ---- */
+.admin-page-ico {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3rem;
+    height: 3rem;
+    border-radius: var(--bs-border-radius-lg);
+    font-size: 1.4rem;
+    flex-shrink: 0;
+}
+
+/* ---- Responsive: stack the sidebar above the content on small screens ---- */
+@media (max-width: 768px) {
+    .admin-shell {
+        height: auto;
+        min-height: 100vh;
+        overflow: visible;
+    }
+    .admin-main {
+        flex-direction: column;
+    }
+    .admin-sidebar {
+        flex-basis: auto;
+        border-right: 0;
+        border-bottom: 1px solid var(--bs-border-color);
+    }
+    .admin-content {
+        overflow: visible;
+    }
+}
+
+/* ---- User Management table ---- */
+/* Dim + lock the table while an AJAX re-fetch is in flight. */
+.admin-table-loading {
+    opacity: .5;
+    pointer-events: none;
+    transition: opacity .1s ease;
+}
+
+/* Single-line rows; the table-responsive wrapper scrolls horizontally if needed. */
+.admin-users-table th,
+.admin-users-table td {
+    white-space: nowrap;
+}
+
+/* ---- User Details — grouped property panels ---- */
+/* Related properties sit in subtle panels with clear boundaries; no headings, generous padding. */
+.admin-detail-group {
+    background: var(--bs-tertiary-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius-lg);
+    padding: 0 1rem;
+    margin-bottom: 1rem;
+}
+.admin-detail-group:last-child {
+    margin-bottom: 0;
+}
+
+.admin-detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: .9rem 0;
+    border-bottom: 1px solid var(--bs-border-color);
+}
+.admin-detail-row:last-child {
+    border-bottom: 0;
+}
+
+.admin-detail-label {
+    display: inline-flex;
+    align-items: center;
+    gap: .6rem;
+    flex-shrink: 0;
+    color: var(--bs-secondary-color);
+    font-size: .9rem;
+}
+.admin-detail-label i {
+    width: 1.1rem;
+    text-align: center;
+    font-size: 1rem;
+    opacity: .85;
+}
+
+.admin-detail-value {
+    min-width: 0;
+    text-align: right;
+    font-weight: 500;
+    word-break: break-word;
+}
+
+/* Click-to-copy user id, with a "Copied!" flash. */
+.user-id-copy {
+    position: relative;
+    cursor: pointer;
+}
+.user-id-copy:hover {
+    text-decoration: underline;
+}
+.user-id-copy.copied::after {
+    content: 'Copied!';
+    position: absolute;
+    bottom: 130%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bs-success);
+    color: #fff;
+    font-size: .7rem;
+    font-weight: 600;
+    padding: .1rem .45rem;
+    border-radius: var(--bs-border-radius-sm);
+    white-space: nowrap;
+    z-index: 5;
+}
