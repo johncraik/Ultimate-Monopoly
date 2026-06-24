@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using JC.Core.Models.Auditing;
+using UltimateMonopoly.Areas.Admin.Enums;
 
 namespace UltimateMonopoly.Models.DataModels.Social;
 
@@ -16,6 +17,8 @@ public class ReportedUser : AuditModel
     public ReportReason Reason { get; set; }
     [MaxLength(10240)]
     public string? Message { get; set; }
+
+    public ReportResolution Resolution { get; set; } = ReportResolution.Open;
 
     public ReportedUser()
     {

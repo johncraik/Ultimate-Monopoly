@@ -91,7 +91,10 @@ public static class ServiceRegistration
         services.TryAddScoped<IGameEngineFactory, GameEngineFactory>();
         services.TryAddSingleton<IEngineNotifier, SignalrEngineNotifier>();
         services.TryAddSingleton<IGameExecutor, GameExecutor>();
-        services.TryAddSingleton<ITurnTaxService, TurnTaxService>();
+        // One singleton, exposed both ways: the engine reads ITurnTaxService; the admin editor needs the
+        // concrete TurnTaxService (Save / GetTurnTax) — both resolve to the same instance.
+        services.TryAddSingleton<TurnTaxService>();
+        services.TryAddSingleton<ITurnTaxService>(sp => sp.GetRequiredService<TurnTaxService>());
         services.AddGameEngine();
 
         // Statistics — the per-game projection. Enqueued fire-and-forget by GameStatsService when

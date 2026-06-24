@@ -5,6 +5,7 @@ using JC.Identity.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using UltimateMonopoly.Areas.Admin.Enums;
+using UltimateMonopoly.Areas.Admin.Middleware;
 using UltimateMonopoly.Areas.Admin.Models.ViewModels;
 using UltimateMonopoly.Data;
 
@@ -15,16 +16,19 @@ public class UserManagementService
     private readonly AppDbContext _context;
     private readonly UserManager<AppUser> _userManager;
     private readonly AdminLogService _adminLog;
+    private readonly AuthRefreshService _authRefreshService;
     private readonly IUserInfo _userInfo;
 
     public UserManagementService(AppDbContext context,
         UserManager<AppUser> userManager,
         AdminLogService adminLog,
+        AuthRefreshService authRefreshService,
         IUserInfo userInfo)
     {
         _context = context;
         _userManager = userManager;
         _adminLog = adminLog;
+        _authRefreshService = authRefreshService;
         _userInfo = userInfo;
         if (!userInfo.IsInRole(SystemRoles.Admin) && !userInfo.IsInRole(SystemRoles.SystemAdmin))
             throw new UnauthorizedAccessException(
@@ -98,7 +102,7 @@ public class UserManagementService
             .ToPagedList(pageNumber, pageSize); //Paginated in memory since restricted users are not filtered in user query
     }
 
-
+    
     public async Task<UserViewModel?> GetUserById(string userId)
     {
         var user = await QueryUsers(null, true, null)
@@ -111,11 +115,24 @@ public class UserManagementService
 
     // ---- Actions (each mutates then writes an AdminActionLog; returns false on a missing user / failed op) ----
 
+    private void RefreshUserSignIn(string userId)
+    {
+        _authRefreshService.RefreshUserSignIn(userId);
+    }
+    
+    
     /// <summary>Adds or removes a role, no-op if already in the desired state. Returns whether the user ends in that state.</summary>
     private async Task<bool> ApplyRole(AppUser user, string role, bool grant)
     {
         var inRole = await _userManager.IsInRoleAsync(user, role);
         if (inRole == grant) return true;
+        
+        //Check Admin is NOT assigning SystemAdmin/Admin (other roles allowed)
+        if(!_userInfo.IsInRole(SystemRoles.SystemAdmin) 
+           && (string.Equals(role, SystemRoles.SystemAdmin, StringComparison.OrdinalIgnoreCase)
+           || string.Equals(role, SystemRoles.Admin, StringComparison.OrdinalIgnoreCase)))
+            return false;
+        
         var result = grant
             ? await _userManager.AddToRoleAsync(user, role)
             : await _userManager.RemoveFromRoleAsync(user, role);
@@ -135,6 +152,7 @@ public class UserManagementService
         if (!(await _userManager.UpdateAsync(user)).Succeeded) return false;
 
         await _adminLog.LogDisplayNameChange(userId, old ?? "(none)", newDisplayName ?? "(none)");
+        RefreshUserSignIn(userId);
         return true;
     }
 
@@ -145,41 +163,66 @@ public class UserManagementService
 
         if (hidden) await _adminLog.LogUserHidden(userId);
         else await _adminLog.LogUserShown(userId);
+        
+        RefreshUserSignIn(userId);
         return true;
     }
 
     public async Task<bool> SetRestricted(string userId, bool restricted)
     {
         var user = await _userManager.FindByIdAsync(userId);
-        if (user == null || !await ApplyRole(user, AppRoles.Restricted, restricted)) return false;
+        if (user == null) return false;
+
+        //Admin cannot restrict SystemAdmin
+        if(await _userManager.IsInRoleAsync(user, SystemRoles.SystemAdmin) 
+           && !_userInfo.IsInRole(SystemRoles.SystemAdmin))
+            return false;
+        
+        var result = await ApplyRole(user, AppRoles.Restricted, restricted);
+        if(!result) return false;
 
         if (restricted) await _adminLog.LogUserRestricted(userId);
         else await _adminLog.LogUserUnrestricted(userId);
+        
+        RefreshUserSignIn(userId);
         return true;
     }
 
-    public async Task<bool> SetEnabled(string userId, bool enabled)
+    public async Task<bool> SetEnabled(string userId, bool enabled, bool idempotent = true)
     {
         var user = await _userManager.FindByIdAsync(userId);
         if (user == null) return false;
-        if (user.IsEnabled == enabled) return true;
+        if (user.IsEnabled == enabled) return idempotent;
 
+        //Admin cannot disable SystemAdmin
+        if(await _userManager.IsInRoleAsync(user, SystemRoles.SystemAdmin) 
+           && !_userInfo.IsInRole(SystemRoles.SystemAdmin))
+            return false;
+        
         user.IsEnabled = enabled;
         if (!(await _userManager.UpdateAsync(user)).Succeeded) return false;
 
         if (enabled) await _adminLog.LogUserEnabled(userId);
         else await _adminLog.LogUserDisabled(userId);
+        
+        RefreshUserSignIn(userId);
         return true;
     }
 
     /// <summary>Grants/removes Admin or SystemAdmin. Caller must gate this to SystemAdmin (design §4).</summary>
     public async Task<bool> SetRole(string userId, string role, bool grant)
     {
+        //System Admin Only
+        if(!_userInfo.IsInRole(SystemRoles.SystemAdmin))
+            return false;
+        
         var user = await _userManager.FindByIdAsync(userId);
         if (user == null || !await ApplyRole(user, role, grant)) return false;
 
         if (grant) await _adminLog.LogRoleAdded(userId, role);
         else await _adminLog.LogRoleRemoved(userId, role);
+        
+        RefreshUserSignIn(userId);
         return true;
     }
 
@@ -190,7 +233,9 @@ public class UserManagementService
     /// </summary>
     public async Task<bool> DeleteUser(string userId)
     {
-        if (userId == _userInfo.UserId) return false;
+        //Cant delete system admin, nor delete if not system admin
+        if (userId == _userInfo.UserId 
+            || !_userInfo.IsInRole(SystemRoles.SystemAdmin)) return false;
 
         var user = await _userManager.FindByIdAsync(userId);
         if (user == null) return false;

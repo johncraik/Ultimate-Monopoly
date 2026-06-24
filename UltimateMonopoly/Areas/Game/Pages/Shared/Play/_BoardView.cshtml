@@ -132,7 +132,7 @@
                         @if (jailPlayers is { Count: > 0 })
                         {
                             <div class="jail-zone__counters">
-                                <partial name="Play/_PlayerCounter" model="(jailPlayers[0].Profile, jailPlayers[0].Model.Direction)" />
+                                <partial name="~/Areas/Game/Pages/Shared/Play/_PlayerCounter.cshtml" model="(jailPlayers[0].Profile, jailPlayers[0].Model.Direction)" />
                             </div>
                             if (jailPlayers.Count > 1)
                             {
@@ -165,7 +165,7 @@
                 @if (spacePlayers is { Count: > 0 })
                 {
                     <div class="space-counters">
-                        <partial name="Play/_PlayerCounter" model="(spacePlayers[0].Profile, spacePlayers[0].Model.Direction)" />
+                        <partial name="~/Areas/Game/Pages/Shared/Play/_PlayerCounter.cshtml" model="(spacePlayers[0].Profile, spacePlayers[0].Model.Direction)" />
                     </div>
                     if (spacePlayers.Count > 1)
                     {

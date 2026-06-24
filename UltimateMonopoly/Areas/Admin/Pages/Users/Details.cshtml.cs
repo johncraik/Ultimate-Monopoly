@@ -39,6 +39,8 @@ public class DetailsModel : PageModel
     public bool TargetIsHidden => User.Roles.Contains(AppRoles.HiddenUser);
     // Delete is SystemAdmin-only, never on yourself, never on another SystemAdmin (remove that role first).
     public bool CanDelete => IsSystemAdmin && !IsSelf && !TargetIsSystemAdmin;
+    // Mirrors the service guard: a plain Admin can't restrict or disable a SystemAdmin (only SystemAdmins can moderate staff).
+    public bool CanModerateTarget => IsSystemAdmin || !TargetIsSystemAdmin;
 
     public async Task<IActionResult> OnGetAsync()
     {

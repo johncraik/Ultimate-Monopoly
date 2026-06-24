@@ -181,6 +181,59 @@
     white-space: nowrap;
 }
 
+/* Whole-row click navigates to the row's details (clickable-rows.js); inner links/buttons still win. */
+.admin-users-table tbody tr[data-href] {
+    cursor: pointer;
+}
+
+/* Id columns (truncated copy codes) — fixed, equal width; let the longer headers wrap to fit. */
+.admin-users-table .admin-id-col {
+    width: 8rem;
+    white-space: normal;
+}
+
+/* Placeholder card for a feature still to be built (e.g. the report user-activity mini-dashboard). */
+.admin-wip {
+    border-style: dashed;
+}
+
+/* Turns table — fixed-width id / number / download columns; the player name absorbs the rest. */
+.admin-turns-table .turn-col-num { width: 5rem; }
+.admin-turns-table .turn-col-dl { width: 6rem; }
+
+/* Game-details read-only state drawer — fixed near-full height; the stacked profile / game-info / board
+   scroll inside it. */
+.admin-game-state {
+    height: 90vh;
+}
+/* Keep the turn / player dropdowns pinned to the top while the body scrolls. */
+.admin-game-state .card-header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+.admin-game-state .card-body {
+    overflow-y: scroll;
+    overflow-x: hidden;
+}
+/* The reused profile pins its tab bar with position:fixed for the live drawer. Here make it sticky so it
+   stays at the bottom of the profile section while it scrolls, then scrolls away as the game-info / board
+   below come into view (sticky is constrained to the profile's own box). */
+.admin-game-state .pp-view {
+    padding-bottom: 0;
+}
+.admin-game-state .pp-tabbar {
+    position: sticky;
+    bottom: 0;
+}
+
+/* Rules table — fixed narrow columns so Title/Description absorb the remaining width. */
+.admin-rules-table .rule-col-section { width: 6rem; }
+.admin-rules-table .rule-col-rule { width: 4.5rem; }
+.admin-rules-table .rule-col-point { width: 4.5rem; }
+.admin-rules-table .rule-col-code { width: 12rem; white-space: normal; }
+.admin-rules-table .rule-col-hidden { width: 5rem; }
+
 /* ---- User Details — grouped property panels ---- */
 /* Related properties sit in subtle panels with clear boundaries; no headings, generous padding. */
 .admin-detail-group {

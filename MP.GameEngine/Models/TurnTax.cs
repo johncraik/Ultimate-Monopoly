@@ -60,7 +60,7 @@ public class TurnTax
     
     private uint TaxAmount(uint balance, uint bracket, float rate)
     {
-        if(balance <= bracket) return 0;
+        if(balance <= bracket || bracket == 0) return 0;
         
         var amount = balance - bracket;
         return (uint)(amount * rate);

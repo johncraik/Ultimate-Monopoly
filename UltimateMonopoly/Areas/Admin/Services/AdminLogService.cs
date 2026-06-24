@@ -1,3 +1,4 @@
+using JC.Core.Extensions;
 using JC.Core.Models;
 using JC.Core.Services.DataRepositories;
 using JC.Identity.Authentication;
@@ -23,6 +24,8 @@ public class AdminLogService
     }
 
     private string AdminLogIdentifier => $"{_userInfo.Username} ({_userInfo.UserId})";
+
+    #region User Management
     
     public async Task LogDisplayNameChange(string userId, string oldDisplayName, string newDisplayName)
     {
@@ -143,7 +146,92 @@ public class AdminLogService
             Detail = detail
         });
     }
+    
+    #endregion
 
+
+    #region Report Management
+
+    public async Task LogReportHandled(string reportId, ReportResolution oldResolution, ReportResolution newResolution)
+    {
+        var detail = $"{AdminLogIdentifier} handled report '{reportId}' " +
+                     $"from {oldResolution.ToDisplayName()} to {newResolution.ToDisplayName()}.";
+        await SaveLog(new AdminActionLog
+        {
+            Action = AdminActionType.ReportResolved,
+            TargetType = AdminTargetType.Report,
+            TargetId = reportId,
+            Detail = detail
+        });
+    }
+
+    #endregion
+
+
+    #region Rules
+
+    public async Task LogRulesUpdated(string ruleId, string title)
+    {
+        var detail = $"{AdminLogIdentifier} updated rule {ruleId} ('{title}').";
+        await SaveLog(new AdminActionLog
+        {
+            Action = AdminActionType.RulesUpdated,
+            TargetType = AdminTargetType.Config,
+            TargetId = ruleId,
+            Detail = detail
+        });
+    }
+
+    public async Task LogTurnTaxUpdated(string summary)
+    {
+        await SaveLog(new AdminActionLog
+        {
+            Action = AdminActionType.TurnTaxUpdated,
+            TargetType = AdminTargetType.Config,
+            TargetId = "turnTax",
+            Detail = $"{AdminLogIdentifier} {summary}"
+        });
+    }
+
+    #endregion
+
+
+    #region Games
+
+    public async Task LogGameDrawn(string gameId)
+    {
+        await SaveLog(new AdminActionLog
+        {
+            Action = AdminActionType.GameDrawn,
+            TargetType = AdminTargetType.Game,
+            TargetId = gameId,
+            Detail = $"{AdminLogIdentifier} declared game '{gameId}' a draw."
+        });
+    }
+
+    public async Task LogGameCancelled(string gameId)
+    {
+        await SaveLog(new AdminActionLog
+        {
+            Action = AdminActionType.GameCancelled,
+            TargetType = AdminTargetType.Game,
+            TargetId = gameId,
+            Detail = $"{AdminLogIdentifier} cancelled game '{gameId}'."
+        });
+    }
+
+    public async Task LogGameDeleted(string gameId)
+    {
+        await SaveLog(new AdminActionLog
+        {
+            Action = AdminActionType.GameDeleted,
+            TargetType = AdminTargetType.Game,
+            TargetId = gameId,
+            Detail = $"{AdminLogIdentifier} deleted game '{gameId}'."
+        });
+    }
+
+    #endregion
 
 
     private async Task SaveLog(AdminActionLog log)

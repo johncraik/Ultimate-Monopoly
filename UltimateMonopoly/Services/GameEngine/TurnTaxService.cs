@@ -59,4 +59,30 @@ public class TurnTaxService : ITurnTaxService
         if(!_tax.TurnTaxEnabled) return 0;
         return _tax.TotalTax(balance);
     }
+
+    /// <summary>A copy of the current brackets — for the admin editor to read without touching live state.</summary>
+    public TurnTax GetTurnTax() => new()
+    {
+        LowerTaxBracket = _tax.LowerTaxBracket,
+        LowerTaxRate = _tax.LowerTaxRate,
+        MiddleTaxBracket = _tax.MiddleTaxBracket,
+        MiddleTaxRate = _tax.MiddleTaxRate,
+        UpperTaxBracket = _tax.UpperTaxBracket,
+        UpperTaxRate = _tax.UpperTaxRate
+    };
+
+    /// <summary>
+    /// Persists new brackets to <c>turnTax.json</c> and refreshes the in-memory copy + <see cref="Enabled"/>
+    /// (mirrors <see cref="Import"/>). As this is the singleton the engine reads, the change takes effect
+    /// live — in-progress games apply it from their next turn-start (global config, not pinned per game).
+    /// </summary>
+    public async Task Save(TurnTax tax)
+    {
+        _tax = tax;
+        Enabled = _tax.TurnTaxEnabled;
+
+        var content = JsonSerializer.Serialize(_tax, new JsonSerializerOptions { WriteIndented = true });
+        var path = _filePathProvider.GetFilePath(FilePathProvider.FileCategory.Rules);
+        await _filePathProvider.WriteFileAsync(path, _taxFileName, content);
+    }
 }

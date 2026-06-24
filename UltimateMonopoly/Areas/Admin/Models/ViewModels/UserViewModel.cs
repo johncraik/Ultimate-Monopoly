@@ -23,7 +23,7 @@ public class UserViewModel
     public string LastActive { get; }
 
     public bool? IsRestricted { get; }
-    public IReadOnlyList<string> Roles { get; }
+    public IReadOnlyList<string> Roles { get; } = [];
     
     public UserViewModel(AppUser user, bool? isRestricted = null, List<string>? roles = null)
     {
@@ -46,5 +46,25 @@ public class UserViewModel
         IsRestricted = isRestricted;
         if (roles != null)
             Roles = roles.AsReadOnly();
+    }
+
+    public UserViewModel()
+    {
+        Profile = new UserProfileViewModel(0, 0, 0, true);
+        Email = "None";
+        EmailConfirmed = false;
+        PhoneNumber = "None";
+        TwoFactorEnabled = false;
+        
+        AccessFailedCount = 0;
+        LockoutEnabled = false;
+        LockoutEnd = "N/A";
+        IsEnabled = false;
+        
+        LastLogin = "Never";
+        LastActive = "Never";
+        
+        IsRestricted = null;
+        Roles = [];
     }
 }

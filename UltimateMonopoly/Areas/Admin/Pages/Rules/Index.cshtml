@@ -1,0 +1,36 @@
+@page
+@model UltimateMonopoly.Areas.Admin.Pages.Rules.IndexModel
+@{
+    ViewData["Title"] = "Game Rules";
+}
+
+<div class="d-flex align-items-center gap-3 mb-4">
+    <span class="admin-page-ico bg-secondary-subtle text-secondary"><i class="bi bi-journal-richtext"></i></span>
+    <div>
+        <h1 class="h3 mb-1">Game Rules</h1>
+        <p class="text-body-secondary mb-0">Edit the player-facing rule text, and hide rules from the public rulebook.</p>
+    </div>
+</div>
+
+@* Search only (no filters). A plain GET form is the no-JS fallback; rules-management.js intercepts and
+   re-fetches just the grouped table partial (the ?handler=Table endpoint). *@
+<alert type="Success" message="@(TempData["Success"] as string)" />
+
+<form id="rule-filters" method="get" class="card mb-3">
+    <div class="card-body">
+        <label class="form-label small text-body-secondary mb-1" for="rule-search">Search</label>
+        <div class="input-group">
+            <input type="search" class="form-control" id="rule-search" name="Search" value="@Model.Search"
+                   placeholder="Title, description, rule code, section…" autocomplete="off" />
+            <button class="btn btn-primary" type="submit" aria-label="Search"><i class="bi bi-search"></i></button>
+        </div>
+    </div>
+</form>
+
+<div id="rules-table">
+    <partial name="_RulesTable" model="Model.TableModel" />
+</div>
+
+@section Scripts {
+    <script src="~/scripts/admin/rules-management.js" asp-append-version="true"></script>
+}

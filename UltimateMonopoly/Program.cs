@@ -4,6 +4,7 @@ using JC.Communication.Email.Models.Options;
 using JC.Communication.Extensions;
 using JC.Core.Extensions;
 using JC.Github.Extensions;
+using JC.Identity.Authentication;
 using JC.Identity.Extensions;
 using JC.MySql;
 using JC.SqlServer.Hangfire;
@@ -12,6 +13,7 @@ using JC.Web.RateLimiting;
 using Microsoft.AspNetCore.Authorization;
 using JC.Web.Security.Models;
 using MP.GameEngine.Abstractions;
+using UltimateMonopoly.Areas.Admin.Middleware;
 using UltimateMonopoly.Authorization;
 using UltimateMonopoly.Data;
 using UltimateMonopoly.Extensions;
@@ -73,8 +75,8 @@ builder.Services.AddAuthorization(options =>
 
     // Admin area — Admin or SystemAdmin (read + moderation). SystemAdmin-only pages/actions take the
     // SystemAdminOnly policy on top. See design-docs/c1-admin-area.md §4.
-    options.AddPolicy("AdminArea", p => p.RequireRole(AppRoles.Admin, AppRoles.SystemAdmin));
-    options.AddPolicy("SystemAdminOnly", p => p.RequireRole(AppRoles.SystemAdmin));
+    options.AddPolicy("AdminArea", p => p.RequireRole(SystemRoles.Admin, SystemRoles.SystemAdmin));
+    options.AddPolicy("SystemAdminOnly", p => p.RequireRole(SystemRoles.SystemAdmin));
 });
 
 // Web (security headers, cookies, client profiling). TrustProxyHeaders so the real client IP is
@@ -145,6 +147,11 @@ app.UseStatusCodePagesWithReExecute("/Error/{0}");
 // Middleware
 app.UseStaticFiles();
 app.UseIdentity();
+
+// Propagate admin-driven role/account changes to the affected user's own live session — runs after
+// UseIdentity so IUserInfo is populated and the principal is authenticated (design-docs/c1-admin-area.md §6.2).
+app.UseMiddleware<AuthRefreshMiddleware>();
+
 app.UseWebDefaults();
 
 // Rate limit ONLY the Identity auth endpoints (login / register / forgot-password / reset / 2FA, …),

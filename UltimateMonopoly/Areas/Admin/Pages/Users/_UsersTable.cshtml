@@ -48,7 +48,7 @@
             {
                 foreach (var u in Model.Users)
                 {
-                    <tr>
+                    <tr data-href="@(Model.FullTable ? $"/Admin/Users/Details?userId={u.Profile.UserId}" : $"/Admin/Audit/Users/Trail/{u.Profile.UserId}")">
                         <td>
                             <code class="user-id-copy" role="button" title="@u.Profile.UserId"
                                   data-copy-id="@u.Profile.UserId">@u.Profile.UserId.Truncate(8, "…")</code>

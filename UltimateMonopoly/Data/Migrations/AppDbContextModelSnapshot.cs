@@ -2312,6 +2312,9 @@ namespace UltimateMonopoly.Data.Migrations
                     b.Property<int>("Reason")
                         .HasColumnType("int");
 
+                    b.Property<int>("Resolution")
+                        .HasColumnType("int");
+
                     b.Property<string>("RestoredById")
                         .HasColumnType("longtext");
 

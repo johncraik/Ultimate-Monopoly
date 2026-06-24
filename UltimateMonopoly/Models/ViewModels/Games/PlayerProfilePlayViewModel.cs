@@ -15,4 +15,9 @@ namespace UltimateMonopoly.Models.ViewModels.Games;
 /// the command buttons via the host-bypass-aware <c>TurnStateProvider.Can…</c>
 /// checks — never to choose what data is shown.
 /// </param>
-public record PlayerProfilePlayViewModel(GameEngine Engine, string PlayerId, string ViewerUserId);
+/// <param name="IsAdminView">
+/// True when the admin game-details page renders this read-only: every command button is force-disabled
+/// and prompts hidden (belt-and-braces with that page not loading the game-play hub). Defaults to false,
+/// so the live game is unchanged.
+/// </param>
+public record PlayerProfilePlayViewModel(GameEngine Engine, string PlayerId, string ViewerUserId, bool IsAdminView = false);

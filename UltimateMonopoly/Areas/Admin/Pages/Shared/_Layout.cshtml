@@ -14,6 +14,7 @@
     }
     <meta name="csrf-header" content="@afTokens.HeaderName" />
     <meta name="csrf-token" content="@afTokens.RequestToken" />
+    @await RenderSectionAsync("Styles", required: false)
 </head>
 <body>
     <div class="admin-shell">
@@ -29,6 +30,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/scripts/navbar.js" asp-append-version="true"></script>
+    <script src="~/scripts/admin/clickable-rows.js" asp-append-version="true"></script>
     @if (User.Identity?.IsAuthenticated == true)
     {
         <script src="~/scripts/SignalR/signalr.min.js" asp-append-version="true"></script>

@@ -2,6 +2,9 @@
     var currentPage = ViewContext.RouteData.Values["page"]?.ToString();
     string DashActive() => currentPage == "/Index" ? "active" : "";
     var usersOpen = currentPage?.StartsWith("/Users") == true;
+    var reportsOpen = currentPage?.StartsWith("/Reports") == true;
+    // Game Management groups game config + lifecycle (SystemAdmin-only); Rules lives under it.
+    var gamesOpen = currentPage?.StartsWith("/Rules") == true || currentPage?.StartsWith("/TurnTax") == true || currentPage?.StartsWith("/Games") == true;
 }
 @*
     Admin sidebar — Bootstrap list-group blocks; blocks with sub-items collapse like an accordion.
@@ -34,38 +37,42 @@
     @* Report Management *@
     <div class="admin-nav-block">
         <button type="button" class="list-group-item list-group-item-action admin-nav-header"
-                data-bs-toggle="collapse" data-bs-target="#nav-reports" aria-expanded="false" aria-controls="nav-reports">
+                data-bs-toggle="collapse" data-bs-target="#nav-reports" aria-expanded="@(reportsOpen ? "true" : "false")" aria-controls="nav-reports">
             <i class="bi bi-flag me-2 text-danger"></i> Report Management
             <i class="bi bi-chevron-down admin-nav-chevron"></i>
         </button>
-        <div class="collapse" id="nav-reports">
+        <div class="collapse @(reportsOpen ? "show" : "")" id="nav-reports">
             <div class="list-group list-group-flush">
-                <a href="#" class="list-group-item list-group-item-action admin-nav-item">Open Reports</a>
-                <a href="#" class="list-group-item list-group-item-action admin-nav-item">Handled Reports</a>
+                <a asp-area="Admin" asp-page="/Reports/Index" asp-route-Resolution="Open" class="list-group-item list-group-item-action admin-nav-item">Open Reports</a>
+                <a asp-area="Admin" asp-page="/Reports/Index" asp-route-Resolution="Handled" class="list-group-item list-group-item-action admin-nav-item">Resolved Reports</a>
+                <a asp-area="Admin" asp-page="/Reports/Index" asp-route-Resolution="AnyAction" class="list-group-item list-group-item-action admin-nav-item">All Reports</a>
             </div>
         </div>
     </div>
 
-    @* Game Management *@
-    <div class="admin-nav-block">
-        <button type="button" class="list-group-item list-group-item-action admin-nav-header"
-                data-bs-toggle="collapse" data-bs-target="#nav-games" aria-expanded="false" aria-controls="nav-games">
-            <i class="bi bi-controller me-2 text-success"></i> Game Management
-            <i class="bi bi-chevron-down admin-nav-chevron"></i>
-        </button>
-        <div class="collapse" id="nav-games">
-            <div class="list-group list-group-flush">
-                <a href="#" class="list-group-item list-group-item-action admin-nav-item">All Games</a>
-                <a href="#" class="list-group-item list-group-item-action admin-nav-item">Setup Games</a>
-                <a href="#" class="list-group-item list-group-item-action admin-nav-item">In Play Games</a>
-                <a href="#" class="list-group-item list-group-item-action admin-nav-item">Finished Games</a>
-                <a href="#" class="list-group-item list-group-item-action admin-nav-item">Cancelled Games</a>
-                <div class="admin-nav-divider"></div>
-                <a href="#" class="list-group-item list-group-item-action admin-nav-item">Game Rules</a>
-                <a href="#" class="list-group-item list-group-item-action admin-nav-item">Game Turn Tax</a>
+    @* Game Management — SystemAdmin only (game config + lifecycle) *@
+    @if (User.IsInRole(AppRoles.SystemAdmin))
+    {
+        <div class="admin-nav-block">
+            <button type="button" class="list-group-item list-group-item-action admin-nav-header"
+                    data-bs-toggle="collapse" data-bs-target="#nav-games" aria-expanded="@(gamesOpen ? "true" : "false")" aria-controls="nav-games">
+                <i class="bi bi-controller me-2 text-success"></i> Game Management
+                <i class="bi bi-chevron-down admin-nav-chevron"></i>
+            </button>
+            <div class="collapse @(gamesOpen ? "show" : "")" id="nav-games">
+                <div class="list-group list-group-flush">
+                    <a asp-area="Admin" asp-page="/Games/Index" class="list-group-item list-group-item-action admin-nav-item">All Games</a>
+                    <a asp-area="Admin" asp-page="/Games/Index" asp-route-State="Setup" class="list-group-item list-group-item-action admin-nav-item">Setup Games</a>
+                    <a asp-area="Admin" asp-page="/Games/Index" asp-route-State="InPlay" class="list-group-item list-group-item-action admin-nav-item">In Play Games</a>
+                    <a asp-area="Admin" asp-page="/Games/Index" asp-route-State="Finished" class="list-group-item list-group-item-action admin-nav-item">Finished Games</a>
+                    <a asp-area="Admin" asp-page="/Games/Index" asp-route-State="Cancelled" class="list-group-item list-group-item-action admin-nav-item">Cancelled Games</a>
+                    <div class="admin-nav-divider"></div>
+                    <a asp-area="Admin" asp-page="/Rules/Index" class="list-group-item list-group-item-action admin-nav-item">Game Rules</a>
+                    <a asp-area="Admin" asp-page="/TurnTax/Index" class="list-group-item list-group-item-action admin-nav-item">Game Turn Tax</a>
+                </div>
             </div>
         </div>
-    </div>
+    }
 
     @* Audit Trail *@
     <div class="admin-nav-block">

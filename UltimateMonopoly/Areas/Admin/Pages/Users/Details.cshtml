@@ -185,9 +185,12 @@
                     <div>
                         <div class="fw-semibold">@(Model.TargetIsRestricted ? "Restricted" : "Restrict")</div>
                         <div class="small text-body-secondary">@AppRoles.RestrictedDesc</div>
+                        @if (!Model.CanModerateTarget) { <span class="text-warning small d-block mt-1">Only a System Admin can moderate a System Admin account.</span> }
                     </div>
                     <form method="post" asp-page-handler="ToggleRestricted" asp-route-userId="@Model.UserId">
-                        <button class="btn @(Model.TargetIsRestricted ? "btn-outline-success" : "btn-outline-warning") text-nowrap" type="submit">
+                        <button class="btn @(Model.TargetIsRestricted ? "btn-outline-success" : "btn-outline-warning") text-nowrap" type="submit"
+                                @(Model.CanModerateTarget ? "" : "disabled")
+                                title="@(Model.CanModerateTarget ? null : "Only a System Admin can moderate a System Admin account.")">
                             @(Model.TargetIsRestricted ? "Un-restrict" : "Restrict")
                         </button>
                     </form>
@@ -200,11 +203,13 @@
                         <div class="small text-body-secondary">
                             Blocks all access to the app — the user can't do anything at all, though the account still exists (a soft delete).
                             @if (Model.IsSelf) { <span class="text-warning d-block mt-1">You can't disable your own account.</span> }
+                            @if (!Model.CanModerateTarget) { <span class="text-warning d-block mt-1">Only a System Admin can moderate a System Admin account.</span> }
                         </div>
                     </div>
                     <form method="post" asp-page-handler="ToggleEnabled" asp-route-userId="@Model.UserId">
                         <button class="btn @(u.IsEnabled ? "btn-outline-danger" : "btn-outline-success") text-nowrap" type="submit"
-                                @(Model.IsSelf && u.IsEnabled ? "disabled" : "")>
+                                @((Model.IsSelf && u.IsEnabled) || !Model.CanModerateTarget ? "disabled" : "")
+                                title="@(Model.CanModerateTarget ? null : "Only a System Admin can moderate a System Admin account.")">
                             @(u.IsEnabled ? "Disable" : "Enable")
                         </button>
                     </form>
