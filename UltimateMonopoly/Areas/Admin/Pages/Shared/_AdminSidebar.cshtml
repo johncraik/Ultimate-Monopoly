@@ -84,7 +84,7 @@
         </button>
         <div class="collapse @(auditOpen ? "show" : "")" id="nav-audit">
             <div class="list-group list-group-flush">
-                <a href="#" class="list-group-item list-group-item-action admin-nav-item">Data Trail</a>
+                <a asp-area="Admin" asp-page="/Audit/Data/Index" class="list-group-item list-group-item-action admin-nav-item">Data Trail</a>
                 <a asp-area="Admin" asp-page="/Audit/Users/Index" class="list-group-item list-group-item-action admin-nav-item">User Trail</a>
             </div>
         </div>

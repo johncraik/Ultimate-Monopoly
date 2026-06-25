@@ -38,7 +38,8 @@ public class TrailModel : PageModel
 
     private PagedList<AuditEntryViewModel> Entries { get; set; } = new([], 1, PageSize, 0);
 
-    public AuditTableModel TableModel => new(Entries, Search, Action);
+    // IsUserTrail = true → the shared _AuditTable shows the Table column (the user is fixed here).
+    public AuditTableModel TableModel => new(Entries, Search, Action, true);
 
     public async Task OnGetAsync(string userId)
     {

@@ -34,7 +34,15 @@
         <thead>
             <tr class="text-body-secondary small text-uppercase">
                 <th class="admin-id-col">Audit ID</th>
-                <th>Table</th>
+                @* Variable column: user trail fixes the user → show Table; data trail fixes the table → show User. *@
+                @if (Model.IsUserTrail)
+                {
+                    <th>Table</th>
+                }
+                else
+                {
+                    <th>User</th>
+                }
                 <th>Date</th>
                 <th>When</th>
                 <th>Action</th>
@@ -58,7 +66,17 @@
                         <td class="admin-id-col">
                             <code class="user-id-copy" role="button" title="@e.AuditId" data-copy="@e.AuditId">@e.AuditId.Truncate(8, "…")</code>
                         </td>
-                        <td class="fw-semibold text-truncate">@e.TableName</td>
+                        @if (Model.IsUserTrail)
+                        {
+                            <td class="fw-semibold text-truncate">@e.TableName</td>
+                        }
+                        else
+                        {
+                            <td class="min-w-0">
+                                <div class="fw-semibold text-truncate">@e.UserName</div>
+                                <code class="user-id-copy small text-body-secondary" role="button" title="@e.UserId" data-copy="@e.UserId">@e.UserId.Truncate(12, "…")</code>
+                            </td>
+                        }
                         <td>@e.AuditDate</td>
                         <td class="text-body-secondary">@e.RelativeDate</td>
                         <td><span class="badge rounded-pill @ActionBadge(e.Action)">@e.ActionDisplay</span></td>

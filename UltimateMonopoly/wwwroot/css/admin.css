@@ -181,6 +181,18 @@
     white-space: nowrap;
 }
 
+/* Comfortable, uniform row height across every admin list table. table-sm's .25rem vertical padding
+   leaves single-line rows (audit / data trail) looking cramped next to the two-line rows (users); this
+   evens them out. Horizontal padding stays compact (inherited from table-sm). The audit detail panel
+   keeps its flush p-0 (utility !important wins), and empty-state cells keep their py-4. */
+.admin-users-table > thead > tr > th,
+.admin-users-table > tbody > tr > td,
+.admin-audit-table > thead > tr > th,
+.admin-audit-table > tbody > tr > td {
+    padding-top: .6rem;
+    padding-bottom: .6rem;
+}
+
 /* Whole-row click navigates to the row's details (clickable-rows.js); inner links/buttons still win. */
 .admin-users-table tbody tr[data-href] {
     cursor: pointer;

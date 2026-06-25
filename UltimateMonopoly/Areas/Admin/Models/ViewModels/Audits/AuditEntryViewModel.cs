@@ -3,8 +3,23 @@ using JC.Core.Enums;
 using JC.Core.Extensions;
 using JC.Core.Models;
 using JC.Core.Models.Auditing;
+using Syncfusion.EJ2.Navigations;
 
 namespace UltimateMonopoly.Areas.Admin.Models.ViewModels.Audits;
+
+public class AuditDataTableViewModel
+{
+    public string TableName { get; }
+    public int AuditCount { get; }
+    public string LatestAuditDate { get; }
+    
+    public AuditDataTableViewModel(string tableName, int auditCount, string? latestAuditDate)
+    {
+        TableName = tableName ?? "Unknown";
+        AuditCount = auditCount;
+        LatestAuditDate = latestAuditDate ?? "Never";
+    }
+}
 
 public class AuditEntryViewModel
 {
@@ -20,13 +35,16 @@ public class AuditEntryViewModel
     public string UserName { get; }
     public string TableName { get; }
     
+    public bool IsUserTrail { get; }
+    
     public Dictionary<string, object?> TableKeys { get; }
     public string? ActionDataRaw { get; }
     public string? ActionData { get; }
 
-    public AuditEntryViewModel(AuditEntry entry)
+    public AuditEntryViewModel(AuditEntry entry, bool isUserTrail)
     {
         AuditId = entry.Id;
+        IsUserTrail = isUserTrail;
         
         Action = entry.Action;
         ActionDisplay = entry.Action.ToDisplayName();

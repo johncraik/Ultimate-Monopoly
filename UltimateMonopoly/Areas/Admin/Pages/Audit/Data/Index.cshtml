@@ -1,0 +1,55 @@
+@page
+@model UltimateMonopoly.Areas.Admin.Pages.Audit.Data.IndexModel
+@{
+    ViewData["Title"] = "Data Trail";
+}
+
+<div class="d-flex align-items-center gap-3 mb-4">
+    <span class="admin-page-ico bg-warning-subtle text-warning"><i class="bi bi-clipboard-data"></i></span>
+    <div>
+        <h1 class="h3 mb-1">Data Trail</h1>
+        <p class="text-body-secondary mb-0">Browse audited tables; pick one to see its full change history.</p>
+    </div>
+</div>
+
+@* No filters/search: the distinct-table set is small and bounded. Rows navigate via clickable-rows.js
+   (data-href); the eye button is the explicit/no-JS fallback. *@
+<div class="d-flex align-items-center justify-content-between mb-2">
+    <span class="small text-body-secondary">@Model.Tables.Count.ToString("N0") table@(Model.Tables.Count == 1 ? "" : "s")</span>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-hover table-sm align-middle admin-users-table mb-0">
+        <thead>
+            <tr class="text-body-secondary small text-uppercase">
+                <th>Table</th>
+                <th class="text-end">Audits</th>
+                <th>Latest Audit</th>
+                <th class="text-end"></th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.Tables.Count == 0)
+            {
+                <tr><td colspan="4" class="text-center text-body-secondary py-4">No audited tables yet.</td></tr>
+            }
+            else
+            {
+                foreach (var t in Model.Tables)
+                {
+                    <tr data-href="/Admin/Audit/Data/Table/@t.TableName">
+                        <td class="fw-semibold text-truncate">@t.TableName</td>
+                        <td class="text-end">@t.AuditCount.ToString("N0")</td>
+                        <td class="text-body-secondary">@t.LatestAuditDate</td>
+                        <td class="text-end">
+                            <a asp-area="Admin" asp-page="/Audit/Data/Table" asp-route-tableName="@t.TableName"
+                               class="btn btn-sm btn-outline-secondary" title="View history" aria-label="View history">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
