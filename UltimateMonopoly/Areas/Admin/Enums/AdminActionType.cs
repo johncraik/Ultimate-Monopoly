@@ -20,9 +20,14 @@ public enum AdminActionType
     GameDrawn,
     GameCancelled,
     GameDeleted,
+    GameRefresh,
 
     // Config
     RulesUpdated,
     TurnTaxUpdated,
-    SettingsUpdated
+    SettingsUpdated,
+
+    // Appended last: AdminActionType is persisted as int, so new values must go at the end to keep
+    // existing AdminActionLog rows' values stable.
+    GameReverted
 }

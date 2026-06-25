@@ -2,7 +2,7 @@ using JC.Core.Models;
 using JC.Identity.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using UltimateMonopoly.Areas.Admin.Models.ViewModels;
+using UltimateMonopoly.Areas.Admin.Models.ViewModels.Users;
 using UltimateMonopoly.Areas.Admin.Services;
 using UltimateMonopoly.Data;
 using UltimateMonopoly.Services;
@@ -21,8 +21,7 @@ public class DetailsModel : PageModel
         _profanity = profanity;
         _userInfo = userInfo;
     }
-
-    [BindProperty(SupportsGet = true)]
+    
     public string UserId { get; set; } = "";
 
     [BindProperty]
@@ -42,8 +41,10 @@ public class DetailsModel : PageModel
     // Mirrors the service guard: a plain Admin can't restrict or disable a SystemAdmin (only SystemAdmins can moderate staff).
     public bool CanModerateTarget => IsSystemAdmin || !TargetIsSystemAdmin;
 
-    public async Task<IActionResult> OnGetAsync()
+    public async Task<IActionResult> OnGetAsync(string userId)
     {
+        UserId = userId;
+        
         var user = await _users.GetUserById(UserId);
         if (user == null) return NotFound();
 
@@ -54,8 +55,10 @@ public class DetailsModel : PageModel
 
     // ---- Section 1: user-editable ----
 
-    public async Task<IActionResult> OnPostDisplayNameAsync()
+    public async Task<IActionResult> OnPostDisplayNameAsync(string userId)
     {
+        UserId = userId;
+        
         var user = await _users.GetUserById(UserId);
         if (user == null) return NotFound();
         User = user;
@@ -74,8 +77,10 @@ public class DetailsModel : PageModel
         return RedirectToPage(new { userId = UserId });
     }
 
-    public async Task<IActionResult> OnPostToggleHiddenAsync()
+    public async Task<IActionResult> OnPostToggleHiddenAsync(string userId)
     {
+        UserId = userId;
+        
         var user = await _users.GetUserById(UserId);
         if (user == null) return NotFound();
 
@@ -85,8 +90,10 @@ public class DetailsModel : PageModel
 
     // ---- Section 2: account actions ----
 
-    public async Task<IActionResult> OnPostToggleRestrictedAsync()
+    public async Task<IActionResult> OnPostToggleRestrictedAsync(string userId)
     {
+        UserId = userId;
+        
         var user = await _users.GetUserById(UserId);
         if (user == null) return NotFound();
 
@@ -94,8 +101,10 @@ public class DetailsModel : PageModel
         return RedirectToPage(new { userId = UserId });
     }
 
-    public async Task<IActionResult> OnPostToggleEnabledAsync()
+    public async Task<IActionResult> OnPostToggleEnabledAsync(string userId)
     {
+        UserId = userId;
+        
         var user = await _users.GetUserById(UserId);
         if (user == null) return NotFound();
 
@@ -110,8 +119,10 @@ public class DetailsModel : PageModel
         return RedirectToPage(new { userId = UserId });
     }
 
-    public async Task<IActionResult> OnPostToggleRoleAsync(string role)
+    public async Task<IActionResult> OnPostToggleRoleAsync(string userId, string role)
     {
+        UserId = userId;
+        
         if (!IsSystemAdmin) return Forbid();
         if (role != SystemRoles.Admin && role != SystemRoles.SystemAdmin) return BadRequest();
 
@@ -122,8 +133,10 @@ public class DetailsModel : PageModel
         return RedirectToPage(new { userId = UserId });
     }
 
-    public async Task<IActionResult> OnPostDeleteAsync()
+    public async Task<IActionResult> OnPostDeleteAsync(string userId)
     {
+        UserId = userId;
+        
         if (!IsSystemAdmin) return Forbid();
 
         if (!await _users.DeleteUser(UserId))

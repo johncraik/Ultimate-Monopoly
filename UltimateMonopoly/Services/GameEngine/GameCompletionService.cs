@@ -42,12 +42,12 @@ public class GameCompletionService : IGameCompletionService
     }
 
     public Task DeclareWinner(MP.GameEngine.Services.Framework.GameEngine engine)
-        => ConcludeGame(engine.Cache);
+        => ConcludeGameWithCheck(engine.Cache);
 
     public Task DrawGame(MP.GameEngine.Services.Framework.GameEngine engine)
-        => ConcludeGame(engine.Cache);
-
-    private async Task ConcludeGame(GameCacheModel gameCache)
+        => ConcludeGameWithCheck(engine.Cache);
+    
+    private async Task ConcludeGameWithCheck(GameCacheModel gameCache)
     {
         // Only Players is needed here (outcomes + EndGame). Do NOT eager-include
         // Turns/Snapshots/TurnEvents: four collection includes on one query is a
@@ -61,6 +61,35 @@ public class GameCompletionService : IGameCompletionService
         if(game is null)
             throw new InvalidOperationException("Game not found");
         
+        await ConcludeGame(gameCache, game);
+    }
+
+
+    public async Task<bool> TryDrawGameByAdmin(MP.GameEngine.Services.Framework.GameEngine engine)
+    {
+        var gameCache = engine.Cache;
+        var game = await _repos.GetRepository<Game>()
+            .AsQueryable().FilterDeleted(DeletedQueryType.OnlyActive)
+            .Include(g => g.Players)
+            .FirstOrDefaultAsync(g => g.Id == gameCache.GameId);
+        if(game is null)
+            return false;
+
+        try
+        {
+            await ConcludeGame(gameCache, game);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to draw game {GameId}", game.Id);
+            return false;
+        }
+    }
+    
+    
+    private async Task ConcludeGame(GameCacheModel gameCache, Game game, bool isAdmin = false)
+    {
         //Stats projection (snapshot + turn events → PlayerGameStat per player) runs in its own
         //transaction, decoupled from finishing the game: it is enqueued as a fire-and-forget
         //Hangfire job AFTER this conclude transaction commits (see below), so a failure to
@@ -135,11 +164,12 @@ public class GameCompletionService : IGameCompletionService
         await _repos.BeginTransactionAsync();
         try
         {
+            var userId = isAdmin ? null : IUserInfo.SYSTEM_USER_ID;
             await _repos.GetRepository<Game>()
-                .UpdateAsync(game, IUserInfo.SYSTEM_USER_ID, saveNow: false);
+                .UpdateAsync(game, userId, saveNow: false);
 
             await _repos.GetRepository<GamePlayer>()
-                .UpdateRangeAsync(game.Players, IUserInfo.SYSTEM_USER_ID, saveNow: false);
+                .UpdateRangeAsync(game.Players, userId, saveNow: false);
             
             //Updates stats on AppUser model
             if(!beenProcessed)

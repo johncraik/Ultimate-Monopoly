@@ -1,11 +1,11 @@
 using JC.Core.Extensions;
+using JC.Core.Models;
 using JC.Core.Models.Pagination;
 using JC.Core.Services.DataRepositories;
-using Microsoft.AspNetCore.Identity;
+using JC.Identity.Authentication;
 using Microsoft.EntityFrameworkCore;
 using UltimateMonopoly.Areas.Admin.Enums;
-using UltimateMonopoly.Areas.Admin.Models.ViewModels;
-using UltimateMonopoly.Data;
+using UltimateMonopoly.Areas.Admin.Models.ViewModels.Reports;
 using UltimateMonopoly.Models.DataModels.Social;
 
 namespace UltimateMonopoly.Areas.Admin.Services;
@@ -18,11 +18,15 @@ public class ReportManagementService
 
     public ReportManagementService(IRepositoryManager repos,
         UserManagementService userManagementService,
-        AdminLogService adminLogService)
+        AdminLogService adminLogService,
+        IUserInfo userInfo)
     {
         _repos = repos;
         _userManagementService = userManagementService;
         _adminLogService = adminLogService;
+        
+        if(!userInfo.IsInRole(SystemRoles.Admin) && !userInfo.IsInRole(SystemRoles.SystemAdmin))
+            throw new UnauthorizedAccessException("User is not authorized to access this resource.");
     }
 
     private IQueryable<ReportedUser> QueryReports(string? search, bool asNoTracking, ReportResolution resolution)

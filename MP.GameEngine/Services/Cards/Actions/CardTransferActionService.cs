@@ -19,11 +19,14 @@ namespace MP.GameEngine.Services.Cards.Actions;
 public class CardTransferActionService : ICardActionService<CardTransferAction>
 {
     private readonly DiceService _diceService;
+    private readonly ICardCacheService _cacheService;
 
     /// <summary>Creates the card-transfer handler over the dice seam its Pass dice-off rolls through.</summary>
-    public CardTransferActionService(DiceService diceService)
+    public CardTransferActionService(DiceService diceService,
+        ICardCacheService cacheService)
     {
         _diceService = diceService;
+        _cacheService = cacheService;
     }
 
     /// <summary>Dispatches to the pass / steal flow. Always returns true (a no-op transfer still "applied").</summary>
@@ -49,19 +52,24 @@ public class CardTransferActionService : ICardActionService<CardTransferAction>
     /// </summary>
     private async Task Pass(Framework.GameEngine engine, PlayerModel holder, CardTransferAction action, CancellationToken ct)
     {
-        if (holder.Cards.Count == 0 || action.DiceOff is null)
+        if (holder.CardInstances.Count == 0 || action.DiceOff is null)
             return;
 
         var recipient = await _diceService.ResolveDiceOffTarget(engine, holder, action.DiceOff, ct);
         if (recipient is null || recipient.PlayerId == holder.PlayerId)
             return;
 
-        var card = await PickCard(engine, holder.PlayerId, holder.Cards, "Pass a card", "Choose one of your cards to pass.", ct);
+        var holderCards = await holder.GetCards(_cacheService); 
+        var card = await PickCard(engine, holder.PlayerId, holderCards, "Pass a card", "Choose one of your cards to pass.", ct);
         if (card is null)
             return;
 
-        holder.Cards.Remove(card);
-        recipient.Cards.Add(card);
+        var instance = holder.CardInstances.FirstOrDefault(i => i.CardId == card.CardId);
+        if (instance is null)
+            return;
+
+        holder.CardInstances.Remove(instance);
+        recipient.CardInstances.Add(instance);
     }
 
     /// <summary>
@@ -71,15 +79,20 @@ public class CardTransferActionService : ICardActionService<CardTransferAction>
     private async Task Steal(Framework.GameEngine engine, PlayerModel holder, CancellationToken ct)
     {
         var target = (await CardActionHelper.ResolveTargets(engine, holder, PlayerTarget.ChosenPlayer, ct)).FirstOrDefault();
-        if (target is null || target.PlayerId == holder.PlayerId || target.Cards.Count == 0)
+        if (target is null || target.PlayerId == holder.PlayerId || target.CardInstances.Count == 0)
             return;
 
-        var card = await PickCard(engine, holder.PlayerId, target.Cards, "Steal a card", "Choose a card to steal.", ct);
+        var targetCards = await target.GetCards(_cacheService);
+        var card = await PickCard(engine, holder.PlayerId, targetCards, "Steal a card", "Choose a card to steal.", ct);
         if (card is null)
             return;
 
-        target.Cards.Remove(card);
-        holder.Cards.Add(card);
+        var instance = target.CardInstances.FirstOrDefault(i => i.CardId == card.CardId);
+        if (instance is null)
+            return;
+
+        target.CardInstances.Remove(instance);
+        holder.CardInstances.Add(instance);
     }
 
     /// <summary>

@@ -1,9 +1,10 @@
 using JC.Core.Extensions;
 using UltimateMonopoly.Areas.Admin.Enums;
+using UltimateMonopoly.Areas.Admin.Models.ViewModels.Users;
 using UltimateMonopoly.Data;
 using UltimateMonopoly.Models.DataModels.Social;
 
-namespace UltimateMonopoly.Areas.Admin.Models.ViewModels;
+namespace UltimateMonopoly.Areas.Admin.Models.ViewModels.Reports;
 
 public class ReportViewModel
 {

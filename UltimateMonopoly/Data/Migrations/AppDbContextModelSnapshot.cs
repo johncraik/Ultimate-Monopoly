@@ -839,6 +839,10 @@ namespace UltimateMonopoly.Data.Migrations
                     b.Property<DateTime>("AuditDate")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<string>("EntityKey")
+                        .HasMaxLength(512)
+                        .HasColumnType("varchar(512)");
+
                     b.Property<string>("TableName")
                         .HasMaxLength(256)
                         .HasColumnType("varchar(256)");
@@ -858,6 +862,8 @@ namespace UltimateMonopoly.Data.Migrations
                     b.HasIndex("TableName");
 
                     b.HasIndex("UserId");
+
+                    b.HasIndex("TableName", "EntityKey");
 
                     b.ToTable("AuditEntries");
                 });

@@ -16,6 +16,9 @@
     </div>
 </div>
 
+<alert type="Success" message="@(TempData["Success"] as string)" />
+<alert type="Error" message="@(TempData["Error"] as string)" />
+
 @* Filters + searches. A plain GET form is the no-JS fallback; game-management.js intercepts changes
    and re-fetches just the table partial (the ?handler=Table endpoint). *@
 <form id="game-filters" method="get" class="card mb-3">

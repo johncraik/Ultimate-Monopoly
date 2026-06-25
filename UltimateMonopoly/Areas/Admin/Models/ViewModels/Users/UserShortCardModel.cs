@@ -1,4 +1,4 @@
-namespace UltimateMonopoly.Areas.Admin.Models.ViewModels;
+namespace UltimateMonopoly.Areas.Admin.Models.ViewModels.Users;
 
 /// <summary>Backs the <c>_UserShortCard</c> partial — a compact user summary (name, email, state) +
 /// a link to the full Details page. <c>User</c> is null when the account has been deleted, in which case

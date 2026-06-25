@@ -16,9 +16,9 @@ public class DetailsModel : PageModel
 
     // The rule's structural identity (from the row's data-href). Point is bound as a string so an
     // empty value (a point-less rule) cleanly round-trips to null.
-    [BindProperty(SupportsGet = true)] public int Section { get; set; }
-    [BindProperty(SupportsGet = true)] public int Rule { get; set; }
-    [BindProperty(SupportsGet = true)] public string? Point { get; set; }
+    public int Section { get; set; }
+    public int Rule { get; set; }
+    public string? Point { get; set; }
 
     // The editable fields.
     [BindProperty] public string Title { get; set; } = "";
@@ -31,23 +31,31 @@ public class DetailsModel : PageModel
 
     private char? PointChar => string.IsNullOrEmpty(Point) ? null : Point[0];
 
-    public async Task<IActionResult> OnGetAsync()
+    public async Task<IActionResult> OnGetAsync(int section, int rule, string? point = null)
     {
-        var rule = await _rules.GetRule(Section, Rule, PointChar);
-        if (rule == null) return NotFound();
+        Section = section;
+        Rule = rule;
+        Point = point;
+        
+        var gameRule = await _rules.GetRule(Section, Rule, PointChar);
+        if (gameRule == null) return NotFound();
 
-        RuleData = rule;
-        Title = rule.Title;
-        Description = rule.RuleDescription;
-        IsHidden = rule.IsHidden;
+        RuleData = gameRule;
+        Title = gameRule.Title;
+        Description = gameRule.RuleDescription;
+        IsHidden = gameRule.IsHidden;
         return Page();
     }
 
-    public async Task<IActionResult> OnPostAsync()
+    public async Task<IActionResult> OnPostAsync(int section, int rule, string? point = null)
     {
-        var rule = await _rules.GetRule(Section, Rule, PointChar);
-        if (rule == null) return NotFound();
-        RuleData = rule;
+        Section = section;
+        Rule = rule;
+        Point = point;
+        
+        var gameRule = await _rules.GetRule(Section, Rule, PointChar);
+        if (gameRule == null) return NotFound();
+        RuleData = gameRule;
 
         if (string.IsNullOrWhiteSpace(Title))
             ModelState.AddModelError(nameof(Title), "Title is required.");

@@ -9,6 +9,16 @@
     const turnSel = document.getElementById('state-turn-select');
     const playerSel = document.getElementById('state-player-select');
 
+    // Keep the Danger Zone revert (hidden input + the "Turn N" labels) in lockstep with the turn selector,
+    // so the modal always confirms — and the POST always targets — the turn currently shown in the dropdown.
+    const revertInput = document.getElementById('revert-turn-input');
+    const revertLabels = document.querySelectorAll('[data-revert-turn]');
+    function syncRevert() {
+        if (!turnSel) return;
+        if (revertInput) revertInput.value = turnSel.value;
+        revertLabels.forEach(el => { el.textContent = turnSel.value; });
+    }
+
     const spinner = '<div class="text-center text-body-secondary py-5"><span class="spinner-border spinner-border-sm me-2"></span>Loading…</div>';
     const errorHtml = '<div class="text-center text-danger py-5">Couldn\'t load this turn.</div>';
 
@@ -28,7 +38,7 @@
         }
     }
 
-    if (turnSel) turnSel.addEventListener('change', load);
+    if (turnSel) turnSel.addEventListener('change', () => { syncRevert(); load(); });
     if (playerSel) playerSel.addEventListener('change', load);
 
     // Deal tab toggle — replicate the live deal-tab.js view switch (no hub): clicking a candidate reveals
@@ -47,5 +57,6 @@
         }
     });
 
+    syncRevert();
     load();
 })();

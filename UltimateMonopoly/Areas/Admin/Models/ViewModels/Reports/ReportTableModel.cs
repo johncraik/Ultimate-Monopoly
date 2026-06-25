@@ -1,7 +1,7 @@
 using JC.Core.Models.Pagination;
 using UltimateMonopoly.Areas.Admin.Enums;
 
-namespace UltimateMonopoly.Areas.Admin.Models.ViewModels;
+namespace UltimateMonopoly.Areas.Admin.Models.ViewModels.Reports;
 
 public class ReportTableModel
 {

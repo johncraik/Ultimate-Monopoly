@@ -82,14 +82,26 @@ public class CardModel
         Conditions = model.Conditions.Select(c => new CardCondition(c)).ToList().AsReadOnly();
     }
 
-    
-    
+    public CardModel(CardModel model, PlayerCardInstance instance) 
+        : this(model)
+    {
+        DrawnOnTurn = instance.DrawnOnTurn;
+        
+        var group = Groups.FirstOrDefault(x => x.GroupId == instance.ChosenGroupId);
+        if(group == null) return;
+        
+        group.IsChosenGroup = true;
+        group.TurnsRemaining = instance.TurnsRemaining;
+    }
+
+
+
     public string GetDisplayText(GameCacheModel gameCache, string playerId)
     {
         var roundingRule = gameCache.RoundingRule;
         var playerCap = gameCache.Game.PlayerPercentCap(playerId);
 
-        return Groups.Aggregate(CardText, (current, g) 
+        return Groups.Aggregate(CardText, (current, g)
             => current.FormatCardText(g, playerCap, roundingRule, false));
     }
 }

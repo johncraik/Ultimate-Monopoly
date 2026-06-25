@@ -1,10 +1,11 @@
 using Microsoft.Extensions.Caching.Memory;
+using MP.GameEngine.Abstractions.Cards;
 using MP.GameEngine.Models.Snapshot.Cards;
 using UltimateMonopoly.Services.Imports;
 
 namespace UltimateMonopoly.Services.Cache;
 
-public class CardCacheService
+public class CardCacheService : ICardCacheService
 {
     private readonly IMemoryCache _memoryCache;
     private readonly CardImportService _cardImportService;
@@ -29,11 +30,11 @@ public class CardCacheService
             return await _cardImportService.ImportCards();
         }) ?? throw new InvalidOperationException("Failed to get all cards");
     
-    public async Task<CardModel> GetCard(string cardId)
+    public async Task<CardModel?> GetCard(string cardId)
         => await _memoryCache.GetOrCreateAsync(GetKey(cardId), async entry =>
         {
             entry.SlidingExpiration = CardExpiration;
             var cards = await GetCards();
             return cards.FirstOrDefault(c => c.CardId == cardId);
-        }) ?? throw new InvalidOperationException("Failed to get card");
+        });
 }

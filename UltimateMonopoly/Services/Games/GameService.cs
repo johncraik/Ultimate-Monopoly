@@ -40,7 +40,7 @@ public class GameService
     }
 
     private IQueryable<Game> QueryGames(bool asNoTracking, bool includePlayers, bool includeBoardSkin, bool includeTurns,
-        bool includeSnapshots, bool? joinedGames, GameState? state)
+        bool includeSnapshots, bool? joinedGames, GameState? state, bool isAdmin = false)
     {
         var query = _repos.GetRepository<Game>()
             .AsQueryable().FilterDeleted(DeletedQueryType.OnlyActive);
@@ -68,10 +68,11 @@ public class GameService
             query = joinedGames.Value
                 ? query.Where(g => g.CreatedById != _userInfo.UserId) 
                 : query.Where(g => g.CreatedById == _userInfo.UserId);
+
+        if (!isAdmin)
+            query = query.Where(g => g.Players.Any(p => p.UserId == _userInfo.UserId));
         
-        return query
-            .Where(g => g.Players.Any(p => p.UserId == _userInfo.UserId))
-            .OrderByDescending(g => g.CreatedUtc);
+        return query.OrderByDescending(g => g.CreatedUtc);
     }
 
     public async Task<List<GameViewModel>> GetAllMyGames(bool asNoTracking = true, bool includeTurns = true,
@@ -197,6 +198,26 @@ public class GameService
         return true;
     }
 
+    public async Task ForceRefreshAsAdmin(string gameId)
+    {
+        //No checks needed
+        _notifier.ForceRefresh(gameId);
+    }
+
+    /// <summary>
+    /// Resets a game's live runtime after an out-of-band DB change (e.g. an admin turn-revert): evicts the
+    /// cached working copy, stops the pump (fire-and-forget — it may be mid-work or wedged), and tells
+    /// connected clients to reload. The next access then rehydrates from the <i>current</i> snapshot rather
+    /// than now-stale in-memory state — without this, a reverted in-play game keeps its old cache/pump and
+    /// duplicate-keys on the next snapshot write. Mirrors the cancel path's "tear down after the DB change".
+    /// </summary>
+    public void ResetRuntimeAsAdmin(string gameId)
+    {
+        _cacheService.Invalidate(gameId);
+        _ = _executor.StopAsync(gameId).AsTask();
+        _notifier.ForceRefresh(gameId);
+    }
+
 
     public async Task<bool> GameInPlay(string gameId)
         => await QueryGames(true, false, false, false, 
@@ -208,17 +229,18 @@ public class GameService
                 false, null, GameState.Finished)
             .FirstOrDefaultAsync(g => g.Id == gameId);
 
-    public async Task<bool> TryCancelGame(string gameId)
+    public async Task<bool> TryCancelGame(string gameId, bool isAdmin = false)
     {
         //Get the game as tracking, no includes, created only (no joined games):
-        var game = await QueryGames(false, false, false, false, false, false, null)
+        var game = await QueryGames(false, false, false, false, 
+                false, isAdmin ? null : false, null, isAdmin)
             .FirstOrDefaultAsync(g => g.Id == gameId && (g.State == GameState.Setup || g.State == GameState.InPlay));
         if(game is null)
             return false;
 
         var clearInPlayGame = game.State == GameState.InPlay;
         
-        var result = game.CancelGame();
+        var result = game.CancelGame(isAdmin);
         if(!result) return false;
         
         await _repos.GetRepository<Game>()
@@ -235,12 +257,16 @@ public class GameService
         return true;
     }
 
-    public async Task<bool> TryDeleteGame(string gameId)
+    public async Task<bool> TryDeleteGame(string gameId, bool isAdmin = false)
     {
-        var game = await QueryGames(false, true, false, false, false, false, GameState.Cancelled)
+        var game = await QueryGames(false, true, false, false, 
+                false, isAdmin ? null : false, isAdmin ? null : GameState.Cancelled, isAdmin)
             .FirstOrDefaultAsync(g => g.Id == gameId);
         if(game is null)
             return false;
+        
+        if(isAdmin && game.State != GameState.Cancelled && game.State != GameState.Finished && game.State != GameState.Finished)
+            return false; 
         
         var players = game.Players.ToList();
         var turns = await _repos.GetRepository<GameTurn>()

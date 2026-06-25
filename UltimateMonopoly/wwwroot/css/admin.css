@@ -197,32 +197,54 @@
     border-style: dashed;
 }
 
-/* Turns table — fixed-width id / number / download columns; the player name absorbs the rest. */
+/* Turns table — fixed-width id / number / size / download columns; the player name absorbs the rest. */
 .admin-turns-table .turn-col-num { width: 5rem; }
+.admin-turns-table .turn-col-size { width: 6rem; white-space: nowrap; }
 .admin-turns-table .turn-col-dl { width: 6rem; }
 
-/* Game-details read-only state drawer — fixed near-full height; the stacked profile / game-info / board
-   scroll inside it. */
-.admin-game-state {
-    height: 90vh;
+/* Audit table — fixed-width id + flag columns; rows expand a detail row on click. */
+.admin-audit-table .admin-id-col { width: 8rem; white-space: normal; }
+.admin-audit-table .audit-col-flag { width: 4.5rem; }
+.admin-audit-table .audit-row { cursor: pointer; }
+/* The expanded row's detail panel has its own background, so don't double-paint the table-hover. */
+.admin-audit-table .audit-detail:hover > td { background: transparent; }
+/* Pretty-printed ActionData JSON in the expanded row. Wrap long lines (a GameSnapshot's StateJson is one
+   giant value) and cap the height, so a huge blob scrolls within its box instead of blowing out the table. */
+.admin-audit-json {
+    max-height: 22rem;
+    max-width: 100%;
+    overflow: auto;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    padding: .75rem;
+    background: var(--bs-body-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
+    font-size: .8125rem;
 }
-/* Keep the turn / player dropdowns pinned to the top while the body scrolls. */
-.admin-game-state .card-header {
+
+/* Game-details read-only state — the turn / player selector card pins to the top of the scrolling
+   content while the three state cards (profile / game-info / board) scroll past it. */
+.admin-state-controls {
     position: sticky;
     top: 0;
-    z-index: 2;
+    z-index: 3;
 }
-.admin-game-state .card-body {
+/* Player-profile card — fixed near-full height; the profile scrolls inside it. The game-info and board
+   cards below have natural height and scroll with the page. */
+.admin-state-profile {
+    height: 90vh;
+}
+.admin-state-profile .card-body {
     overflow-y: scroll;
     overflow-x: hidden;
 }
 /* The reused profile pins its tab bar with position:fixed for the live drawer. Here make it sticky so it
-   stays at the bottom of the profile section while it scrolls, then scrolls away as the game-info / board
-   below come into view (sticky is constrained to the profile's own box). */
-.admin-game-state .pp-view {
+   stays at the bottom of the profile card while the profile scrolls (sticky is constrained to that card). */
+.admin-state-profile .pp-view {
     padding-bottom: 0;
 }
-.admin-game-state .pp-tabbar {
+.admin-state-profile .pp-tabbar {
     position: sticky;
     bottom: 0;
 }

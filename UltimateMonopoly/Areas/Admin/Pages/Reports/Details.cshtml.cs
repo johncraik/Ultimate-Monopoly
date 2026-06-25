@@ -3,7 +3,7 @@ using JC.Identity.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using UltimateMonopoly.Areas.Admin.Enums;
-using UltimateMonopoly.Areas.Admin.Models.ViewModels;
+using UltimateMonopoly.Areas.Admin.Models.ViewModels.Reports;
 using UltimateMonopoly.Areas.Admin.Services;
 
 namespace UltimateMonopoly.Areas.Admin.Pages.Reports;
@@ -19,7 +19,6 @@ public class DetailsModel : PageModel
         _userInfo = userInfo;
     }
 
-    [BindProperty(SupportsGet = true)]
     public string ReportId { get; set; } = "";
 
     public ReportViewModel Report { get; private set; } = default!;
@@ -49,8 +48,10 @@ public class DetailsModel : PageModel
         && Report.Resolution != ReportResolution.AccountDeleted
         && Report.Resolution != ReportResolution.AllActions;
 
-    public async Task<IActionResult> OnGetAsync()
+    public async Task<IActionResult> OnGetAsync(string reportId)
     {
+        ReportId = reportId;
+        
         var report = await _reports.GetReportById(ReportId);
         if (report == null) return NotFound();
 
@@ -61,29 +62,37 @@ public class DetailsModel : PageModel
     // The Try* methods are authoritative (resolution-state + tier/peer guards); the UI gates are
     // defence-in-depth. Each redirects back with a TempData message.
 
-    public async Task<IActionResult> OnPostHandleAsync()
+    public async Task<IActionResult> OnPostHandleAsync(string reportId)
     {
+        ReportId = reportId;
+        
         if (await _reports.TryHandleReport(ReportId)) TempData["Success"] = "Report marked as handled.";
         else TempData["Error"] = "Couldn't mark this report as handled — only an open report can be handled.";
         return RedirectToPage(new { reportId = ReportId });
     }
 
-    public async Task<IActionResult> OnPostRestrictAsync()
+    public async Task<IActionResult> OnPostRestrictAsync(string reportId)
     {
+        ReportId = reportId;
+        
         if (await _reports.TryRestrictUser(ReportId)) TempData["Success"] = "Reported user restricted.";
         else TempData["Error"] = "Couldn't restrict this user — the report may already be restricted, or you can't moderate this account.";
         return RedirectToPage(new { reportId = ReportId });
     }
 
-    public async Task<IActionResult> OnPostDisableAsync()
+    public async Task<IActionResult> OnPostDisableAsync(string reportId)
     {
+        ReportId = reportId;
+        
         if (await _reports.TryDisableUser(ReportId)) TempData["Success"] = "Reported user disabled.";
         else TempData["Error"] = "Couldn't disable this user — the account may already be disabled, or you can't moderate this account.";
         return RedirectToPage(new { reportId = ReportId });
     }
 
-    public async Task<IActionResult> OnPostDeleteAsync()
+    public async Task<IActionResult> OnPostDeleteAsync(string reportId)
     {
+        ReportId = reportId;
+        
         if (!IsSystemAdmin) return Forbid();
 
         if (await _reports.TryDeleteUser(ReportId)) TempData["Success"] = "Reported user deleted.";

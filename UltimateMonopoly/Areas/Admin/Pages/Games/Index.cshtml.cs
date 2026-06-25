@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using MP.GameEngine.Enums.Games;
-using UltimateMonopoly.Areas.Admin.Models.ViewModels;
+using UltimateMonopoly.Areas.Admin.Models.ViewModels.Games;
 using UltimateMonopoly.Areas.Admin.Services;
 
 namespace UltimateMonopoly.Areas.Admin.Pages.Games;

@@ -1,7 +1,7 @@
 using JC.Core.Models.Pagination;
 using MP.GameEngine.Enums.Games;
 
-namespace UltimateMonopoly.Areas.Admin.Models.ViewModels;
+namespace UltimateMonopoly.Areas.Admin.Models.ViewModels.Games;
 
 public class GameTableModel
 {

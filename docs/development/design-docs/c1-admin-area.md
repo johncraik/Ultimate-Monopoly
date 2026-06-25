@@ -4,9 +4,10 @@ The operational backbone for running the app in public: the admin UI + services 
 SystemAdmins/Admins **see what's happening and act on it**. This is the single largest V1 piece
 (roadmap C1), so it gets its own doc and a **phased build** — not one shot.
 
-**Status:** design. Phased (see §13). Some areas are deliberately **deferred** but planned here:
-the **Audit Trail** (§9 — blocked on a JC.Core `AuditEntry.EntityKey` column John is adding) and the
-**log viewers** (§10 — admin/comms logs, several gated on A1/E1). Everything else is build-ready.
+**Status:** design. Phased (see §13). Phases 1–5 are built. The **Audit Trail** (§9) is **now unblocked** —
+the JC.Core `AuditEntry.EntityKey` column has landed — and is the active next phase, alongside the
+**log viewers** (§10 — admin/comms logs, several gated on A1/E1) and the reusable **Recent Activity panel**
+(§7.3) those feed.
 
 ---
 
@@ -186,6 +187,55 @@ public enum ReportResolution { Open = 0, AccountRestricted = 1, AccountDisabled 
 - **Quick actions** (both tiers): apply **Restricted**, **disable** the reported user — reuse §6.
   **SystemAdmin** additionally gets **delete** (§6.3). Every action → resolution flag + `AdminActionLog`.
 
+### 7.3 Recent Activity panel — a reusable composition
+
+The Report-Details "recent activity" mini-dashboard (the placeholder under the report info) is built as a
+**reusable, user-keyed panel** — a composition of independent activity streams, each a reusable atom owned
+by its own area (Audit §9, Logs §10, Games §8). It surfaces on **Reports → Details** (the reported user)
+first, and is reusable on **User → Details** and anywhere a per-user activity view is wanted; nothing here
+is bespoke to Reports — the reported user is just a user.
+
+**The reusable-atom contract** (generalises the `_UsersTable` + `FullTable` pattern). Every stream exposes:
+- A **scoped query** bound to a user id (games by host **or** player; audit `WHERE UserId`; admin-log
+  `WHERE CreatedById`; comms by recipient), returning a `PagedList<T>` (the dedicated full page) or a
+  page-sized preview (the panel).
+- A **reusable table partial** — the *same* partial the stream's full page renders, populated from a list
+  of items (mirrors how `_UsersTable` / `_GamesTable` / etc. are model-driven). The panel just hands each
+  partial its scoped, page-sized list — it owns no queries of its own.
+
+**The streams, source, auth gate, and preview size:**
+
+| Stream | Source (scoped to user X) | Visible to | Size |
+|---|---|---|---|
+| Message logs | Messaging logs for X | Admin or SystemAdmin — *empty until E1* | 15 |
+| Recent games | `GameManagementService` — games where X is **host OR player** (`hostIdSearch` = `playerIdSearch` = X) | **SystemAdmin only** | 10 |
+| Admin logs | `AdminActionLog` where X is the **acting admin** (`CreatedById = X`) | Admin or SystemAdmin — **and** only when X **has ≥1 entry OR currently holds Admin/SystemAdmin** | 5 |
+| Email logs | `EmailLog` (recipient X) | Admin or SystemAdmin — *empty until A1* | 5 |
+| Notification logs | `Notification` / `NotificationLog` (recipient X) | Admin or SystemAdmin | 5 |
+| User trail | `AuditEntries WHERE UserId = X` (X's own audited actions, §9.3) | Admin or SystemAdmin | 30 |
+
+- **Auth split (important).** Report management is **Admin *or* SystemAdmin**, but **game management is
+  SystemAdmin-only** — so the **Recent games** stream renders **only when the viewing admin is a
+  SystemAdmin**. Every other stream is visible to any admin-level role.
+- **Admin-logs visibility rule.** Show the section when the viewed user **currently holds Admin/SystemAdmin
+  OR has ≥1 admin-log entry** — a user may have been an admin previously; if they aren't now but have
+  historical action logs (as the actor), those still surface. *(`CreatedById = X` = the actions X took as an
+  admin; moderation-history "actions taken *against* X" via `TargetId` is a distinct possible stream, not
+  included here.)*
+- **Gated streams render but stay empty** until their backing feature lands (Email → A1, Message → E1),
+  consistent with §10.
+
+**Layout** (the panel's internal structure; its placement inside Reports/User Details is a UI concern):
+- **Two 50/50 columns**
+  - **Left:** Message logs (15) · Recent games (10, *SystemAdmin only*)
+  - **Right:** Admin logs (5, *gated*) · Email logs (5) · Notification logs (5)
+- **Full-width below:** User trail (30)
+
+**Build note.** The panel lands incrementally — each stream appears as its backing atom is built. Recent
+games, notifications, admin logs, and the user trail are buildable now; email/message fill in with A1/E1.
+Reuse demands the atoms come first: build each stream's scoped query + table partial (§8/§9/§10), then the
+panel and the standalone pages both compose them.
+
 ---
 
 ## 8. Game Management *(SystemAdmin only)*
@@ -202,7 +252,9 @@ public enum ReportResolution { Open = 0, AccountRestricted = 1, AccountDisabled 
 
 ### 8.2 Admin game list + actions
 - New paginated **admin query**: *all* games (not per-user) — id, name, **creator** (id + display),
-  state, **players (+ user ids)**, board, turn count, timestamps.
+  state, **players (+ user ids)**, board, turn count, timestamps. The same query also serves a
+  **per-user** scope (pass a user id as both `hostIdSearch` and `playerIdSearch` → games where they are
+  **host OR player**), which is the **Recent games** atom the §7.3 activity panel reuses — SystemAdmin-only.
 - **State-gated actions** (each → `AdminActionLog` + a confirm):
 
   | State | Actions |
@@ -222,16 +274,15 @@ public enum ReportResolution { Open = 0, AccountRestricted = 1, AccountDisabled 
 
 ---
 
-## 9. Audit Trail *(DEFERRED — blocked on JC.Core `EntityKey`)*
+## 9. Audit Trail *(unblocked — `EntityKey` has landed)*
 
-Planned in full so it's ready when the column lands.
-
-### 9.1 The unblocking change
-`AuditEntry` today is `{ Action, AuditDate, UserId, UserName, TableName, ActionData(JSON) }` — **no
-queryable record id**, so per-record history is impossible (the PK only lives in the create entry's
-JSON). John is adding **`EntityKey`** to JC.Core's `AuditEntry`: a **comma-separated list** of the
-affected record's primary-key value(s) (composite keys → `"42,7"`). With it, per-record grouping is a
-plain `WHERE TableName=… AND EntityKey=…`.
+### 9.1 The unblocking change *(done)*
+`AuditEntry` was `{ Action, AuditDate, UserId, UserName, TableName, ActionData(JSON) }` — **no
+queryable record id**, so per-record history was impossible (the PK only lived in the create entry's
+JSON). JC.Core's `AuditEntry` now has **`EntityKey`**: a **comma-separated list** of the affected record's
+primary-key value(s) (composite keys → `"42,7"`). With it, per-record grouping is a plain
+`WHERE TableName=… AND EntityKey=…`. *(Shipped as `varchar(512)` so the `(TableName, EntityKey)` index
+stays within MySQL's 3072-byte limit.)*
 
 ### 9.2 Data trail (grouped by table)
 - **Tables** — distinct `TableName` from `AuditEntries`, with counts.
@@ -314,8 +365,12 @@ Each phase is a self-contained slice (and a section of this doc):
 4. **Game Management** — `settings.json` + `SettingsService` + `GameRetentionJob`; admin game list +
    state-gated actions (+ declare-draw, + `TryDeleteGame` Finished).
 5. **Rules + Turn Tax** — editors over `RuleCatalog.TryUpdateRules` + `TurnTaxService.Save`.
-6. **Audit Trail** *(deferred)* — once `AuditEntry.EntityKey` lands (§9).
-7. **Logs** *(deferred)* — `AdminActionLog` viewer + Notifications now; Email with A1; Messaging with E1 (§10).
+6. **Audit Trail** — `AuditEntry.EntityKey` has landed, so the Data trail is unblocked (§9). Yields the
+   **User-trail atom** the §7.3 panel consumes.
+7. **Logs** — `AdminActionLog` viewer + Notifications now; Email with A1; Messaging with E1 (§10). Each
+   viewer is a **reusable atom** (scoped query + table partial) the §7.3 Recent Activity panel composes.
+8. **Recent Activity panel** (§7.3) — assemble the per-user composition once its atoms (User trail,
+   AdminActionLog, Notifications, Recent games) exist; drop it into Reports → Details (and User → Details).
 
 ---
 

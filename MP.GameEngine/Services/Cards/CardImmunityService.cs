@@ -1,3 +1,4 @@
+using MP.GameEngine.Abstractions.Cards;
 using MP.GameEngine.Enums.Cards;
 using MP.GameEngine.Models.Cards.Actions;
 using MP.GameEngine.Models.Prompts.PromptTypes;
@@ -8,6 +9,13 @@ namespace MP.GameEngine.Services.Cards;
 
 public class CardImmunityService
 {
+    private readonly ICardCacheService _cacheService;
+
+    public CardImmunityService(ICardCacheService cacheService)
+    {
+        _cacheService = cacheService;
+    }
+    
     public async Task<bool> CheckSwappingMoneyImmunity(Framework.GameEngine engine, PlayerModel subject,
         CancellationToken ct)
         => await CheckImmunity(engine, subject, CardImmunity.SwappingMoney, ct);
@@ -31,10 +39,11 @@ public class CardImmunityService
 
     private async Task<bool> CheckImmunity(Framework.GameEngine engine, PlayerModel subject, CardImmunity immunity, CancellationToken ct)
     {
-        var immunityCard = subject.Cards.FirstOrDefault(c =>
-            c.Groups.SelectMany(g => g.Actions)
-                .OfType<ImmunityAction>()
-                .Any(a => a.Immunity == immunity));
+        var immunityCard = (await subject.GetCards(_cacheService))
+            .FirstOrDefault(c => 
+                c.Groups.SelectMany(g => g.Actions)
+                    .OfType<ImmunityAction>()
+                    .Any(a => a.Immunity == immunity));
         if(immunityCard == null) return false;
 
         var response = await engine.PromptProvider.RequestAsync(new CardOptionPrompt

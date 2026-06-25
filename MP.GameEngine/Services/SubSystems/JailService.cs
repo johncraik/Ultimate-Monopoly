@@ -1,3 +1,4 @@
+using MP.GameEngine.Abstractions.Cards;
 using MP.GameEngine.Enums;
 using MP.GameEngine.Enums.Cards;
 using MP.GameEngine.Enums.Players;
@@ -17,16 +18,19 @@ public class JailService
     private readonly TransactionService _transactionService;
     private readonly CardTriggerService _triggerService;
     private readonly CardImmunityService _immunityService;
+    private readonly ICardCacheService _cacheService;
 
     public JailService(MovementService movementService,
         TransactionService transactionService,
         CardTriggerService triggerService,
-        CardImmunityService immunityService)
+        CardImmunityService immunityService,
+        ICardCacheService cacheService)
     {
         _movementService = movementService;
         _transactionService = transactionService;
         _triggerService = triggerService;
         _immunityService = immunityService;
+        _cacheService = cacheService;
     }
     
     public async Task<bool> SendPlayerToJail(Framework.GameEngine engine, PlayerModel player, CancellationToken ct)
@@ -109,7 +113,7 @@ public class JailService
         //Round the cost for front-end prompt:
         var jailCost = MoneyHelper.NormaliseAmount(player.JailCost, engine.Cache.RoundingRule, FinancialReason.JailFee);
 
-        var getOutOfJailCard = player.GetOutOfJailCard();
+        var getOutOfJailCard = await player.GetOutOfJailCard(_cacheService);
         var response = await engine.PromptProvider.RequestAsync(new LeaveJailPrompt
         {
             PlayerId = player.PlayerId,

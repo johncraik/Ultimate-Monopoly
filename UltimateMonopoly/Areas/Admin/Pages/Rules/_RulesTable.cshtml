@@ -38,7 +38,7 @@ else
                     <tbody>
                         @foreach (var r in group)
                         {
-                            <tr data-href="/Admin/Rules/Details?section=@r.Section&rule=@r.Rule&point=@r.Point">
+                            <tr data-href="/Admin/Rules/Details/@r.Section/@r.Rule@(r.Point is null ? "" : $"/{r.Point}")">
                                 <td class="rule-col-section">@r.Section</td>
                                 <td class="rule-col-rule">@r.Rule</td>
                                 <td class="rule-col-point">@(r.Point?.ToString() ?? "—")</td>

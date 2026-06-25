@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using MP.GameEngine.Abstractions.Cards;
 using MP.GameEngine.Enums;
 using MP.GameEngine.Enums.Cards;
 using MP.GameEngine.Enums.Players;
@@ -68,7 +69,9 @@ public class PlayerModel
     /// <summary>
     /// Cards owned by the player (keep until needed/played upon condition)
     /// </summary>
-    public List<CardModel> Cards { get; set; } = [];
+    //public List<CardModel> Cards { get; set; } = [];
+    public List<PlayerCardInstance> CardInstances { get; set; } = [];
+    
 
     /// <summary>
     /// All loans taken out by the player, including those that have been paid off
@@ -115,7 +118,8 @@ public class PlayerModel
         IsBankrupt = model.IsBankrupt;
         FreeHotels = model.FreeHotels;
 
-        Cards = model.Cards.Select(c => new CardModel(c)).ToList();
+        //Cards = model.Cards.Select(c => new CardModel(c)).ToList();
+        CardInstances = model.CardInstances.Select(c => new PlayerCardInstance(c)).ToList();
         Loans = model.Loans.Select(l => new LoanModel(l)).ToList();
 
         FPHandedInSets = [..model.FPHandedInSets];
@@ -197,33 +201,65 @@ public class PlayerModel
 
     #region Cards
 
-    public CardModel? GetOutOfJailCard()
-        => Cards.FirstOrDefault(c => c.Groups.Any(g => 
-            g.Actions.Any(a =>
+    public async Task<List<CardModel>> GetCards(ICardCacheService cache)
+    {
+        var cards = await cache.GetCards();
+        return CardInstances
+            .Select(i =>
             {
-                if(a is not JailAction j) return false;
-                return j.Kind == JailKind.Release;
-            })));
+                var card = cards.FirstOrDefault(c => c.CardId == i.CardId);
+                return card == null ? null : new CardModel(card, i);
+            })
+            .Where(c => c != null)
+            .ToList()!;
+    }
+    
+    
+    public async Task<CardModel?> GetOutOfJailCard(ICardCacheService cache)
+        => (await cache.GetCards())
+            .FirstOrDefault(c => CardInstances
+                                     .Select(i => i.CardId)
+                                     .Contains(c.CardId) &&
+                c.Groups.Any(g => 
+                    g.Actions.Any(a =>
+                    {
+                        if(a is not JailAction j) return false;
+                        return j.Kind == JailKind.Release;
+                    })));
 
-    public List<CardModel> GetOutOfJailCards()
-        => Cards.Where(c => c.Groups.Any(g => 
-            g.Actions.Any(a =>
-            {
-                if(a is not JailAction j) return false;
-                return j.Kind == JailKind.Release;
-            })))
+    public async Task<List<CardModel>> GetOutOfJailCards(ICardCacheService cache)
+        => (await cache.GetCards())
+            .Where(c => CardInstances
+                            .Select(i => i.CardId)
+                            .Contains(c.CardId) &&
+                c.Groups.Any(g => 
+                    g.Actions.Any(a =>
+                    {
+                        if(a is not JailAction j) return false;
+                        return j.Kind == JailKind.Release;
+                    })))
             .ToList();
     
-    public List<CardModel> GetPlayableCards()
-        => Cards.Where(c => c.ConditionType != CardConditionType.None 
-                            && c.Conditions.Any(cd => cd.Trigger is CardTrigger.OnTurnStart or CardTrigger.OnSpaceLand 
-                                                      || cd.Trigger.HasFlag(CardTrigger.OnTurnStart) || cd.Trigger.HasFlag(CardTrigger.OnSpaceLand)))
+    public async Task<List<CardModel>> GetPlayableCards(ICardCacheService cache)
+        => (await cache.GetCards())
+            .Where(c => CardInstances
+                            .Select(i => i.CardId)
+                            .Contains(c.CardId) 
+                        && c.ConditionType != CardConditionType.None 
+                        && c.Conditions.Any(cd => cd.Trigger is CardTrigger.OnTurnStart or CardTrigger.OnSpaceLand 
+                                                  || cd.Trigger.HasFlag(CardTrigger.OnTurnStart) 
+                                                  || cd.Trigger.HasFlag(CardTrigger.OnSpaceLand)))
             .ToList();
     
-    public List<CardModel> GetOtherCards()
-        => Cards.Where(c => c.ConditionType != CardConditionType.None 
-                            && c.Conditions.All(cd => cd.Trigger is not CardTrigger.OnTurnStart and not CardTrigger.OnSpaceLand 
-                                                      && !cd.Trigger.HasFlag(CardTrigger.OnTurnStart) && !cd.Trigger.HasFlag(CardTrigger.OnSpaceLand)))
+    public async Task<List<CardModel>> GetOtherCards(ICardCacheService cache)
+        => (await cache.GetCards())
+            .Where(c => CardInstances
+                            .Select(i => i.CardId)
+                            .Contains(c.CardId) 
+                        && c.ConditionType != CardConditionType.None 
+                        && c.Conditions.All(cd => cd.Trigger is not CardTrigger.OnTurnStart and not CardTrigger.OnSpaceLand 
+                                                  && !cd.Trigger.HasFlag(CardTrigger.OnTurnStart) 
+                                                  && !cd.Trigger.HasFlag(CardTrigger.OnSpaceLand)))
             .ToList();
 
     #endregion

@@ -1,7 +1,7 @@
 using UltimateMonopoly.Data;
 using UltimateMonopoly.Models.ViewModels.Social;
 
-namespace UltimateMonopoly.Areas.Admin.Models.ViewModels;
+namespace UltimateMonopoly.Areas.Admin.Models.ViewModels.Users;
 
 public class UserViewModel
 {

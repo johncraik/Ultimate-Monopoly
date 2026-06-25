@@ -3,6 +3,7 @@ using JC.BackgroundJobs.Models;
 using JC.Core.Extensions;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using MP.GameEngine.Abstractions;
+using MP.GameEngine.Abstractions.Cards;
 using MP.GameEngine.Extensions;
 using UltimateMonopoly.Areas.Admin.Models;
 using UltimateMonopoly.Data;
@@ -82,7 +83,7 @@ public static class ServiceRegistration
         services.TryAddScoped<GameCacheService>();
         
         // Cards
-        services.TryAddScoped<CardCacheService>();
+        services.TryAddScoped<ICardCacheService, CardCacheService>();
         services.TryAddScoped<CardImportService>();
         
         // Game Engine

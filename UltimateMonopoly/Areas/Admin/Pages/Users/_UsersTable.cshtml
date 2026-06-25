@@ -1,4 +1,4 @@
-@model UltimateMonopoly.Areas.Admin.Models.ViewModels.UserTableModel
+@model UltimateMonopoly.Areas.Admin.Models.ViewModels.Users.UserTableModel
 @using System
 @using JC.Core.Extensions
 @using Microsoft.AspNetCore.Html
@@ -48,7 +48,7 @@
             {
                 foreach (var u in Model.Users)
                 {
-                    <tr data-href="@(Model.FullTable ? $"/Admin/Users/Details?userId={u.Profile.UserId}" : $"/Admin/Audit/Users/Trail/{u.Profile.UserId}")">
+                    <tr data-href="@(Model.FullTable ? $"/Admin/Users/Details/{u.Profile.UserId}" : $"/Admin/Audit/Users/Trail/{u.Profile.UserId}")">
                         <td>
                             <code class="user-id-copy" role="button" title="@u.Profile.UserId"
                                   data-copy-id="@u.Profile.UserId">@u.Profile.UserId.Truncate(8, "…")</code>
@@ -78,12 +78,12 @@
                             <div class="btn-group btn-group-sm" role="group">
                                 @if (Model.FullTable)
                                 {
-                                    <a href="/Admin/Users/Details?userId=@u.Profile.UserId"
+                                    <a href="/Admin/Users/Details/@u.Profile.UserId"
                                        class="btn btn-outline-secondary" title="View details" aria-label="View details">
                                         <i class="bi bi-eye"></i>
                                     </a>
                                 }
-                                <a href="/Admin/Audit/UserTrail?userId=@u.Profile.UserId"
+                                <a href="/Admin/Audit/Users/Trail/@u.Profile.UserId"
                                    class="btn btn-outline-secondary" title="Audit trail" aria-label="Audit trail">
                                     <i class="bi bi-clipboard-data"></i>
                                 </a>
@@ -96,9 +96,9 @@
                                             <i class="bi bi-journal-text"></i>
                                         </button>
                                         <ul class="dropdown-menu dropdown-menu-end">
-                                            <li><a class="dropdown-item" href="/Admin/Logs/Notifications?userId=@u.Profile.UserId"><i class="bi bi-bell me-2"></i>Notifications</a></li>
-                                            <li><a class="dropdown-item" href="/Admin/Logs/Emails?userId=@u.Profile.UserId"><i class="bi bi-envelope me-2"></i>Emails</a></li>
-                                            <li><a class="dropdown-item" href="/Admin/Logs/Messages?userId=@u.Profile.UserId"><i class="bi bi-chat-dots me-2"></i>Messages</a></li>
+                                            <li><a class="dropdown-item" href="/Admin/Logs/Notifications/@u.Profile.UserId"><i class="bi bi-bell me-2"></i>Notifications</a></li>
+                                            <li><a class="dropdown-item" href="/Admin/Logs/Emails/@u.Profile.UserId"><i class="bi bi-envelope me-2"></i>Emails</a></li>
+                                            <li><a class="dropdown-item" href="/Admin/Logs/Messages/@u.Profile.UserId"><i class="bi bi-chat-dots me-2"></i>Messages</a></li>
                                         </ul>
                                     </div>
                                 }

@@ -23,7 +23,7 @@ public class AdminLogService
             );
     }
 
-    private string AdminLogIdentifier => $"{_userInfo.Username} ({_userInfo.UserId})";
+    private string AdminLogIdentifier => $"{_userInfo.Username}{(_userInfo.IsInRole(SystemRoles.SystemAdmin) ? " (System Admin)" : "")}";
 
     #region User Management
     
@@ -228,6 +228,28 @@ public class AdminLogService
             TargetType = AdminTargetType.Game,
             TargetId = gameId,
             Detail = $"{AdminLogIdentifier} deleted game '{gameId}'."
+        });
+    }
+    
+    public async Task LogGameRefreshed(string gameId)
+    {
+        await SaveLog(new AdminActionLog
+        {
+            Action = AdminActionType.GameRefresh,
+            TargetType = AdminTargetType.Game,
+            TargetId = gameId,
+            Detail = $"{AdminLogIdentifier} refreshed game '{gameId}'."
+        });
+    }
+
+    public async Task LogGameReverted(string gameId, uint turnNumber)
+    {
+        await SaveLog(new AdminActionLog
+        {
+            Action = AdminActionType.GameReverted,
+            TargetType = AdminTargetType.Game,
+            TargetId = gameId,
+            Detail = $"{AdminLogIdentifier} reverted game '{gameId}' to turn {turnNumber} — all later turns were permanently deleted."
         });
     }
 

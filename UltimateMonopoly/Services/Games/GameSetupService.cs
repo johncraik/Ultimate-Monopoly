@@ -6,6 +6,7 @@ using JC.Web.UI.Helpers;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using MP.GameEngine.Abstractions;
+using MP.GameEngine.Abstractions.Cards;
 using MP.GameEngine.Enums.Games;
 using MP.GameEngine.Helpers.RuleSet;
 using MP.GameEngine.Models;
@@ -34,7 +35,7 @@ public class GameSetupService
     private readonly IHubContext<GameSetupHub> _setupHub;
     private readonly FriendService _friendService;
     private readonly BoardCacheService _boardCacheService;
-    private readonly CardCacheService _cardCacheService;
+    private readonly ICardCacheService _cardCacheService;
     private readonly MP.GameEngine.Services.GameEngineSetupService _engineEngineSetupService;
     private readonly GameCacheService _gameCacheService;
     private readonly ISnapshotService _snapshotService;
@@ -51,7 +52,7 @@ public class GameSetupService
         IHubContext<GameSetupHub> setupHub,
         FriendService friendService,
         BoardCacheService boardCacheService,
-        CardCacheService cardCacheService,
+        ICardCacheService cardCacheService,
         MP.GameEngine.Services.GameEngineSetupService engineEngineSetupService,
         GameCacheService gameCacheService,
         ISnapshotService snapshotService,

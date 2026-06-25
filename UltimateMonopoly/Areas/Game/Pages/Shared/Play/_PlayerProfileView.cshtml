@@ -1,4 +1,5 @@
 @using JC.Core.Extensions
+@using MP.GameEngine.Abstractions.Cards
 @using MP.GameEngine.Enums
 @using MP.GameEngine.Enums.Cards
 @using MP.GameEngine.Enums.Properties
@@ -13,6 +14,7 @@
 @model PlayerProfilePlayViewModel
 @inject PlayerCacheService PlayerCache
 @inject MP.GameEngine.Abstractions.ITurnTaxService TurnTaxService
+@inject ICardCacheService CardCache
 @{
     // The live player-profile body. Rendered on first load (Player/Index) and
     // re-rendered on every SignalR StateChanged frame (Index.OnGetStateAsync →
@@ -316,7 +318,7 @@
                                         @* Only when the player holds a Get Out of Jail Free card
                                (LeaveJailCard → CardService.PlayCard). Same CanLeaveJail gate;
                                holding the card is the extra condition. *@
-                                        @if (player.GetOutOfJailCard() is { } jailCard)
+                                        @if (await player.GetOutOfJailCard(CardCache) is { } jailCard)
                                         {
                                             <button type="button" class="btn btn-outline-secondary py-2" data-leave-jail-card data-card-id="@jailCard.CardId">
                                                 <i class="bi bi-ticket-perforated me-1"></i> Leave jail — use card
@@ -689,10 +691,10 @@
                         //  1) Get out of jail   2) Playable now (turn-start / on-landing)   3) Triggered.
                         // A get-out-of-jail card is OnInJail-triggered, so it also matches GetOtherCards();
                         // exclude it from the triggered list so it appears once, under its own section.
-                        var jailCards = player.GetOutOfJailCards().OrderBy(c => c.CardType).ToList();
+                        var jailCards = (await player.GetOutOfJailCards(CardCache)).OrderBy(c => c.CardType).ToList();
                         var jailIds = jailCards.Select(c => c.CardId).ToHashSet();
-                        var playableCards = player.GetPlayableCards().OrderBy(c => c.CardType).ToList();
-                        var triggeredCards = player.GetOtherCards()
+                        var playableCards = (await player.GetPlayableCards(CardCache)).OrderBy(c => c.CardType).ToList();
+                        var triggeredCards = (await player.GetOtherCards(CardCache))
                             .Where(c => !jailIds.Contains(c.CardId))
                             .OrderBy(c => c.CardType).ToList();
 
@@ -712,7 +714,7 @@
                             </div>;
                     }
 
-                    @if (player.Cards.Count == 0)
+                    @if (player.CardInstances.Count == 0)
                     {
                         <div class="card">
                             <div class="card-body text-center text-body-secondary py-4">

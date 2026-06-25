@@ -1,8 +1,9 @@
 using JC.Core.Extensions;
 using MP.GameEngine.Enums.Games;
+using UltimateMonopoly.Areas.Admin.Models.ViewModels.Users;
 using UltimateMonopoly.Models.DataModels.Games;
 
-namespace UltimateMonopoly.Areas.Admin.Models.ViewModels;
+namespace UltimateMonopoly.Areas.Admin.Models.ViewModels.Games;
 
 public class GameViewModel
 {

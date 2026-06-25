@@ -1,4 +1,4 @@
-@model UltimateMonopoly.Areas.Admin.Models.ViewModels.ReportTableModel
+@model UltimateMonopoly.Areas.Admin.Models.ViewModels.Reports.ReportTableModel
 @using JC.Core.Extensions
 @using UltimateMonopoly.Areas.Admin.Enums
 @{
@@ -36,7 +36,7 @@
             {
                 foreach (var r in Model.Reports)
                 {
-                    <tr data-href="/Admin/Reports/Details?reportId=@r.ReportId">
+                    <tr data-href="/Admin/Reports/Details/@r.ReportId">
                         <td class="admin-id-col">
                             <code class="user-id-copy" role="button" title="@r.ReportId"
                                   data-copy-id="@r.ReportId">@r.ReportId.Truncate(8, "…")</code>
@@ -60,7 +60,7 @@
                                         <div class="fw-semibold text-truncate">@r.ReportedUser.Profile.Username</div>
                                         <div class="small text-body-secondary text-truncate">@r.ReportedUser.Profile.DisplayName</div>
                                     </div>
-                                    <a href="/Admin/Users/Details?userId=@r.ReportedUser.Profile.UserId"
+                                    <a href="/Admin/Users/Details/@r.ReportedUser.Profile.UserId"
                                        class="btn btn-sm btn-outline-secondary text-nowrap" title="View user" aria-label="View user">
                                         <i class="bi bi-eye"></i>
                                     </a>

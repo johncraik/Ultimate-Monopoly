@@ -1,4 +1,5 @@
 using MP.GameEngine.Abstractions;
+using MP.GameEngine.Abstractions.Cards;
 using MP.GameEngine.Enums;
 using MP.GameEngine.Models.EventReceipts;
 using MP.GameEngine.Models.Snapshot;
@@ -11,16 +12,19 @@ public class BankruptcyService
     private readonly TransactionService _transactionService;
     private readonly PropertyTransferService _propertyTransferService;
     private readonly PropertyService _propertyService;
+    private readonly ICardCacheService _cacheService;
 
     public BankruptcyService(IGameCompletionService completionService,
         TransactionService transactionService,
         PropertyTransferService propertyTransferService,
-        PropertyService propertyService)
+        PropertyService propertyService,
+        ICardCacheService cacheService)
     {
         _completionService = completionService;
         _transactionService = transactionService;
         _propertyTransferService = propertyTransferService;
         _propertyService = propertyService;
+        _cacheService = cacheService;
     }
 
     public async Task DeclareBankruptcyFromShortfall(Framework.GameEngine engine, PlayerModel player, uint bankruptAmount, 
@@ -84,18 +88,12 @@ public class BankruptcyService
         _propertyService.NormaliseProperties(engine);
         
         //Hand back all cards:
-        foreach (var card in player.Cards)
+        foreach (var card in await player.GetCards(_cacheService))
         {
-            //Reset card groups:
-            foreach (var g in card.Groups)
-            {
-                g.TurnsRemaining = g.TurnsActive;
-                g.IsChosenGroup = false;
-            }
             engine.Cache.Game.CardDecks.HandBack(card.CardType, card);
         }
         //Empty list:
-        player.Cards.Clear();
+        player.CardInstances.Clear();
         
         engine.CiteRule(RuleCode.Bankruptcy_Declared);
         engine.CiteRule(RuleCode.Bankruptcy_AssetsToBank);

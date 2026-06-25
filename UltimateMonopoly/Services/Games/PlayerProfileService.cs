@@ -4,6 +4,7 @@ using JC.Core.Models;
 using JC.Core.Services.DataRepositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using MP.GameEngine.Abstractions.Cards;
 using MP.GameEngine.Enums.Games;
 using MP.GameEngine.Helpers;
 using MP.GameEngine.Models.Deals;
@@ -20,16 +21,19 @@ public class PlayerProfileService
     private readonly IUserInfo _userInfo;
     private readonly UserService _userService;
     private readonly IGameExecutor _executor;
+    private readonly ICardCacheService _cacheService;
 
     public PlayerProfileService(IRepositoryManager repos,
         IUserInfo userInfo,
         UserService userService,
-        IGameExecutor executor)
+        IGameExecutor executor,
+        ICardCacheService cacheService)
     {
         _repos = repos;
         _userInfo = userInfo;
         _userService = userService;
         _executor = executor;
+        _cacheService = cacheService;
     }
 
 
@@ -152,7 +156,8 @@ public class PlayerProfileService
             if (current is null || !engine.TurnStateProvider.CanLeaveJail(current.PlayerId, submittingUserId))
                 return;
 
-            var card = current.Cards.FirstOrDefault(c => c.CardId == cardId);
+            var playerCards = await current.GetCards(_cacheService);
+            var card = playerCards.FirstOrDefault(c => c.CardId == cardId);
             if (card is null)
                 return;
 
@@ -170,8 +175,9 @@ public class PlayerProfileService
             var current = engine.Cache.Game.CurrentPlayer();
             if (current is null || !engine.TurnStateProvider.CanPortfolioCommand(current.PlayerId, submittingUserId))
                 return;
-
-            var card = current.Cards.FirstOrDefault(c => c.CardId == cardId);
+            
+            var playerCards = await current.GetCards(_cacheService);
+            var card = playerCards.FirstOrDefault(c => c.CardId == cardId);
             if (card is null)
                 return;
 

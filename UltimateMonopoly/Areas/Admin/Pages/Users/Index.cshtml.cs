@@ -2,7 +2,7 @@ using JC.Core.Models.Pagination;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using UltimateMonopoly.Areas.Admin.Enums;
-using UltimateMonopoly.Areas.Admin.Models.ViewModels;
+using UltimateMonopoly.Areas.Admin.Models.ViewModels.Users;
 using UltimateMonopoly.Areas.Admin.Services;
 
 namespace UltimateMonopoly.Areas.Admin.Pages.Users;

@@ -5,6 +5,7 @@
     var reportsOpen = currentPage?.StartsWith("/Reports") == true;
     // Game Management groups game config + lifecycle (SystemAdmin-only); Rules lives under it.
     var gamesOpen = currentPage?.StartsWith("/Rules") == true || currentPage?.StartsWith("/TurnTax") == true || currentPage?.StartsWith("/Games") == true;
+    var auditOpen = currentPage?.StartsWith("/Audit") == true;
 }
 @*
     Admin sidebar — Bootstrap list-group blocks; blocks with sub-items collapse like an accordion.
@@ -77,14 +78,14 @@
     @* Audit Trail *@
     <div class="admin-nav-block">
         <button type="button" class="list-group-item list-group-item-action admin-nav-header"
-                data-bs-toggle="collapse" data-bs-target="#nav-audit" aria-expanded="false" aria-controls="nav-audit">
+                data-bs-toggle="collapse" data-bs-target="#nav-audit" aria-expanded="@(auditOpen ? "true" : "false")" aria-controls="nav-audit">
             <i class="bi bi-clipboard-data me-2 text-warning"></i> Audit Trail
             <i class="bi bi-chevron-down admin-nav-chevron"></i>
         </button>
-        <div class="collapse" id="nav-audit">
+        <div class="collapse @(auditOpen ? "show" : "")" id="nav-audit">
             <div class="list-group list-group-flush">
                 <a href="#" class="list-group-item list-group-item-action admin-nav-item">Data Trail</a>
-                <a href="#" class="list-group-item list-group-item-action admin-nav-item">User Trail</a>
+                <a asp-area="Admin" asp-page="/Audit/Users/Index" class="list-group-item list-group-item-action admin-nav-item">User Trail</a>
             </div>
         </div>
     </div>

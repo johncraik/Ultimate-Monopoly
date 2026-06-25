@@ -1,4 +1,4 @@
-@model UltimateMonopoly.Areas.Admin.Models.ViewModels.GameTableModel
+@model UltimateMonopoly.Areas.Admin.Models.ViewModels.Games.GameTableModel
 @using JC.Core.Extensions
 @using MP.GameEngine.Enums.Games
 @{
@@ -52,7 +52,7 @@
             {
                 foreach (var g in Model.Games)
                 {
-                    <tr data-href="/Admin/Games/Details?gameId=@g.GameId">
+                    <tr data-href="/Admin/Games/Details/@g.GameId">
                         <td class="admin-id-col">
                             <code class="user-id-copy" role="button" title="@g.GameId"
                                   data-copy-id="@g.GameId">@g.GameId.Truncate(8, "…")</code>

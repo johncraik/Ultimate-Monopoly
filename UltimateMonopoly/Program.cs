@@ -13,6 +13,7 @@ using JC.Web.RateLimiting;
 using Microsoft.AspNetCore.Authorization;
 using JC.Web.Security.Models;
 using MP.GameEngine.Abstractions;
+using MP.GameEngine.Abstractions.Cards;
 using UltimateMonopoly.Areas.Admin.Middleware;
 using UltimateMonopoly.Authorization;
 using UltimateMonopoly.Data;
@@ -209,7 +210,7 @@ async Task SetupDefaults()
 {
     await using var scope = app.Services.CreateAsyncScope();
     var boardCache = scope.ServiceProvider.GetRequiredService<BoardCacheService>();
-    var cardCache = scope.ServiceProvider.GetRequiredService<CardCacheService>();
+    var cardCache = scope.ServiceProvider.GetRequiredService<ICardCacheService>();
     var blockedWordImport = scope.ServiceProvider.GetRequiredService<BlockedWordImportService>();
 
     await boardCache.GetDefaultBoard();

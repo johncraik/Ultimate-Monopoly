@@ -1,12 +1,19 @@
 using System.Text.Json.Nodes;
+using JC.Core.Enums;
 using JC.Core.Extensions;
+using JC.Core.Models;
 using JC.Core.Models.Pagination;
 using JC.Core.Services.DataRepositories;
+using JC.Identity.Authentication;
 using Microsoft.EntityFrameworkCore;
+using MP.GameEngine.Abstractions;
 using MP.GameEngine.Enums.Games;
 using UltimateMonopoly.Areas.Admin.Models;
 using UltimateMonopoly.Areas.Admin.Models.ViewModels;
+using UltimateMonopoly.Areas.Admin.Models.ViewModels.Games;
+using UltimateMonopoly.Areas.Admin.Models.ViewModels.Users;
 using UltimateMonopoly.Models.DataModels.Games;
+using UltimateMonopoly.Services.Games;
 
 namespace UltimateMonopoly.Areas.Admin.Services;
 
@@ -15,24 +22,41 @@ public class GameManagementService
     private readonly IRepositoryManager _repos;
     private readonly AdminLogService _adminLogService;
     private readonly UserManagementService _userManagementService;
+    private readonly AdminGameStateService _adminGameStateService;
+    private readonly IGameCompletionService _gameCompletionService;
+    private readonly GameService _gameService;
+    private readonly IUserInfo _userInfo;
     private readonly string _defaultBoardName;
 
     public GameManagementService(IRepositoryManager repos,
         AdminLogService adminLogService,
         UserManagementService userManagementService,
-        IConfiguration config)
+        IConfiguration config,
+        AdminGameStateService adminGameStateService,
+        IGameCompletionService gameCompletionService,
+        GameService gameService,
+        IUserInfo userInfo)
     {
         _repos = repos;
         _adminLogService = adminLogService;
         _userManagementService = userManagementService;
+        _adminGameStateService = adminGameStateService;
+        _gameCompletionService = gameCompletionService;
+        _gameService = gameService;
+        _userInfo = userInfo;
         _defaultBoardName = config["Imports:BoardName"] ?? "Monopoly Board";
+        
+        if(!userInfo.IsInRole(SystemRoles.Admin) && !userInfo.IsInRole(SystemRoles.SystemAdmin))
+            throw new UnauthorizedAccessException(
+                "You are not authorized to perform this action."
+            );       
     }
 
     private IQueryable<UltimateMonopoly.Models.DataModels.Games.Game> QueryGames(string? search,
-        string? hostIdSearch, bool asNoTracking, GameState? state, GameOutcome? outcome)
+        string? hostIdSearch, string? playerIdSearch, bool asNoTracking, GameState? state, GameOutcome? outcome)
     {
         var query = _repos.GetRepository<UltimateMonopoly.Models.DataModels.Games.Game>()
-            .AsQueryable();
+            .AsQueryable().FilterDeleted(DeletedQueryType.OnlyActive);
         
         if(asNoTracking)
             query = query.AsNoTracking();
@@ -49,9 +73,15 @@ public class GameManagementService
             query = query.Where(g => g.Name.Contains(search) || g.JoinCode.Contains(search) 
                                                              || g.Players.Any(p => p.UserId.Contains(search)));
         }
-        
-        if(!string.IsNullOrEmpty(hostIdSearch))
-            query = query.Where(g => g.CreatedById == hostIdSearch);
+
+        query = string.IsNullOrEmpty(hostIdSearch) switch
+        {
+            false when !string.IsNullOrEmpty(playerIdSearch)
+                => query.Where(g => g.CreatedById == hostIdSearch || g.Players.Any(p => p.UserId == playerIdSearch)),
+            false => query.Where(g => g.CreatedById == hostIdSearch),
+            true when !string.IsNullOrEmpty(playerIdSearch) => query.Where(g => g.Players.Any(p => p.UserId == playerIdSearch)),
+            _ => query
+        };
         
         return query.Include(g => g.Turns)
             .Include(g => g.Players)
@@ -59,10 +89,18 @@ public class GameManagementService
             .OrderByDescending(g => g.CreatedUtc);
     }
 
-    public async Task<PagedList<GameViewModel>> GetGames(int pageNumber, int pageSize, string? search, string? hostIdSearch,
-        GameState? state, GameOutcome? outcome)
+    private void AuthCheck()
     {
-        var games = await QueryGames(search, hostIdSearch, true, state, outcome)
+        if(!_userInfo.IsInRole(SystemRoles.SystemAdmin))
+            throw new UnauthorizedAccessException("You are not authorized to perform this action.");
+    }
+
+    public async Task<PagedList<GameViewModel>> GetGames(int pageNumber, int pageSize, string? search, string? hostIdSearch,
+        GameState? state, GameOutcome? outcome, string? playerIdSearch = null)
+    {
+        AuthCheck();
+        
+        var games = await QueryGames(search, hostIdSearch, playerIdSearch, true, state, outcome)
             .ToPagedListAsync(pageNumber, pageSize);
 
         var viewModels = new List<GameViewModel>();
@@ -89,6 +127,8 @@ public class GameManagementService
 
     public async Task<GameDetailViewModel?> GetGameDetail(string gameId)
     {
+        AuthCheck();
+        
         var game = await _repos.GetRepository<UltimateMonopoly.Models.DataModels.Games.Game>()
             .AsQueryable().AsNoTracking()
             .Include(g => g.Players)
@@ -108,6 +148,19 @@ public class GameManagementService
 
         var gameVm = new GameViewModel(game, currentTurn, host, players, _defaultBoardName);
 
+        // Per-turn stored sizes — projected as the JSON's character length in SQL (LEN), so the blobs
+        // themselves are never transferred. Char length ≈ byte size for the ASCII-dominant JSON.
+        var snapshotSizes = await _repos.GetRepository<GameSnapshot>()
+            .AsQueryable().AsNoTracking()
+            .Where(s => s.GameId == gameId)
+            .Select(s => new { s.TurnId, Len = (long)s.StateJson.Length })
+            .ToDictionaryAsync(s => s.TurnId, s => s.Len);
+        var eventSizes = await _repos.GetRepository<GameTurnEvents>()
+            .AsQueryable().AsNoTracking()
+            .Where(e => e.GameId == gameId)
+            .Select(e => new { e.TurnId, Len = (long)e.EventsJson.Length })
+            .ToDictionaryAsync(e => e.TurnId, e => e.Len);
+
         // Resolve each turn's current-player name once per distinct user, newest turn first.
         var names = new Dictionary<string, UserViewModel?>();
         var rows = new List<GameTurnRowViewModel>();
@@ -118,7 +171,9 @@ public class GameManagementService
                 user = await _userManagementService.GetUserById(t.UserId);
                 names[t.UserId] = user;
             }
-            rows.Add(new GameTurnRowViewModel(t, user));
+            rows.Add(new GameTurnRowViewModel(t, user,
+                snapshotSizes.GetValueOrDefault(t.Id),
+                eventSizes.GetValueOrDefault(t.Id)));
         }
 
         return new GameDetailViewModel(gameVm, rows);
@@ -129,6 +184,8 @@ public class GameManagementService
 
     public async Task<GameTurnExport?> BuildTurnExport(string gameId, uint turnNumber)
     {
+        AuthCheck();
+        
         var turn = await _repos.GetRepository<GameTurn>()
             .AsQueryable().AsNoTracking()
             .FirstOrDefaultAsync(t => t.GameId == gameId && t.TurnNumber == turnNumber);
@@ -147,6 +204,8 @@ public class GameManagementService
 
     public async Task<GameExport?> BuildGameExport(string gameId)
     {
+        AuthCheck();
+        
         var game = await _repos.GetRepository<UltimateMonopoly.Models.DataModels.Games.Game>()
             .AsQueryable().AsNoTracking()
             .Include(g => g.Turns)
@@ -193,49 +252,81 @@ public class GameManagementService
                 : user.Profile.DisplayName;
 
 
-    // ---- Actions (state-gated) — NOT WIRED YET ----
-    // GameService's host actions are player/host-scoped (its QueryGames filters to the caller's own games;
-    // ForceRefresh/Draw require the caller to be the host), so they need admin-callable paths first. The
-    // GameService call and the AdminActionLog write belong together HERE (not the page) so every action is
-    // audited — uncomment each flow once the admin path lands. Returns false (not performed) for now.
+    // ---- Actions (state-gated) ----
+    // GameService's host actions are player/host-scoped, so each goes through an admin-callable path
+    // (TryDrawGameByAdmin / TryCancelGame / TryDeleteGame / ForceRefreshAsAdmin). The GameService call and
+    // the AdminActionLog write live together HERE (not the page) so every action is audited. The bool
+    // results report whether the action ran (e.g. false when the game is in the wrong state / already gone).
 
-    public Task<bool> DrawGame(string gameId)
+    public async Task<bool> DrawGame(string gameId)
     {
-        // if (!await _gameService.EnqueueDrawGameAsAdmin(gameId)) return false;   // admin draw — skip the host check
-        // await _adminLogService.LogGameDrawn(gameId);
-        // return true;
-        return Task.FromResult(false);
+        AuthCheck();
+        
+        var engine = await _adminGameStateService.BuildEngine(gameId);
+        if(engine == null) return false;
+
+        var result = await _gameCompletionService.TryDrawGameByAdmin(engine);
+        if(!result) return false;
+        
+        await _adminLogService.LogGameDrawn(gameId);
+        return true;
     }
 
-    public Task<bool> CancelGame(string gameId)
+    public async Task<bool> CancelGame(string gameId)
     {
-        // if (!await _gameService.TryCancelGameAsAdmin(gameId)) return false;     // admin cancel — no player filter
-        // await _adminLogService.LogGameCancelled(gameId);
-        // return true;
-        return Task.FromResult(false);
+        AuthCheck();
+        
+        var result = await _gameService.TryCancelGame(gameId, true);
+        if(!result) return false;
+        
+        await _adminLogService.LogGameCancelled(gameId);
+        return true;   
     }
 
-    public Task<bool> CancelAndDeleteGame(string gameId)
+    public async Task<(bool CancelResult, bool DeleteResult)> CancelAndDeleteGame(string gameId)
     {
-        // if (!await _gameService.TryCancelGameAsAdmin(gameId)) return false;
-        // if (!await _gameService.TryDeleteGameAsAdmin(gameId)) return false;     // delete allows {Finished, Cancelled}
-        // await _adminLogService.LogGameDeleted(gameId);
-        // return true;
-        return Task.FromResult(false);
+        AuthCheck();
+        
+        var result = await CancelGame(gameId);
+        return !result 
+            ? (false, false) 
+            : (true, await DeleteGame(gameId));
     }
 
-    public Task<bool> DeleteGame(string gameId)
+    public async Task<bool> DeleteGame(string gameId)
     {
-        // if (!await _gameService.TryDeleteGameAsAdmin(gameId)) return false;     // delete allows {Finished, Cancelled}
-        // await _adminLogService.LogGameDeleted(gameId);
-        // return true;
-        return Task.FromResult(false);
+        AuthCheck();
+        
+        var result = await _gameService.TryDeleteGame(gameId, true);
+        if(!result) return false;
+        
+        await _adminLogService.LogGameDeleted(gameId);
+        return true;
     }
 
-    public Task<bool> ForceRefresh(string gameId)
+    public async Task ForceRefresh(string gameId)
     {
-        // if (!await _gameService.ForceRefreshAsAdmin(gameId)) return false;      // skip host check, broadcast via IEngineNotifier
-        // return true;   // non-destructive — not audited (no AdminActionType for a refresh)
-        return Task.FromResult(false);
+        AuthCheck();
+        
+        await _gameService.ForceRefreshAsAdmin(gameId);
+        await _adminLogService.LogGameRefreshed(gameId);
+    }
+
+    // Irreversible: TryRevertToTurn hard-deletes every turn/snapshot/event after turnNumber. Returns false
+    // when there's nothing later to delete (turnNumber is already the latest) or the game is gone.
+    public async Task<bool> RevertGameToTurn(string gameId, uint turnNumber)
+    {
+        AuthCheck();
+        
+        var result = await _adminGameStateService.TryRevertToTurn(gameId, turnNumber);
+        if (!result) return false;
+
+        // The DB was reverted under a possibly-live in-play game. Tear down its in-memory runtime so the
+        // next access rehydrates from the reverted snapshot — otherwise the stale cache/pump duplicate-keys
+        // on the next persist (the reload that "fixed it" was a manual version of this).
+        _gameService.ResetRuntimeAsAdmin(gameId);
+
+        await _adminLogService.LogGameReverted(gameId, turnNumber);
+        return true;
     }
 }

@@ -2,7 +2,7 @@
 @using UltimateMonopoly.Models.ViewModels.Games
 @using UltimateMonopoly.Models.ViewModels.Social
 @using UltimateMonopoly.Services.Cache
-@model UltimateMonopoly.Areas.Admin.Models.ViewModels.GameStateViewModel
+@model UltimateMonopoly.Areas.Admin.Models.ViewModels.Games.GameStateViewModel
 @inject PlayerCacheService PlayerCache
 @{
     // Admin read-only game state for one turn: the selected player's profile, the game-info panel, and the
@@ -20,17 +20,23 @@
     }
 }
 
-@* Selected player's profile (read-only) *@
-<partial name="~/Areas/Game/Pages/Shared/Play/_PlayerProfileView.cshtml"
-         model="new PlayerProfilePlayViewModel(engine, Model.PlayerId, Model.ViewerUserId, IsAdminView: true)" />
+@* Card 1 — selected player's profile (read-only). Own card, fixed height; the profile scrolls inside it. *@
+<div class="card admin-state-profile mb-3">
+    <div class="card-body p-2">
+        <partial name="~/Areas/Game/Pages/Shared/Play/_PlayerProfileView.cshtml"
+                 model="new PlayerProfilePlayViewModel(engine, Model.PlayerId, Model.ViewerUserId, IsAdminView: true)" />
+    </div>
+</div>
 
-@* Game info panel *@
-<div class="mt-3">
+@* Card 2 — game info panel. Already its own .card (play-pane), so just spacing; natural height. *@
+<div class="mb-3">
     <partial name="~/Areas/Game/Pages/Shared/Play/_GameInfoPanel.cshtml" model="engine" />
 </div>
 
-@* Board *@
-<div class="mt-3">
-    <partial name="~/Areas/Game/Pages/Shared/Play/_BoardView.cshtml"
-             model="new BoardViewModel(cache.Board, game.Properties, playerCounters, game.FreeParkingAmount)" />
+@* Card 3 — board view. Own card, natural height (the board sizes itself off the card width). *@
+<div class="card">
+    <div class="card-body">
+        <partial name="~/Areas/Game/Pages/Shared/Play/_BoardView.cshtml"
+                 model="new BoardViewModel(cache.Board, game.Properties, playerCounters, game.FreeParkingAmount)" />
+    </div>
 </div>
