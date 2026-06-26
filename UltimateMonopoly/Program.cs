@@ -15,6 +15,7 @@ using JC.Web.Security.Models;
 using MP.GameEngine.Abstractions;
 using MP.GameEngine.Abstractions.Cards;
 using UltimateMonopoly.Areas.Admin.Middleware;
+using UltimateMonopoly.Areas.Admin.Services;
 using UltimateMonopoly.Authorization;
 using UltimateMonopoly.Data;
 using UltimateMonopoly.Extensions;
@@ -32,8 +33,12 @@ Syncfusion.Licensing.SyncfusionLicenseProvider.RegisterLicense(
 // Razor Pages + API controllers
 builder.Services.AddRazorPages(options =>
 {
-    // Gate the whole Admin area to the AdminArea policy (Admin or SystemAdmin) — see below.
+    // Gate the whole Admin area to the AdminArea policy (Admin or SystemAdmin or GithubManager) — see below.
     options.Conventions.AuthorizeAreaFolder("Admin", "/", "AdminArea");
+    // GithubManager-only users may use just the Reported Issues page; this filter funnels them there from any
+    // other admin page (Dashboard included). Dual-role admins are unaffected.
+    options.Conventions.AddAreaFolderApplicationModelConvention("Admin", "/",
+        model => model.Filters.Add(new GithubManagerPageFilter()));
 });
 builder.Services.AddControllers();
 
@@ -76,7 +81,7 @@ builder.Services.AddAuthorization(options =>
 
     // Admin area — Admin or SystemAdmin (read + moderation). SystemAdmin-only pages/actions take the
     // SystemAdminOnly policy on top. See design-docs/c1-admin-area.md §4.
-    options.AddPolicy("AdminArea", p => p.RequireRole(SystemRoles.Admin, SystemRoles.SystemAdmin));
+    options.AddPolicy("AdminArea", p => p.RequireRole(SystemRoles.Admin, SystemRoles.SystemAdmin, AppRoles.GithubManager));
     options.AddPolicy("SystemAdminOnly", p => p.RequireRole(SystemRoles.SystemAdmin));
 });
 
@@ -219,4 +224,7 @@ async Task SetupDefaults()
     
     var taxService = scope.ServiceProvider.GetRequiredService<ITurnTaxService>();
     await taxService.Import();
+
+    var settings = scope.ServiceProvider.GetRequiredService<SettingsDictionary>();
+    await settings.Import();
 }

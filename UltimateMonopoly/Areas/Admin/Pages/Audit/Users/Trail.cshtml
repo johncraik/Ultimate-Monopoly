@@ -1,4 +1,4 @@
-@page "{userId}"
+@page "{userId?}"
 @model UltimateMonopoly.Areas.Admin.Pages.Audit.Users.TrailModel
 @using JC.Core.Enums
 @{
@@ -12,19 +12,26 @@
     </a>
     <span class="admin-page-ico bg-warning-subtle text-warning"><i class="bi bi-clipboard-data"></i></span>
     <div class="min-w-0">
-        <h1 class="h3 mb-1 text-truncate">User Trail</h1>
+        <h1 class="h3 mb-1 text-truncate">@(Model.IsSystem ? "System Trail" : "User Trail")</h1>
         <p class="text-body-secondary mb-0 text-truncate">
-            @if (Model.User is not null)
+            @if (Model.IsSystem)
             {
-                <span class="fw-semibold">@(string.IsNullOrWhiteSpace(Model.User.Profile.Username) ? "(unknown)" : Model.User.Profile.Username)</span>
-                <span> &middot; </span>
+                <span class="fw-semibold"><i class="bi bi-robot me-1"></i>System &amp; background actions</span>
             }
             else
             {
-                <span class="text-warning"><i class="bi bi-exclamation-circle me-1"></i>No account</span>
-                <span> &middot; </span>
+                @if (Model.User is not null)
+                {
+                    <span class="fw-semibold">@(string.IsNullOrWhiteSpace(Model.User.Profile.Username) ? "(unknown)" : Model.User.Profile.Username)</span>
+                    <span> &middot; </span>
+                }
+                else
+                {
+                    <span class="text-warning"><i class="bi bi-exclamation-circle me-1"></i>No account</span>
+                    <span> &middot; </span>
+                }
+                <code class="user-id-copy" role="button" data-copy="@Model.UserId" title="Click to copy">@Model.UserId</code>
             }
-            <code class="user-id-copy" role="button" data-copy="@Model.UserId" title="Click to copy">@Model.UserId</code>
         </p>
     </div>
 </div>

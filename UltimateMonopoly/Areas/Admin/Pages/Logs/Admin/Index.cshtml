@@ -1,0 +1,53 @@
+@page
+@model UltimateMonopoly.Areas.Admin.Pages.Logs.Admin.IndexModel
+@using JC.Web.UI.Helpers
+@using UltimateMonopoly.Areas.Admin.Enums
+@{
+    ViewData["Title"] = "Admin Logs";
+
+    // Built in a code block — Razor can't parse the generic FromEnum<T> inline inside an attribute.
+    var actionItems = DropdownHelper.FromEnum<AdminActionType>(Model.Action).WithPlaceholder("All actions");
+    var targetItems = DropdownHelper.FromEnum<AdminTargetType>(Model.TargetType).WithPlaceholder("All targets");
+}
+
+<div class="d-flex align-items-center gap-3 mb-4">
+    <span class="admin-page-ico bg-secondary-subtle text-secondary"><i class="bi bi-journal-text"></i></span>
+    <div>
+        <h1 class="h3 mb-1">Admin Logs</h1>
+        <p class="text-body-secondary mb-0">Every action taken by an admin — who did what, to whom, and when.</p>
+    </div>
+</div>
+
+@* Search + filters. A plain GET form is the no-JS fallback; admin-logs.js intercepts changes and
+   re-fetches just the table partial (?handler=Table). The dropdowns' empty "All" option = no filter. *@
+<form id="log-filters" method="get" class="card mb-3">
+    <div class="card-body">
+        <div class="row g-3 align-items-end">
+            <div class="col-12 col-xl-6">
+                <label class="form-label small text-body-secondary mb-1" for="log-search">Search</label>
+                <div class="input-group">
+                    <input type="search" class="form-control" id="log-search" name="Search" value="@Model.Search"
+                           placeholder="Admin id, target id, details…" autocomplete="off" />
+                    <button class="btn btn-primary" type="submit" aria-label="Search"><i class="bi bi-search"></i></button>
+                </div>
+            </div>
+            <div class="col-12 col-xl-3">
+                <label class="form-label small text-body-secondary mb-1" for="log-action">Action</label>
+                <select class="form-select" id="log-action" name="Action" asp-items="actionItems"></select>
+            </div>
+            <div class="col-12 col-xl-3">
+                <label class="form-label small text-body-secondary mb-1" for="log-target">Target</label>
+                <select class="form-select" id="log-target" name="TargetType" asp-items="targetItems"></select>
+            </div>
+        </div>
+    </div>
+</form>
+
+<div id="logs-table">
+    <partial name="~/Areas/Admin/Pages/Logs/_AdminLogsTable.cshtml" model="Model.TableModel" />
+</div>
+
+@section Scripts {
+    <script src="~/scripts/admin/copy.js" asp-append-version="true"></script>
+    <script src="~/scripts/admin/admin-logs.js" asp-append-version="true"></script>
+}

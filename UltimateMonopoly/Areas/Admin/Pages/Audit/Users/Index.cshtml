@@ -10,6 +10,11 @@
         <h1 class="h3 mb-1">User Trail</h1>
         <p class="text-body-secondary mb-0">Pick a user to see every action they've taken across the app.</p>
     </div>
+    @* No userId + system=true → the System / background-actor trail on the same Trail page. *@
+    <a asp-area="Admin" asp-page="/Audit/Users/Trail" asp-route-system="true"
+       class="btn btn-outline-warning ms-auto align-self-center text-nowrap">
+        <i class="bi bi-robot me-1"></i>View System Trail
+    </a>
 </div>
 
 @* Search only (no filters). A plain GET form is the no-JS fallback; user-management.js intercepts it and

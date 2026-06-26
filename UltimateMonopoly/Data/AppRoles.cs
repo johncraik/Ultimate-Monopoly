@@ -9,4 +9,7 @@ public class AppRoles : SystemRoles
     
     public const string HiddenUser = nameof(HiddenUser);
     public const string HiddenUserDesc = "User that is not publicly visible. Other users can still add them to their friends list to see their profile.";
+    
+    public const string GithubManager  = nameof(GithubManager);
+    public const string GithubManagerDesc = "Sends notifications to the user for new and updated Github issues.";
 }

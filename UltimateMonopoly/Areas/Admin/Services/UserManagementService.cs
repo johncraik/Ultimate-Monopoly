@@ -30,7 +30,9 @@ public class UserManagementService
         _adminLog = adminLog;
         _authRefreshService = authRefreshService;
         _userInfo = userInfo;
-        if (!userInfo.IsInRole(SystemRoles.Admin) && !userInfo.IsInRole(SystemRoles.SystemAdmin))
+        if (!userInfo.IsInRole(SystemRoles.Admin)
+            && !userInfo.IsInRole(SystemRoles.SystemAdmin)
+            && !userInfo.IsInRole(AppRoles.GithubManager))
             throw new UnauthorizedAccessException(
                 "You are not authorized to perform this action."
             );

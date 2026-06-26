@@ -1,0 +1,38 @@
+@page
+@model UltimateMonopoly.Areas.Admin.Pages.Logs.Notifications.IndexModel
+@{
+    ViewData["Title"] = "Notification Logs";
+}
+
+<div class="d-flex align-items-center gap-3 mb-4">
+    <span class="admin-page-ico bg-secondary-subtle text-secondary"><i class="bi bi-bell"></i></span>
+    <div>
+        <h1 class="h3 mb-1">Notification Logs</h1>
+        <p class="text-body-secondary mb-0">Pick a user to view the notifications they received.</p>
+    </div>
+    <a asp-area="Admin" asp-page="/Logs/Notifications/Log"
+       class="btn btn-outline-secondary ms-auto align-self-center text-nowrap">
+        <i class="bi bi-envelope-paper me-1"></i>View Read/Unread Logs
+    </a>
+</div>
+
+@* Search only. A plain GET form is the no-JS fallback; user-management.js intercepts and re-fetches just
+   the table partial (?handler=Table). Reuses the audit-mode (FullTable=false) _UsersTable. *@
+<form id="user-filters" method="get" class="card mb-3">
+    <div class="card-body">
+        <label class="form-label small text-body-secondary mb-1" for="user-search">Search</label>
+        <div class="input-group">
+            <input type="search" class="form-control" id="user-search" name="Search" value="@Model.Search"
+                   placeholder="Username, name, email, phone…" autocomplete="off" />
+            <button class="btn btn-primary" type="submit" aria-label="Search"><i class="bi bi-search"></i></button>
+        </div>
+    </div>
+</form>
+
+<div id="users-table">
+    <partial name="~/Areas/Admin/Pages/Users/_UsersTable.cshtml" model="Model.TableModel" />
+</div>
+
+@section Scripts {
+    <script src="~/scripts/admin/user-management.js" asp-append-version="true"></script>
+}

@@ -1,0 +1,55 @@
+@page
+@model UltimateMonopoly.Areas.Admin.Pages.Logs.Issues.IndexModel
+@using JC.Web.UI.Helpers
+@using JC.Github.Models
+@{
+    ViewData["Title"] = "Reported Issues";
+
+    // Built in a code block — Razor can't parse the generic FromEnum<T> inline in an attribute.
+    var typeItems = DropdownHelper.FromEnum<IssueType>(Model.Type).WithPlaceholder("All types");
+    var statusItems = DropdownHelper
+        .FromDictionary(new Dictionary<string, string> { ["false"] = "Open", ["true"] = "Closed" }, Model.Closed?.ToString().ToLowerInvariant())
+        .WithPlaceholder("All status");
+}
+
+<div class="d-flex align-items-center gap-3 mb-4">
+    <span class="admin-page-ico bg-secondary-subtle text-secondary"><i class="bi bi-bug"></i></span>
+    <div>
+        <h1 class="h3 mb-1">Reported Issues</h1>
+        <p class="text-body-secondary mb-0">Bugs and suggestions reported in-app or synced from GitHub.</p>
+    </div>
+</div>
+
+@* Search + type / status filters. A plain GET form is the no-JS fallback; issues-logs.js intercepts and
+   re-fetches just the table partial (?handler=Table). *@
+<form id="log-filters" method="get" class="card mb-3">
+    <div class="card-body">
+        <div class="row g-3 align-items-end">
+            <div class="col-12 col-xl-8">
+                <label class="form-label small text-body-secondary mb-1" for="issue-search">Search</label>
+                <div class="input-group">
+                    <input type="search" class="form-control" id="issue-search" name="Search" value="@Model.Search"
+                           placeholder="Description, reporter…" autocomplete="off" />
+                    <button class="btn btn-primary" type="submit" aria-label="Search"><i class="bi bi-search"></i></button>
+                </div>
+            </div>
+            <div class="col-12 col-xl-2">
+                <label class="form-label small text-body-secondary mb-1" for="issue-type">Type</label>
+                <select class="form-select" id="issue-type" name="Type" asp-items="typeItems"></select>
+            </div>
+            <div class="col-12 col-xl-2">
+                <label class="form-label small text-body-secondary mb-1" for="issue-status">Status</label>
+                <select class="form-select" id="issue-status" name="Closed" asp-items="statusItems"></select>
+            </div>
+        </div>
+    </div>
+</form>
+
+<div id="logs-table">
+    <partial name="_ReportedIssuesTable" model="Model.TableModel" />
+</div>
+
+@section Scripts {
+    <script src="~/scripts/admin/copy.js" asp-append-version="true"></script>
+    <script src="~/scripts/admin/issues-logs.js" asp-append-version="true"></script>
+}

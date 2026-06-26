@@ -1,0 +1,9 @@
+@using Microsoft.Extensions.Hosting
+@inject Microsoft.AspNetCore.Hosting.IWebHostEnvironment Env
+@* Dev-only floating bug / suggestion reporter via the JC.Web <bug-reporter> tag helper (renders the button,
+   form, and submit JS itself, and sends RequestVerificationToken + masked client metadata). Production gets a
+   dedicated reporting page, so the widget is suppressed there. Posts JSON to /BugReport. *@
+@if (!Env.IsProduction())
+{
+    <bug-reporter endpoint="/BugReport" title="Report an issue" mask-request-path="false" mask-query="false"/>
+}

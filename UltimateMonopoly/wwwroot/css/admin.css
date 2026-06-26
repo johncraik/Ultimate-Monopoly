@@ -235,6 +235,21 @@
     font-size: .8125rem;
 }
 
+/* Expanded-row detail text (log details, thread-activity details, reported-issue descriptions). Preserve the
+   line breaks in the stored text and wrap long unbroken tokens (e.g. a folded metadata block) instead of
+   overflowing the row. */
+.admin-log-detail {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+/* Reported-issue rendered HTML body — the sanitised user description plus the metadata <details> tables. */
+.admin-issue-body { overflow-wrap: anywhere; }
+.admin-issue-body table { width: auto; margin: .35rem 0 .25rem; border-collapse: collapse; }
+.admin-issue-body td { border: 1px solid var(--bs-border-color); padding: .2rem .5rem; vertical-align: top; }
+.admin-issue-body details { margin-top: .5rem; }
+.admin-issue-body summary { cursor: pointer; }
+
 /* Game-details read-only state — the turn / player selector card pins to the top of the scrolling
    content while the three state cards (profile / game-info / board) scroll past it. */
 .admin-state-controls {
@@ -337,4 +352,10 @@
     border-radius: var(--bs-border-radius-sm);
     white-space: nowrap;
     z-index: 5;
+}
+
+/* Notification logs — the read/unread log table inside a notification's accordion: cap height + scroll. */
+.admin-notif-logs {
+    max-height: 16rem;
+    overflow-y: auto;
 }

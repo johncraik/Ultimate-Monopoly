@@ -9,6 +9,10 @@
     const searchInput = form.querySelector('input[name="Search"]');
     let debounce;
 
+    // The system trail has no {userId} route segment — it's carried as ?system=true, so preserve it
+    // (the path-only keep below doesn't cover query flags). Constant for the page's lifetime.
+    const systemFlag = new URLSearchParams(location.search).get('system');
+
     function tableUrl(page) {
         const fd = new FormData(form);
         const params = new URLSearchParams();
@@ -17,6 +21,7 @@
         if (s) params.set('Search', s);
         const a = (fd.get('Action') || '').toString();
         if (a) params.set('Action', a);
+        if (systemFlag) params.set('system', systemFlag);
         params.set('pageNumber', page || 1);
         // location.pathname keeps the {userId} route segment; only the query state changes.
         return location.pathname + '?' + params.toString();
@@ -53,6 +58,8 @@
         e.preventDefault();
         const url = new URL(link.href, location.href);
         url.searchParams.set('handler', 'Table');
+        // The pagination href is built without the system flag — re-add it (see tableUrl).
+        if (systemFlag) url.searchParams.set('system', systemFlag);
         load(url.toString());
     });
 })();

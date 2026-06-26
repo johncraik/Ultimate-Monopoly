@@ -1,0 +1,52 @@
+@page
+@model UltimateMonopoly.Areas.Admin.Pages.Logs.Notifications.LogModel
+@using JC.Web.UI.Helpers
+@{
+    ViewData["Title"] = "Read/Unread Logs";
+
+    // Built in a code block — Razor can't parse generics inline in an attribute.
+    var readItems = DropdownHelper
+        .FromDictionary(new Dictionary<string, string> { ["true"] = "Read", ["false"] = "Unread" }, Model.Read?.ToString().ToLowerInvariant())
+        .WithPlaceholder("All states");
+}
+
+<div class="d-flex align-items-center gap-3 mb-4">
+    <a asp-area="Admin" asp-page="/Logs/Notifications/Index" class="btn btn-sm btn-outline-secondary" title="Back to users">
+        <i class="bi bi-arrow-left"></i>
+    </a>
+    <span class="admin-page-ico bg-secondary-subtle text-secondary"><i class="bi bi-envelope-paper"></i></span>
+    <div>
+        <h1 class="h3 mb-1">Read/Unread Logs</h1>
+        <p class="text-body-secondary mb-0">Every notification read and unread event, who performed it, and when.</p>
+    </div>
+</div>
+
+@* Search + read-state filter. A plain GET form is the no-JS fallback; notification-logs.js intercepts and
+   re-fetches just the table partial (?handler=Table). *@
+<form id="log-filters" method="get" class="card mb-3">
+    <div class="card-body">
+        <div class="row g-3 align-items-end">
+            <div class="col-12 col-xl-8">
+                <label class="form-label small text-body-secondary mb-1" for="log-search">Search</label>
+                <div class="input-group">
+                    <input type="search" class="form-control" id="log-search" name="Search" value="@Model.Search"
+                           placeholder="User id, notification id…" autocomplete="off" />
+                    <button class="btn btn-primary" type="submit" aria-label="Search"><i class="bi bi-search"></i></button>
+                </div>
+            </div>
+            <div class="col-12 col-xl-4">
+                <label class="form-label small text-body-secondary mb-1" for="log-read">State</label>
+                <select class="form-select" id="log-read" name="Read" asp-items="readItems"></select>
+            </div>
+        </div>
+    </div>
+</form>
+
+<div id="logs-table">
+    <partial name="_NotificationLogsTable" model="Model.TableModel" />
+</div>
+
+@section Scripts {
+    <script src="~/scripts/admin/copy.js" asp-append-version="true"></script>
+    <script src="~/scripts/admin/notification-logs.js" asp-append-version="true"></script>
+}

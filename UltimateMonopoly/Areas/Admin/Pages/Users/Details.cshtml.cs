@@ -36,6 +36,7 @@ public class DetailsModel : PageModel
     public bool TargetIsSystemAdmin => User.Roles.Contains(SystemRoles.SystemAdmin);
     public bool TargetIsRestricted => User.IsRestricted ?? false;
     public bool TargetIsHidden => User.Roles.Contains(AppRoles.HiddenUser);
+    public bool TargetIsGithubManager => User.Roles.Contains(AppRoles.GithubManager);
     // Delete is SystemAdmin-only, never on yourself, never on another SystemAdmin (remove that role first).
     public bool CanDelete => IsSystemAdmin && !IsSelf && !TargetIsSystemAdmin;
     // Mirrors the service guard: a plain Admin can't restrict or disable a SystemAdmin (only SystemAdmins can moderate staff).
@@ -124,7 +125,7 @@ public class DetailsModel : PageModel
         UserId = userId;
         
         if (!IsSystemAdmin) return Forbid();
-        if (role != SystemRoles.Admin && role != SystemRoles.SystemAdmin) return BadRequest();
+        if (role != SystemRoles.Admin && role != SystemRoles.SystemAdmin && role != AppRoles.GithubManager) return BadRequest();
 
         var user = await _users.GetUserById(UserId);
         if (user == null) return NotFound();

@@ -913,6 +913,9 @@ namespace UltimateMonopoly.Data.Migrations
                         .HasMaxLength(36)
                         .HasColumnType("varchar(36)");
 
+                    b.Property<string>("ClientMetadata")
+                        .HasColumnType("longtext");
+
                     b.Property<bool>("Closed")
                         .HasColumnType("tinyint(1)");
 

@@ -1,17 +1,33 @@
+@using UltimateMonopoly.Data
 @{
     var currentPage = ViewContext.RouteData.Values["page"]?.ToString();
     string DashActive() => currentPage == "/Index" ? "active" : "";
     var usersOpen = currentPage?.StartsWith("/Users") == true;
     var reportsOpen = currentPage?.StartsWith("/Reports") == true;
     // Game Management groups game config + lifecycle (SystemAdmin-only); Rules lives under it.
-    var gamesOpen = currentPage?.StartsWith("/Rules") == true || currentPage?.StartsWith("/TurnTax") == true || currentPage?.StartsWith("/Games") == true;
+    var gamesOpen = currentPage?.StartsWith("/Rules") == true || currentPage?.StartsWith("/TurnTax") == true || currentPage?.StartsWith("/Games") == true || currentPage?.StartsWith("/Settings") == true;
     var auditOpen = currentPage?.StartsWith("/Audit") == true;
+    var logsOpen = currentPage?.StartsWith("/Logs") == true;
+
+    // GithubManager-only users get a single-link sidebar — the only admin page they can use.
+    var isOnlyGithubManager = !User.IsInRole(AppRoles.Admin) && !User.IsInRole(AppRoles.SystemAdmin)
+                              && User.IsInRole(AppRoles.GithubManager);
 }
 @*
     Admin sidebar — Bootstrap list-group blocks; blocks with sub-items collapse like an accordion.
     Item links are placeholders (#) until each feature phase lands (design-docs/c1-admin-area.md §13).
 *@
 <nav class="admin-sidebar">
+@if (isOnlyGithubManager)
+{
+    <div class="admin-nav-block">
+        <a asp-area="Admin" asp-page="/Logs/Issues/Index" class="list-group-item list-group-item-action admin-nav-header @(currentPage == "/Logs/Issues/Index" ? "active" : "")">
+            <i class="bi bi-card-list me-2 text-info"></i> Reported Issues
+        </a>
+    </div>
+}
+else
+{
     @* Dashboard — single link, no dropdown *@
     <div class="admin-nav-block">
         <a asp-area="Admin" asp-page="/Index" class="list-group-item list-group-item-action admin-nav-header @DashActive()">
@@ -70,6 +86,7 @@
                     <div class="admin-nav-divider"></div>
                     <a asp-area="Admin" asp-page="/Rules/Index" class="list-group-item list-group-item-action admin-nav-item">Game Rules</a>
                     <a asp-area="Admin" asp-page="/TurnTax/Index" class="list-group-item list-group-item-action admin-nav-item">Game Turn Tax</a>
+                    <a asp-area="Admin" asp-page="/Settings/Index" class="list-group-item list-group-item-action admin-nav-item">Game Settings</a>
                 </div>
             </div>
         </div>
@@ -93,18 +110,21 @@
     @* Application Logs *@
     <div class="admin-nav-block">
         <button type="button" class="list-group-item list-group-item-action admin-nav-header"
-                data-bs-toggle="collapse" data-bs-target="#nav-logs" aria-expanded="false" aria-controls="nav-logs">
+                data-bs-toggle="collapse" data-bs-target="#nav-logs" aria-expanded="@(logsOpen ? "true" : "false")" aria-controls="nav-logs">
             <i class="bi bi-journal-text me-2 text-secondary"></i> Application Logs
             <i class="bi bi-chevron-down admin-nav-chevron"></i>
         </button>
-        <div class="collapse" id="nav-logs">
+        <div class="collapse @(logsOpen ? "show" : "")" id="nav-logs">
             <div class="list-group list-group-flush">
-                <a href="#" class="list-group-item list-group-item-action admin-nav-item">Admin Logs</a>
+                <a asp-area="Admin" asp-page="/Logs/Admin/Index" class="list-group-item list-group-item-action admin-nav-item">Admin Logs</a>
                 <div class="admin-nav-divider"></div>
-                <a href="#" class="list-group-item list-group-item-action admin-nav-item">Notification Logs</a>
-                <a href="#" class="list-group-item list-group-item-action admin-nav-item">Email Logs</a>
-                <a href="#" class="list-group-item list-group-item-action admin-nav-item">Messaging Logs</a>
+                <a asp-area="Admin" asp-page="/Logs/Notifications/Index" class="list-group-item list-group-item-action admin-nav-item">Notification Logs</a>
+                <a asp-area="Admin" asp-page="/Logs/Email/Index" class="list-group-item list-group-item-action admin-nav-item">Email Logs</a>
+                <a asp-area="Admin" asp-page="/Logs/Messaging/Index" class="list-group-item list-group-item-action admin-nav-item">Messaging Logs</a>
+                <div class="admin-nav-divider"></div>
+                <a asp-area="Admin" asp-page="/Logs/Issues/Index" class="list-group-item list-group-item-action admin-nav-item">Reported Issues</a>
             </div>
         </div>
     </div>
+}
 </nav>

@@ -1,0 +1,76 @@
+@page "{userId}"
+@model UltimateMonopoly.Areas.Admin.Pages.Logs.Notifications.UserModel
+@using JC.Web.UI.Helpers
+@using JC.Communication.Notifications.Models
+@using UltimateMonopoly.Areas.Admin.Enums
+@{
+    ViewData["Title"] = "User Notifications";
+
+    // Built in a code block — Razor can't parse generics inline in an attribute.
+    var typeItems = DropdownHelper.FromEnum<NotificationType>(Model.Type).WithPlaceholder("All types");
+    var readItems = DropdownHelper
+        .FromDictionary(new Dictionary<string, string> { ["true"] = "Read", ["false"] = "Unread" }, Model.Read?.ToString().ToLowerInvariant())
+        .WithPlaceholder("All states");
+    var statusItems = DropdownHelper.FromEnum<NotificationStatusFilter>(Model.Status);
+}
+
+<div class="d-flex align-items-center gap-3 mb-4">
+    <a asp-area="Admin" asp-page="/Logs/Notifications/Index" class="btn btn-sm btn-outline-secondary" title="Back to users">
+        <i class="bi bi-arrow-left"></i>
+    </a>
+    <span class="admin-page-ico bg-secondary-subtle text-secondary"><i class="bi bi-bell"></i></span>
+    <div class="min-w-0">
+        <h1 class="h3 mb-1 text-truncate">User Notifications</h1>
+        <p class="text-body-secondary mb-0 text-truncate">
+            @if (Model.Recipient is not null)
+            {
+                <span class="fw-semibold">@(string.IsNullOrWhiteSpace(Model.Recipient.Profile.Username) ? "(unknown)" : Model.Recipient.Profile.Username)</span>
+                <span> &middot; </span>
+            }
+            else
+            {
+                <span class="text-warning"><i class="bi bi-exclamation-circle me-1"></i>No account</span>
+                <span> &middot; </span>
+            }
+            <code class="user-id-copy" role="button" data-copy="@Model.UserId" title="Click to copy">@Model.UserId</code>
+        </p>
+    </div>
+</div>
+
+@* Search + type / read-state / status filters. A plain GET form is the no-JS fallback; notifications-user.js
+   intercepts and re-fetches just the table partial (?handler=Table). Status drives which service call runs. *@
+<form id="notif-filters" method="get" class="card mb-3">
+    <div class="card-body">
+        <div class="row g-3 align-items-end">
+            <div class="col-12 col-xl-6">
+                <label class="form-label small text-body-secondary mb-1" for="notif-search">Search</label>
+                <div class="input-group">
+                    <input type="search" class="form-control" id="notif-search" name="Search" value="@Model.Search"
+                           placeholder="Title, body…" autocomplete="off" />
+                    <button class="btn btn-primary" type="submit" aria-label="Search"><i class="bi bi-search"></i></button>
+                </div>
+            </div>
+            <div class="col-12 col-xl-2">
+                <label class="form-label small text-body-secondary mb-1" for="notif-type">Type</label>
+                <select class="form-select" id="notif-type" name="Type" asp-items="typeItems"></select>
+            </div>
+            <div class="col-12 col-xl-2">
+                <label class="form-label small text-body-secondary mb-1" for="notif-read">State</label>
+                <select class="form-select" id="notif-read" name="Read" asp-items="readItems"></select>
+            </div>
+            <div class="col-12 col-xl-2">
+                <label class="form-label small text-body-secondary mb-1" for="notif-status">Status</label>
+                <select class="form-select" id="notif-status" name="Status" asp-items="statusItems"></select>
+            </div>
+        </div>
+    </div>
+</form>
+
+<div id="notifications-table">
+    <partial name="_NotificationsTable" model="Model.TableModel" />
+</div>
+
+@section Scripts {
+    <script src="~/scripts/admin/copy.js" asp-append-version="true"></script>
+    <script src="~/scripts/admin/notifications-user.js" asp-append-version="true"></script>
+}

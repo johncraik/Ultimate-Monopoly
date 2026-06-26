@@ -1,0 +1,212 @@
+@using JC.Core.Extensions
+@using System.Text.Json
+@using UltimateMonopoly.Data
+@model UltimateMonopoly.Areas.Admin.Models.ViewModels.Logs.ReportedIssueTableModel
+@{
+    // The reporter's User Details page is admin-only — hide the "view user" button from GithubManager-only viewers.
+    var viewerIsAdmin = User.IsInRole(AppRoles.Admin) || User.IsInRole(AppRoles.SystemAdmin);
+
+    var hrefFormat = $"?Search={Uri.EscapeDataString(Model.Search ?? "")}" +
+                     $"&Type={Model.Type}&Closed={Model.Closed}&pageNumber={{0}}";
+
+    string TypeBadge(JC.Github.Models.IssueType t) =>
+        t == JC.Github.Models.IssueType.Bug ? "text-bg-danger" : "text-bg-info";
+
+    // Client-metadata values arrive as JsonElement (Dictionary<string, object?>); render readably, '-' for null/empty.
+    string FormatMeta(object? value)
+    {
+        if (value is null) return "-";
+        if (value is JsonElement el)
+        {
+            return el.ValueKind switch
+            {
+                JsonValueKind.Null => "-",
+                JsonValueKind.String => string.IsNullOrWhiteSpace(el.GetString()) ? "-" : el.GetString()!,
+                JsonValueKind.True => "true",
+                JsonValueKind.False => "false",
+                _ => string.IsNullOrWhiteSpace(el.ToString()) ? "-" : el.ToString()
+            };
+        }
+        var s = value.ToString();
+        return string.IsNullOrWhiteSpace(s) ? "-" : s;
+    }
+}
+
+<div class="d-flex align-items-center justify-content-between mb-2">
+    <span class="small text-body-secondary">@Model.Issues.TotalCount.ToString("N0") issue(s)</span>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-hover table-sm align-middle admin-audit-table mb-0">
+        <thead>
+            <tr class="text-body-secondary small text-uppercase">
+                <th class="admin-id-col">Issue ID</th>
+                <th>Type</th>
+                <th>Description</th>
+                <th class="text-center">Status</th>
+                <th>GitHub</th>
+                <th>Reporter</th>
+                <th>Created</th>
+                <th>Contact</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.Issues.Count == 0)
+            {
+                <tr><td colspan="8" class="text-center text-body-secondary py-4">No reported issues match.</td></tr>
+            }
+            else
+            {
+                foreach (var i in Model.Issues)
+                {
+                    var detailId = $"issue-{i.IssueId}";
+                    @* Click the row to toggle its detail row (independent collapse). No data-href.
+                       id = the GitHub issue number (when synced) so a "View Issue in App" deep link can anchor
+                       to it (#{ExternalId}); Razor omits the attribute when ExternalId is null. *@
+                    <tr id="@i.ExternalId" class="audit-row" role="button" data-bs-toggle="collapse" data-bs-target="#@detailId" aria-expanded="false" aria-controls="@detailId">
+                        <td class="admin-id-col">
+                            <code class="user-id-copy" role="button" title="@i.IssueId" data-copy="@i.IssueId">@i.IssueId.Truncate(8, "…")</code>
+                        </td>
+                        <td><span class="badge rounded-pill @TypeBadge(i.Type)">@i.TypeDisplay</span></td>
+                        <td><span title="@i.Description">@i.Description.Truncate(50, "…")</span></td>
+                        <td class="text-center">
+                            @if (i.Closed)
+                            {
+                                <span class="badge rounded-pill text-bg-secondary"><i class="bi bi-check-circle me-1"></i>Closed</span>
+                            }
+                            else
+                            {
+                                <span class="badge rounded-pill text-bg-success"><i class="bi bi-dot"></i>Open</span>
+                            }
+                        </td>
+                        <td>
+                            @if (i.ReportSent && i.GitHubUrl != null)
+                            {
+                                @* Whole badge is the link to the GitHub issue. *@
+                                <a href="@i.GitHubUrl" target="_blank" rel="noopener" class="badge text-bg-success text-decoration-none">
+                                    Synced - #@i.ExternalId<i class="bi bi-box-arrow-up-right ms-2"></i>
+                                </a>
+                            }
+                            else if (i.ReportSent)
+                            {
+                                <span class="badge text-bg-success">Synced - #@i.ExternalId</span>
+                            }
+                            else
+                            {
+                                <span class="badge text-bg-warning"><i class="bi bi-exclamation-triangle me-1"></i>Not synced</span>
+                            }
+                        </td>
+                        <td class="min-w-0">
+                            <div class="fw-semibold text-truncate">@i.ReporterName</div>
+                            @if (i.ReporterId != "-")
+                            {
+                                <code class="user-id-copy small text-body-secondary d-block" role="button" title="@i.ReporterId" data-copy="@i.ReporterId">@i.ReporterId.Truncate(12, "…")</code>
+                                @if (viewerIsAdmin)
+                                {
+                                    <a href="/Admin/Users/Details/@i.ReporterId" class="btn btn-sm btn-outline-secondary mt-1" title="View user" aria-label="View user">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                }
+                            }
+                            else
+                            {
+                                <span class="small text-body-secondary">—</span>
+                            }
+                        </td>
+                        <td>@i.CreatedDate</td>
+                        <td>
+                            @* Only when there's a local reporter to contact (GitHub-origin issues have no registered user). *@
+                            @if (i.ReporterId != "-")
+                            {
+                                <a href="/Admin/Logs/Issues/Contact/@i.IssueId" class="btn btn-sm btn-outline-primary text-nowrap" title="Contact reporter">
+                                    <i class="bi bi-envelope me-1"></i>Contact
+                                </a>
+                            }
+                            else
+                            {
+                                <span class="small text-body-secondary">—</span>
+                            }
+                        </td>
+                    </tr>
+                    @* Detail row — full description, optional screenshot, and synced comments. *@
+                    <tr class="audit-detail">
+                        <td colspan="8" class="p-0 border-0">
+                            <div id="@detailId" class="collapse">
+                                <div class="bg-body-tertiary p-3">
+                                    <div class="row g-3">
+                                        @* Left — the reporter's full description (plain text; never sent to GitHub with metadata). *@
+                                        <div class="col-12 col-lg-6">
+                                            <div class="small text-body-secondary text-uppercase mb-1">Description</div>
+                                            <div class="admin-log-detail">@i.Description</div>
+                                        </div>
+
+                                        @* Right — client metadata, collapsible, kept off the public GitHub issue. *@
+                                        <div class="col-12 col-lg-6">
+                                            <div class="small text-body-secondary text-uppercase mb-1">Client metadata</div>
+                                            @if (i.ClientMetadata.Count == 0)
+                                            {
+                                                <div class="text-body-secondary small">None recorded.</div>
+                                            }
+                                            else
+                                            {
+                                                <div class="admin-issue-body">
+                                                    <details>
+                                                        <summary>@i.ClientMetadata.Count field(s)</summary>
+                                                        <table class="mt-2">
+                                                            @foreach (var kvp in i.ClientMetadata)
+                                                            {
+                                                                <tr>
+                                                                    <td class="fw-semibold text-nowrap">@kvp.Key</td>
+                                                                    <td>@FormatMeta(kvp.Value)</td>
+                                                                </tr>
+                                                            }
+                                                        </table>
+                                                    </details>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+
+                                    @if (i.HasImage)
+                                    {
+                                        <div class="small text-body-secondary text-uppercase mb-1 mt-3">Screenshot</div>
+                                        <img src="@i.ImageDataUri" alt="Reported screenshot" class="img-fluid rounded border mb-1" style="max-height: 18rem;" />
+                                    }
+
+                                    <div class="small text-body-secondary text-uppercase mb-2 mt-3">Comments (@i.Comments.Count)</div>
+                                    @if (i.Comments.Count == 0)
+                                    {
+                                        <div class="text-body-secondary small">No comments@(i.ReportSent ? "." : " — this issue never synced to GitHub.")</div>
+                                    }
+                                    else
+                                    {
+                                        <div class="d-flex flex-column gap-2">
+                                            @foreach (var c in i.Comments)
+                                            {
+                                                <div class="border rounded p-2">
+                                                    <div class="d-flex align-items-center gap-2 flex-wrap small text-body-secondary mb-1">
+                                                        <span class="fw-semibold text-body"><i class="bi bi-github me-1"></i>@c.Author</span>
+                                                        <span>@c.CreatedAt</span>
+                                                        @if (c.IsEdited)
+                                                        {
+                                                            <span class="badge text-bg-secondary">edited @c.EditedAt</span>
+                                                        }
+                                                    </div>
+                                                    <div>@c.Body</div>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+<div class="mt-3 d-flex justify-content-center">
+    <pagination model="Model.Issues" href-format="@hrefFormat" />
+</div>

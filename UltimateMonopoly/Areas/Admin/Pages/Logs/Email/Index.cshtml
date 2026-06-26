@@ -1,0 +1,35 @@
+@page
+@model UltimateMonopoly.Areas.Admin.Pages.Logs.Email.IndexModel
+@{
+    ViewData["Title"] = "Email Logs";
+}
+
+<div class="d-flex align-items-center gap-3 mb-4">
+    <span class="admin-page-ico bg-secondary-subtle text-secondary"><i class="bi bi-envelope"></i></span>
+    <div>
+        <h1 class="h3 mb-1">Email Logs</h1>
+        <p class="text-body-secondary mb-0">Every outbound email — sender, subject, recipients, and send results.</p>
+    </div>
+</div>
+
+@* Search only. A plain GET form is the no-JS fallback; email-logs.js intercepts and re-fetches just the
+   table partial (?handler=Table). *@
+<form id="log-filters" method="get" class="card mb-3">
+    <div class="card-body">
+        <label class="form-label small text-body-secondary mb-1" for="log-search">Search</label>
+        <div class="input-group">
+            <input type="search" class="form-control" id="log-search" name="Search" value="@Model.Search"
+                   placeholder="From, subject, recipient, created-by id…" autocomplete="off" />
+            <button class="btn btn-primary" type="submit" aria-label="Search"><i class="bi bi-search"></i></button>
+        </div>
+    </div>
+</form>
+
+<div id="logs-table">
+    <partial name="_EmailLogsTable" model="Model.TableModel" />
+</div>
+
+@section Scripts {
+    <script src="~/scripts/admin/copy.js" asp-append-version="true"></script>
+    <script src="~/scripts/admin/email-logs.js" asp-append-version="true"></script>
+}

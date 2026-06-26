@@ -11,7 +11,12 @@ public class UserTableModel
     public PagedList<UserViewModel> Users { get; }
     public bool FullTable { get; }
 
-    public UserTableModel(PagedList<UserViewModel> users, string? search, 
+    /// <summary>Where a row links in the non-full (picker) variant. Null → the default User Trail page;
+    /// set it to reuse the picker for another destination (e.g. the notifications-by-user page). The row
+    /// navigates to <c>{RowLinkBase}/{userId}</c>.</summary>
+    public string? RowLinkBase { get; }
+
+    public UserTableModel(PagedList<UserViewModel> users, string? search,
         UserManagementFilter restrictedFilter, UserManagementFilter disabledFilter)
     {
         Users = users;
@@ -21,10 +26,11 @@ public class UserTableModel
         FullTable = true;
     }
 
-    public UserTableModel(PagedList<UserViewModel> users, string? search = null)
+    public UserTableModel(PagedList<UserViewModel> users, string? search = null, string? rowLinkBase = null)
     {
         Users = users;
         Search = search;
+        RowLinkBase = rowLinkBase;
         FullTable = false;
     }
 }

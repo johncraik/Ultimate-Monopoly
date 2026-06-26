@@ -236,6 +236,62 @@ games, notifications, admin logs, and the user trail are buildable now; email/me
 Reuse demands the atoms come first: build each stream's scoped query + table partial (§8/§9/§10), then the
 panel and the standalone pages both compose them.
 
+### 7.4 Build plan — **all atoms now exist** (log viewers + audit trail are built)
+
+The log viewers (§10) and audit trail (§9) shipped, so every stream's scoped query **and** reusable table
+partial already exist. This is now a **composition** job, not new queries. Confirmed inventory (each stream =
+existing service method + existing partial + model, scoped to user X):
+
+| Stream | Fetch (scoped to X) | Partial | Model | Size |
+|---|---|---|---|---|
+| Message logs | `AppLogService.GetThreadActivityLogs(p, 15, search: X)` | `Logs/Messaging/_ThreadActivityLogsTable` | `ThreadActivityLogTableModel` | 15 |
+| Recent games *(SysAdmin)* | `GameManagementService.GetGames(p, 10, host: X, player: X)` | `Games/_GamesTable` | `GameTableModel` | 10 |
+| Admin logs *(gated)* | `AppLogService.GetAdminLogs(p, 5, search: X)` | `Logs/Admin/_AdminLogsTable` | `AdminLogTableModel` | 5 |
+| Email logs | `AppLogService.GetEmailLogs(p, 5, search: X)` | `Logs/Email/_EmailLogsTable` | `EmailLogTableModel` | 5 |
+| Notifications | `AppLogService.GetUserNotifications(X, p, 5, …)` | `Logs/Notifications/_NotificationsTable` | `NotificationTableModel` | 5 |
+| User trail | `AuditTrailService.GetUserTrail(X, p, 30)` | `Audit/_AuditTable` (`IsUserTrail`) | `AuditTableModel` | 30 |
+
+**Pattern:** *search by user id* for message / admin / email logs; *explicit per-user functions* for games /
+notifications / user-trail. **Notifications = the per-user `_NotificationsTable`** (via `GetUserNotifications`),
+**not** the read/unread `_NotificationLogsTable`.
+
+**Decisions (confirmed):**
+
+1. **Preview mode (drop pagination + "View all").** Add a `Preview` bool to each of the 6 `TableModel`s. When
+   set, the partial **omits its `<pagination>`** (and count header); the panel renders a section header with a
+   **"View all →"** link to the standalone page, pre-scoped to X:
+   - Message logs → `/Admin/Logs/Messaging/Index?Search={X}`
+   - Recent games → `/Admin/Games/Index?Search={X}` — the games-list `search` matches
+     `Players.Any(p => p.UserId.Contains(search))`, so search-by-id works (SysAdmin-only page).
+   - Admin logs → `/Admin/Logs/Admin/Index?Search={X}`
+   - Email logs → `/Admin/Logs/Email/Index?Search={X}`
+   - Notifications → `/Admin/Logs/Notifications/User/{X}`
+   - User trail → `/Admin/Audit/Users/Trail/{X}`
+2. **Placement = a fresh full-width row.** The WIP card is replaced by a **full-width block below** the
+   report/actions row. The **50/50 split spans the full page width** (left: Message logs · Recent games;
+   right: Admin logs · Email logs · Notifications); the **User trail is its own full-width row** beneath the
+   50/50.
+3. **Reusable = composed view model + partial + builder.** A `RecentActivityModel` holds each sub-`TableModel`
+   (nullable when a stream is hidden) + the view-all URLs; `_RecentActivityPanel.cshtml` renders the layout and
+   calls each sub-partial in preview mode. A small **builder** (e.g. `RecentActivityService.Build(userId,
+   viewerIsSystemAdmin, userHoldsAdminRole)`) injects `AppLogService` + `GameManagementService` +
+   `AuditTrailService` and composes the scoped queries — so Reports → Details **and** User → Details both just
+   call the builder (the panel owns no queries).
+4. **Auth / gates.**
+   - **Recent games — SysAdmin only.** `GameManagementService.GetGames` calls `AuthCheck()` (throws if not
+     SysAdmin) **in the method, not the ctor** — so inject freely, but only **call** it when the viewer is a
+     SystemAdmin; otherwise leave the games stream null (hidden).
+   - **Admin logs — gated.** Render only when X **currently holds Admin/SystemAdmin OR has ≥1 admin-log entry**
+     (`CreatedById = X`); else omit the section.
+   - `AppLogService` / `AuditTrailService` **guard their constructors** (throw if the resolver isn't Admin/
+     SystemAdmin) — fine here, the panel is admin-only, but it's why the builder must run in an admin request
+     context (cf. the GithubManager constructor-guard gotcha).
+
+**Build steps:** (1) add `Preview` to the 6 `TableModel`s + the pagination-drop in each partial; (2)
+`RecentActivityModel`; (3) `RecentActivityService.Build(...)`; (4) `_RecentActivityPanel.cshtml` (50/50 + full-
+width trail; hide a cell when its sub-model is null); (5) wire into Reports → Details (pass `ReportedUserId`,
+`IsSystemAdmin`, and whether the reported user holds admin) — reusable on User → Details next.
+
 ---
 
 ## 8. Game Management *(SystemAdmin only)*

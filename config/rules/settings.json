@@ -1,0 +1,11 @@
+{
+  "EnableCleanup": true,
+  "CleanupRetentionMonths": 3,
+  "EnableAbandonedGamesManagement": true,
+  "AbandonedGameAction": 1,
+  "AbandonedRetentionWeeks": 6,
+  "EnableAutoDeleteCancelled": true,
+  "AutoDeleteCancelledRetentionMonths": 3,
+  "EnableAutoDeleteSnapshots": true,
+  "AutoDeleteSnapshotsRetentionMonths": 3
+}

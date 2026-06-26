@@ -16,9 +16,14 @@ public static class AdminServiceRegistration
         services.TryAddScoped<GameManagementService>();
         services.TryAddScoped<AdminGameStateService>();
         services.TryAddScoped<AuditTrailService>();
+        services.TryAddScoped<AppLogService>();
+        services.TryAddScoped<SettingsManagementService>();
 
         // Singleton registry of users flagged for a live-session sign-in refresh (role/account changes).
         services.TryAddSingleton<AuthRefreshService>();
+
+        // Singleton holder for the admin-configurable game settings (config/rules/settings.json).
+        services.TryAddSingleton<SettingsDictionary>();
 
         return services;
     }

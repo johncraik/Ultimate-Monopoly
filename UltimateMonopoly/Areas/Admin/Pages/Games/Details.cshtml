@@ -29,6 +29,8 @@
     var canDraw = state is GameState.InPlay;
     var canDelete = state is GameState.Finished or GameState.Cancelled;
     var canForceRefresh = state is GameState.InPlay;
+    // Revert resumes at the start of a turn and re-plays it — only meaningful for a live, in-play game.
+    var canRevert = state is GameState.InPlay;
 
     var orderedPlayers = g.Players.OrderByDescending(p => p.Profile.UserId == g.HostUserId).ToList();
 }
@@ -270,7 +272,9 @@
                 </div>
             </div>
 
-            @* ---------- DANGER ZONE — irreversible revert to the selected turn ---------- *@
+            @* ---------- DANGER ZONE — irreversible revert to the selected turn (in-play games only) ---------- *@
+            @if (canRevert)
+            {
             <div class="card border-danger border-2 mt-3">
                 <div class="card-header bg-danger text-white d-flex align-items-center gap-2 fw-semibold">
                     <i class="bi bi-exclamation-octagon-fill"></i> Danger Zone
@@ -290,11 +294,12 @@
                     </button>
                 </div>
             </div>
+            }
         }
     </div>
 </div>
 
-@if (d.Turns.Count > 0)
+@if (d.Turns.Count > 0 && canRevert)
 {
     @* Confirm modal for the irreversible revert. The hidden turnNumber + the labels are kept in sync with
        the state turn selector by game-details.js. *@

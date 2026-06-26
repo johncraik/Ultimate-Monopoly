@@ -1,12 +1,14 @@
 @using JC.Communication.Notifications.Helpers
 @using JC.Communication.Notifications.Services
 @using JC.Core.Extensions
+@using JC.Identity.Authentication
 @using Microsoft.AspNetCore.Identity
 @using UltimateMonopoly.Data
 @using UltimateMonopoly.Services
+@using Microsoft.Extensions.Hosting
 @inject SignInManager<AppUser> SignInManager
 @inject NotificationCache NotificationCache
-@inject ProfileService ProfileService
+@inject Microsoft.AspNetCore.Hosting.IWebHostEnvironment Env
 
 <nav class="navbar navbar-expand-lg navbar-glass mb-4">
     <div class="container-lg">
@@ -57,30 +59,7 @@
                 <div class="d-flex align-items-center gap-2 ms-auto justify-content-end">
                     <partial name="_NotificationBell" />
 
-                    @{
-                        var currentUser = await ProfileService.GetCurrentUserProfileViewModelAsync();
-                    }
-                    <div class="dropdown">
-                        <button class="btn p-0 border-0 rounded-circle" type="button"
-                                data-bs-toggle="dropdown" aria-expanded="false" aria-label="My Account">
-                            <profile-circle user="currentUser" size="Md" />
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end" style="max-width: 95vw;">
-                            @if (User.IsInRole(AppRoles.Admin) || User.IsInRole(AppRoles.SystemAdmin))
-                            {
-                                <li><a class="dropdown-item" asp-area="Admin" asp-page="/Index"><i class="bi bi-shield-lock me-1"></i>Admin Centre</a></li>
-                                <li><hr class="dropdown-divider" /></li>
-                            }
-                            <li><a class="dropdown-item" href="/profile">Profile</a></li>
-                            <li><a class="dropdown-item" href="/account">Account</a></li>
-                            <li><hr class="dropdown-divider" /></li>
-                            <li>
-                                <form asp-area="Identity" asp-page="/Account/Logout" method="post" class="m-0">
-                                    <button type="submit" class="dropdown-item dropdown-item-danger">Logout</button>
-                                </form>
-                            </li>
-                        </ul>
-                    </div>
+                    <partial name="~/Pages/Shared/_ProfileDropdown.cshtml" />
                 </div>
 
             }

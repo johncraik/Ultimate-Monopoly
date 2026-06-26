@@ -7,11 +7,13 @@
     string RoleBadgeClass(string role) =>
         role == AppRoles.SystemAdmin ? "text-bg-danger" :
         role == AppRoles.Admin ? "text-bg-primary" :
+        role == AppRoles.GithubManager ? "text-bg-info" :
         role == AppRoles.Restricted ? "text-bg-warning" :
         role == AppRoles.HiddenUser ? "text-bg-secondary" : "text-bg-info";
 
     string RoleLabel(string role) =>
         role == AppRoles.SystemAdmin ? "System Admin" :
+        role == AppRoles.GithubManager ? "GitHub Manager" :
         role == AppRoles.HiddenUser ? "Hidden" : role;
 }
 
@@ -217,6 +219,19 @@
 
                 @if (Model.IsSystemAdmin)
                 {
+                    @* Make / remove GitHub Manager — above Admin, below the Restricted action. *@
+                    <div class="d-flex justify-content-between align-items-start gap-3 border-top pt-3">
+                        <div>
+                            <div class="fw-semibold">@(Model.TargetIsGithubManager ? "Remove GitHub Manager" : "Make GitHub Manager")</div>
+                            <div class="small text-body-secondary">@AppRoles.GithubManagerDesc</div>
+                        </div>
+                        <form method="post" asp-page-handler="ToggleRole" asp-route-userId="@Model.UserId" asp-route-role="@AppRoles.GithubManager">
+                            <button class="btn @(Model.TargetIsGithubManager ? "btn-outline-secondary" : "btn-outline-info") text-nowrap" type="submit">
+                                @(Model.TargetIsGithubManager ? "Remove" : "Grant")
+                            </button>
+                        </form>
+                    </div>
+
                     @* Make / remove Admin *@
                     <div class="d-flex justify-content-between align-items-start gap-3 border-top pt-3">
                         <div>

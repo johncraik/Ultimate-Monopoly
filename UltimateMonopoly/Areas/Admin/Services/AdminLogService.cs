@@ -4,6 +4,7 @@ using JC.Core.Services.DataRepositories;
 using JC.Identity.Authentication;
 using UltimateMonopoly.Areas.Admin.Enums;
 using UltimateMonopoly.Areas.Admin.Models;
+using UltimateMonopoly.Data;
 
 namespace UltimateMonopoly.Areas.Admin.Services;
 
@@ -17,7 +18,9 @@ public class AdminLogService
     {
         _logs = logs;
         _userInfo = userInfo;
-        if(!userInfo.IsInRole(SystemRoles.Admin) && !userInfo.IsInRole(SystemRoles.SystemAdmin))
+        if(!userInfo.IsInRole(SystemRoles.Admin) 
+           && !userInfo.IsInRole(SystemRoles.SystemAdmin)
+           && !userInfo.IsInRole(AppRoles.GithubManager))
             throw new UnauthorizedAccessException(
                 "You are not authorized to perform this action."
             );
@@ -190,6 +193,28 @@ public class AdminLogService
             TargetType = AdminTargetType.Config,
             TargetId = "turnTax",
             Detail = $"{AdminLogIdentifier} {summary}"
+        });
+    }
+
+    public async Task LogSettingsUpdated(string summary)
+    {
+        await SaveLog(new AdminActionLog
+        {
+            Action = AdminActionType.SettingsUpdated,
+            TargetType = AdminTargetType.Config,
+            TargetId = "settings",
+            Detail = $"{AdminLogIdentifier} {summary}"
+        });
+    }
+
+    public async Task LogStatisticsRecomputed(int deletedCount)
+    {
+        await SaveLog(new AdminActionLog
+        {
+            Action = AdminActionType.StatisticsRecomputed,
+            TargetType = AdminTargetType.Config,
+            TargetId = "statistics",
+            Detail = $"{AdminLogIdentifier} triggered a statistics recompute — {deletedCount} player stat record(s) deleted and re-queued."
         });
     }
 

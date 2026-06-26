@@ -27,13 +27,15 @@ public class AuditTrailService
     }
 
     /// <summary>Audit entries newest-first, optionally scoped to one actor and filtered by table-name search + action.</summary>
-    private IQueryable<AuditEntry> Query(string? userId, string? search, AuditAction? action, string? tableName)
+    private IQueryable<AuditEntry> Query(string? userId, bool system, string? search, AuditAction? action, string? tableName)
     {
         var query = _context.AuditEntries.AsNoTracking().AsQueryable();
 
         if (!string.IsNullOrEmpty(userId))
             query = query.Where(a => a.UserId == userId);
-
+        else if (system)
+            query = query.Where(a => a.UserId == IUserInfo.UNKNOWN_USER_ID || a.UserId == IUserInfo.SYSTEM_USER_ID);
+        
         if (action.HasValue)
             query = query.Where(a => a.Action == action.Value);
 
@@ -43,14 +45,14 @@ public class AuditTrailService
         if (!string.IsNullOrWhiteSpace(search))
         {
             search = search.ToLower();
-            query = string.IsNullOrEmpty(userId)
+            query = !string.IsNullOrEmpty(userId)
                 //Filter search to be TableView (search userId and userName)
                 ? query.Where(a => (!string.IsNullOrEmpty(a.EntityKey) && a.EntityKey.ToLower().Contains(search)) 
-                                   || (!string.IsNullOrEmpty(a.UserId) && a.UserId.ToLower().Contains(search)) 
-                                   || (!string.IsNullOrEmpty(a.UserName) && a.UserName.ToLower().Contains(search)))
+                                   || (a.TableName != null && a.TableName.ToLower().Contains(search)))
                 //Filter search to be UserView (search tableName)
                 : query.Where(a => (!string.IsNullOrEmpty(a.EntityKey) && a.EntityKey.ToLower().Contains(search)) 
-                                   || (a.TableName != null && a.TableName.ToLower().Contains(search)));
+                                   || (!string.IsNullOrEmpty(a.UserId) && a.UserId.ToLower().Contains(search)) 
+                                   || (!string.IsNullOrEmpty(a.UserName) && a.UserName.ToLower().Contains(search)));
         }
 
         return query.OrderByDescending(a => a.AuditDate);
@@ -60,7 +62,15 @@ public class AuditTrailService
     public async Task<PagedList<AuditEntryViewModel>> GetUserTrail(string userId, int pageNumber, int pageSize,
         string? search, AuditAction? action)
     {
-        var paged = await Query(userId, search, action, null).ToPagedListAsync(pageNumber, pageSize);
+        var paged = await Query(userId, false, search, action, null).ToPagedListAsync(pageNumber, pageSize);
+        var entries = paged.Select(e => new AuditEntryViewModel(e, true)).ToList();
+        return new PagedList<AuditEntryViewModel>(entries, paged.PageNumber, paged.PageSize, paged.TotalCount);
+    }
+    
+    public async Task<PagedList<AuditEntryViewModel>> GetSystemTrail(int pageNumber, int pageSize,
+        string? search, AuditAction? action)
+    {
+        var paged = await Query(null, true, search, action, null).ToPagedListAsync(pageNumber, pageSize);
         var entries = paged.Select(e => new AuditEntryViewModel(e, true)).ToList();
         return new PagedList<AuditEntryViewModel>(entries, paged.PageNumber, paged.PageSize, paged.TotalCount);
     }
@@ -68,7 +78,7 @@ public class AuditTrailService
     public async Task<PagedList<AuditEntryViewModel>> GetDataTableTrail(string tableName, int pageNumber, int pageSize,
         string? search, AuditAction? action)
     {
-        var paged = await Query(null, search, action, tableName).ToPagedListAsync(pageNumber, pageSize);
+        var paged = await Query(null, false, search, action, tableName).ToPagedListAsync(pageNumber, pageSize);
         var entries = paged.Select(e => new AuditEntryViewModel(e, false)).ToList();
         return new PagedList<AuditEntryViewModel>(entries, paged.PageNumber, paged.PageSize, paged.TotalCount);
     }

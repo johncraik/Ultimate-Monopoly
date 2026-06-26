@@ -9,6 +9,11 @@
         ? "<i class=\"bi bi-check-circle-fill text-success\" title=\"Yes\"></i>"
         : "<i class=\"bi bi-x-circle-fill text-danger\" title=\"No\"></i>");
 
+    // Restricted: solid amber '!' (restricted) / solid grey minus (not restricted).
+    Func<bool, IHtmlContent> restrictedFlag = on => new HtmlString(on
+        ? "<i class=\"bi bi-exclamation-circle-fill text-warning\" title=\"Restricted\"></i>"
+        : "<i class=\"bi bi-dash-circle-fill text-secondary\" title=\"Not restricted\"></i>");
+
     // Pagination links carry the current filter/search (no handler) so a no-JS click reloads the full
     // page; user-management.js upgrades the click to a ?handler=Table partial fetch.
     var hrefFormat = $"?RestrictedFilter={Model.RestrictedFilter}&DisabledFilter={Model.DisabledFilter}" +
@@ -33,7 +38,7 @@
                     <th>Lockout</th>
                     <th>Last Login</th>
                     <th>Last Active</th>
-                    <th class="text-center">Disabled</th>
+                    <th class="text-center">Enabled</th>
                     <th class="text-center">Restricted</th>
                 }
                 <th class="text-end"></th>
@@ -48,7 +53,10 @@
             {
                 foreach (var u in Model.Users)
                 {
-                    <tr data-href="@(Model.FullTable ? $"/Admin/Users/Details/{u.Profile.UserId}" : $"/Admin/Audit/Users/Trail/{u.Profile.UserId}")">
+                    // Non-full (picker) destination: the configured RowLinkBase, else the default User Trail.
+                    var trailHref = $"/Admin/Audit/Users/Trail/{u.Profile.UserId}";
+                    var pickerHref = Model.RowLinkBase != null ? $"{Model.RowLinkBase}/{u.Profile.UserId}" : trailHref;
+                    <tr data-href="@(Model.FullTable ? $"/Admin/Users/Details/{u.Profile.UserId}" : pickerHref)">
                         <td>
                             <code class="user-id-copy" role="button" title="@u.Profile.UserId"
                                   data-copy-id="@u.Profile.UserId">@u.Profile.UserId.Truncate(8, "…")</code>
@@ -70,8 +78,8 @@
                             </td>
                             <td>@u.LastLogin</td>
                             <td>@u.LastActive</td>
-                            <td class="text-center">@flag(!u.IsEnabled)</td>
-                            <td class="text-center">@flag(u.IsRestricted ?? false)</td>
+                            <td class="text-center">@flag(u.IsEnabled)</td>
+                            <td class="text-center">@restrictedFlag(u.IsRestricted ?? false)</td>
                         }
                         
                         <td class="text-end">
@@ -83,10 +91,18 @@
                                         <i class="bi bi-eye"></i>
                                     </a>
                                 }
-                                <a href="/Admin/Audit/Users/Trail/@u.Profile.UserId"
-                                   class="btn btn-outline-secondary" title="Audit trail" aria-label="Audit trail">
-                                    <i class="bi bi-clipboard-data"></i>
-                                </a>
+                                @if (!Model.FullTable && Model.RowLinkBase != null)
+                                {
+                                    <a href="@pickerHref" class="btn btn-outline-secondary" title="View" aria-label="View">
+                                        <i class="bi bi-bell"></i>
+                                    </a>
+                                }
+                                else
+                                {
+                                    <a href="@trailHref" class="btn btn-outline-secondary" title="Audit trail" aria-label="Audit trail">
+                                        <i class="bi bi-clipboard-data"></i>
+                                    </a>
+                                }
                                 
                                 @if (Model.FullTable)
                                 {
@@ -96,9 +112,9 @@
                                             <i class="bi bi-journal-text"></i>
                                         </button>
                                         <ul class="dropdown-menu dropdown-menu-end">
-                                            <li><a class="dropdown-item" href="/Admin/Logs/Notifications/@u.Profile.UserId"><i class="bi bi-bell me-2"></i>Notifications</a></li>
-                                            <li><a class="dropdown-item" href="/Admin/Logs/Emails/@u.Profile.UserId"><i class="bi bi-envelope me-2"></i>Emails</a></li>
-                                            <li><a class="dropdown-item" href="/Admin/Logs/Messages/@u.Profile.UserId"><i class="bi bi-chat-dots me-2"></i>Messages</a></li>
+                                            <li><a class="dropdown-item" href="/Admin/Logs/Notifications/User/@u.Profile.UserId"><i class="bi bi-bell me-2"></i>Notifications</a></li>
+                                            <li><a class="dropdown-item" href="/Admin/Logs/Emails?search=@u.Profile.UserId"><i class="bi bi-envelope me-2"></i>Emails</a></li>
+                                            <li><a class="dropdown-item" href="/Admin/Logs/Messages?search=@u.Profile.UserId"><i class="bi bi-chat-dots me-2"></i>Messages</a></li>
                                         </ul>
                                     </div>
                                 }

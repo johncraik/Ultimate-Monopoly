@@ -5,6 +5,7 @@ using JC.Core.Services.DataRepositories;
 using JC.Identity.Authentication;
 using Microsoft.EntityFrameworkCore;
 using MP.GameEngine.Abstractions;
+using MP.GameEngine.Enums.Games;
 using MP.GameEngine.Models.DTOs;
 using MP.GameEngine.Services;
 using MP.GameEngine.Services.Cards;
@@ -97,7 +98,7 @@ public class AdminGameStateService
             .AsQueryable()
             .Include(g => g.Turns)
             .FilterDeleted(DeletedQueryType.OnlyActive)
-            .FirstOrDefaultAsync(g => g.Id == gameId);
+            .FirstOrDefaultAsync(g => g.Id == gameId && g.State == GameState.InPlay);
         if (game == null) return false;
 
         // The target turn N is the resume point: its GameTurn + GameSnapshot stay, so the game rehydrates
