@@ -16,6 +16,9 @@ public class AuditTableModel
     public AuditAction? Action { get; }
     public bool IsUserTrail { get; }
 
+    /// <summary>Preview mode (the §7.3 Recent Activity panel): the partial drops its pagination + count header.</summary>
+    public bool Preview { get; init; }
+
     public AuditTableModel(PagedList<AuditEntryViewModel> entries, string? search, AuditAction? action, bool isUserTrail)
     {
         Entries = entries;

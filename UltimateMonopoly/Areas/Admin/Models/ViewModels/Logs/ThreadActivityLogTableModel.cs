@@ -11,6 +11,9 @@ public class ThreadActivityLogTableModel
     public string? Search { get; }
     public ThreadActivityType? ActivityType { get; }
 
+    /// <summary>Preview mode (the §7.3 Recent Activity panel): the partial drops its pagination + count header.</summary>
+    public bool Preview { get; init; }
+
     public ThreadActivityLogTableModel(PagedList<ThreadActivityLogViewModel> logs, string? search, ThreadActivityType? activityType)
     {
         Logs = logs;

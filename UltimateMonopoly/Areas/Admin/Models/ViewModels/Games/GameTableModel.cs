@@ -11,6 +11,9 @@ public class GameTableModel
     public GameState? State { get; }
     public GameOutcome? Outcome { get; }
 
+    /// <summary>Preview mode (the §7.3 Recent Activity panel): the partial drops its pagination + count header.</summary>
+    public bool Preview { get; init; }
+
     public GameTableModel(PagedList<GameViewModel> games, string? search, string? hostId,
         GameState? state, GameOutcome? outcome)
     {

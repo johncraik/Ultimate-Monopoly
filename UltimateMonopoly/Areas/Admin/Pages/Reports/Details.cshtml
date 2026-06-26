@@ -64,15 +64,6 @@
             </div>
         </div>
 
-        @* WIP — a mini-dashboard of this user's recent activity (logs / audit / games) lands once those
-           admin areas exist, so we read from them rather than duplicating their queries here. *@
-        <div class="card admin-wip">
-            <div class="card-body text-center text-body-secondary py-4">
-                <i class="bi bi-clock-history d-block fs-4 mb-2"></i>
-                <div class="fw-semibold">Recent activity coming soon</div>
-                <div class="small">Logs, audit trail, and recent games for this user will surface here once those admin areas are built.</div>
-            </div>
-        </div>
     </div>
 
     @* ---------- RIGHT: reporter + actions ---------- *@
@@ -148,6 +139,9 @@
         </div>
     </div>
 </div>
+
+@* Recent activity panel (§7.3) — the reported user's logs / audit / games, keyed by their id. *@
+<partial name="~/Areas/Admin/Pages/Shared/_RecentActivityPanel.cshtml" model="Model.Activity" />
 
 @if (Model.CanDelete)
 {

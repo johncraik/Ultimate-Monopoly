@@ -134,6 +134,9 @@
     </table>
 </div>
 
-<div class="mt-3 d-flex justify-content-center">
-    <pagination model="Model.Entries" href-format="@hrefFormat" />
-</div>
+@if (!Model.Preview)
+{
+    <div class="mt-3 d-flex justify-content-center">
+        <pagination model="Model.Entries" href-format="@hrefFormat" />
+    </div>
+}

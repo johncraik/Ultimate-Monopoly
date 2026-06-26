@@ -3,6 +3,7 @@ using JC.Identity.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using UltimateMonopoly.Areas.Admin.Enums;
+using UltimateMonopoly.Areas.Admin.Models.ViewModels;
 using UltimateMonopoly.Areas.Admin.Models.ViewModels.Reports;
 using UltimateMonopoly.Areas.Admin.Services;
 
@@ -11,17 +12,23 @@ namespace UltimateMonopoly.Areas.Admin.Pages.Reports;
 public class DetailsModel : PageModel
 {
     private readonly ReportManagementService _reports;
+    private readonly RecentActivityService _activity;
     private readonly IUserInfo _userInfo;
 
-    public DetailsModel(ReportManagementService reports, IUserInfo userInfo)
+    public DetailsModel(ReportManagementService reports, RecentActivityService activity, IUserInfo userInfo)
     {
         _reports = reports;
+        _activity = activity;
         _userInfo = userInfo;
     }
 
     public string ReportId { get; set; } = "";
 
     public ReportViewModel Report { get; private set; } = default!;
+
+    // The reported user's recent-activity panel (§7.3) — keyed by ReportedUserId, so it surfaces even when
+    // the account has since been deleted (its historical logs/audit/games persist under the id).
+    public RecentActivityModel Activity { get; private set; } = default!;
 
     // Open vs resolved (resolved = any non-open resolution).
     public bool IsOpen => Report.Resolution == ReportResolution.Open;
@@ -33,6 +40,9 @@ public class DetailsModel : PageModel
     public bool TargetIsSystemAdmin => Report.ReportedUser?.Roles.Contains(SystemRoles.SystemAdmin) ?? false;
     // A plain Admin can't moderate a SystemAdmin (mirrors UserManagementService).
     public bool CanModerateTarget => IsSystemAdmin || !TargetIsSystemAdmin;
+    // Gates the activity panel's admin-logs stream (§7.4) — the reported user currently holds an admin role.
+    public bool ReportedUserHoldsAdminRole =>
+        (Report.ReportedUser?.Roles.Contains(SystemRoles.Admin) ?? false) || TargetIsSystemAdmin;
 
     // Resolution-state gates — match the allowed-state checks in each Try* method.
     public bool CanHandle => Report.Resolution == ReportResolution.Open;
@@ -56,6 +66,7 @@ public class DetailsModel : PageModel
         if (report == null) return NotFound();
 
         Report = report;
+        Activity = await _activity.Build(report.ReportedUserId, IsSystemAdmin, ReportedUserHoldsAdminRole);
         return Page();
     }
 

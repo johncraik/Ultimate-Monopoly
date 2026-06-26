@@ -280,6 +280,9 @@
     </div>
 </div>
 
+@* Recent activity panel (§7.3) — this user's logs / audit / games, keyed by their id. *@
+<partial name="~/Areas/Admin/Pages/Shared/_RecentActivityPanel.cshtml" model="Model.Activity" />
+
 @if (Model.CanDelete)
 {
     <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">

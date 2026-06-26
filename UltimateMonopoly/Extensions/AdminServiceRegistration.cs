@@ -18,6 +18,7 @@ public static class AdminServiceRegistration
         services.TryAddScoped<AuditTrailService>();
         services.TryAddScoped<AppLogService>();
         services.TryAddScoped<SettingsManagementService>();
+        services.TryAddScoped<RecentActivityService>();
 
         // Singleton registry of users flagged for a live-session sign-in refresh (role/account changes).
         services.TryAddSingleton<AuthRefreshService>();

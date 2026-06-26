@@ -12,6 +12,9 @@ public class AdminLogTableModel
     public AdminActionType? Action { get; }
     public AdminTargetType? TargetType { get; }
 
+    /// <summary>Preview mode (the §7.3 Recent Activity panel): the partial drops its pagination + count header.</summary>
+    public bool Preview { get; init; }
+
     public AdminLogTableModel(PagedList<AdminLogViewModel> logs, string? search,
         AdminActionType? action, AdminTargetType? targetType)
     {

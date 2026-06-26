@@ -2,6 +2,7 @@ using JC.Core.Models;
 using JC.Identity.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using UltimateMonopoly.Areas.Admin.Models.ViewModels;
 using UltimateMonopoly.Areas.Admin.Models.ViewModels.Users;
 using UltimateMonopoly.Areas.Admin.Services;
 using UltimateMonopoly.Data;
@@ -13,21 +14,27 @@ public class DetailsModel : PageModel
 {
     private readonly UserManagementService _users;
     private readonly ProfanityService _profanity;
+    private readonly RecentActivityService _activity;
     private readonly IUserInfo _userInfo;
 
-    public DetailsModel(UserManagementService users, ProfanityService profanity, IUserInfo userInfo)
+    public DetailsModel(UserManagementService users, ProfanityService profanity, RecentActivityService activity,
+        IUserInfo userInfo)
     {
         _users = users;
         _profanity = profanity;
+        _activity = activity;
         _userInfo = userInfo;
     }
-    
+
     public string UserId { get; set; } = "";
 
     [BindProperty]
     public string? DisplayName { get; set; }
 
     public UserViewModel User { get; private set; } = default!;
+
+    // The user's recent-activity panel (§7.3) — the same composition used on Reports → Details.
+    public RecentActivityModel Activity { get; private set; } = default!;
 
     // View gates.
     public bool IsSystemAdmin => _userInfo.IsInRole(SystemRoles.SystemAdmin);
@@ -51,6 +58,7 @@ public class DetailsModel : PageModel
 
         User = user;
         DisplayName = user.Profile.DisplayName;
+        Activity = await _activity.Build(UserId, IsSystemAdmin, TargetIsAdmin || TargetIsSystemAdmin);
         return Page();
     }
 

@@ -16,6 +16,9 @@ public class NotificationTableModel
     public bool? Read { get; }
     public NotificationStatusFilter Status { get; }
 
+    /// <summary>Preview mode (the §7.3 Recent Activity panel): the partial drops its pagination + count header.</summary>
+    public bool Preview { get; init; }
+
     public NotificationTableModel(PagedList<NotificationViewModel> notifications, string recipientUserId,
         string? search, NotificationType? type, bool? read, NotificationStatusFilter status)
     {
