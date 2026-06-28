@@ -7,7 +7,6 @@ namespace UltimateMonopoly.Models.ViewModels;
 
 //Social Records:
 public record FriendRequestResult(bool Success, string? ErrorMessage);
-public record ChatMessage(bool FromMe, string AuthorDisplay, string Body, DateTime SentUtc);
 
 // GameId set → the (non-setup) View button opens that player's game stats for the game;
 // null → it opens the player's social profile.

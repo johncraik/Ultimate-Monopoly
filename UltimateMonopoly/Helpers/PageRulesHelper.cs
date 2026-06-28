@@ -1,6 +1,12 @@
+using UltimateMonopoly.Models.ViewModels;
+
 namespace UltimateMonopoly.Helpers;
 
-public record RuleSection(string Section, int SectionNumber);
+public class RuleSection(string section, int sectionNumber)
+{
+    public string Section { get; } = section;
+    public int SectionNumber { get; set; } = sectionNumber;
+}
 
 public static class PageRulesHelper
 {
@@ -26,9 +32,9 @@ public static class PageRulesHelper
     private const string PurgingSection = "Purging";
     private const string BankruptcySection = "Bankruptcy";
 
-    public static List<RuleSection> GetSections()
-        =>
-        [
+    public static List<RuleSection> GetSections(List<GameRule>? rules)
+    {
+        List<RuleSection> sections = [
             new(DefaultSection, 0),
             new(TurnTaxSection, 1),
             new(DiceSection, 2),
@@ -51,7 +57,26 @@ public static class PageRulesHelper
             new(PurgingSection, 19),
             new(BankruptcySection, 20)
         ];
+        
+        if(rules == null)
+            return sections;
+
+        var i = 0;
+        var validSections = new List<RuleSection>();
+        foreach (var s in from s in sections 
+                 let validRules = rules
+                     .Count(r => r.Section == s.SectionNumber && !r.IsHidden) 
+                 where validRules != 0 
+                 select s)
+        {
+            s.SectionNumber = i;
+            validSections.Add(s);
+            i++;
+        }
+        
+        return validSections;
+    }
     
     public static RuleSection? GetSection(int sectionNumber)
-        => GetSections().FirstOrDefault(x => x.SectionNumber == sectionNumber);
+        => GetSections(null).FirstOrDefault(x => x.SectionNumber == sectionNumber);
 }

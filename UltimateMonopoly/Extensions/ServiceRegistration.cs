@@ -64,6 +64,7 @@ public static class ServiceRegistration
         // Social — friends
         services.TryAddScoped<FriendService>();
         services.TryAddScoped<BlockAndReportService>();
+        services.TryAddScoped<FriendMessagingService>();
 
         // Identity — profile
         services.TryAddScoped<ProfileService>();

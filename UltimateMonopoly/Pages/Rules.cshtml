@@ -8,9 +8,10 @@
 
     // Sidebar sections come from the helper (single source of section order/numbering); only show
     // sections that actually have rules in the catalogue.
-    var sections = PageRulesHelper.GetSections();
+    var sections = PageRulesHelper.GetSections(Model.Rules);
     var bySection = Model.Rules
         .GroupBy(r => r.Section)
+        .Where(r => !r.All(rule => rule.IsHidden))
         .ToDictionary(g => g.Key, g => g.ToList());
     var shownSections = sections.Where(s => bySection.ContainsKey(s.SectionNumber)).ToList();
 
@@ -117,7 +118,7 @@
                                 @s.Section
                             </h2>
 
-                            @foreach (var rule in bySection[s.SectionNumber])
+                            @foreach (var rule in bySection[s.SectionNumber].Where(r => !r.IsHidden))
                             {
                                 var cited = rule.RuleCode is not null;
                                 <div id="@RuleId(rule)" class="d-flex gap-3 py-2 rule-item">

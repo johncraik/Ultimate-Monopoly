@@ -125,8 +125,8 @@ builder.Services.AddEmail<AppDbContext>(builder.Configuration, options =>
         : EmailLoggingMode.ExcludeContent;
 });
 
-// Communication — Messaging
-builder.Services.AddMessaging<AppDbContext>();
+// Communication — Messaging (E1 — friends-only DMs; no group chats)
+builder.Services.AddMessaging<AppDbContext>(o => o.DisableGroups = true);
 
 // Communication — Notifications
 builder.Services.AddNotifications<AppDbContext>();
@@ -196,6 +196,7 @@ app.MapControllers();
 app.MapHub<PresenceHub>("/hubs/presence");
 app.MapHub<GameSetupHub>("/hubs/game-setup");
 app.MapHub<GamePlayHub>("/hubs/game-play");
+app.MapHub<MessagingHub>("/hubs/messaging");
 
 // Profile cookie — 90-day encrypted cookie holding the user's avatar choices
 app.PopulateEncryptedCookieProfiles(

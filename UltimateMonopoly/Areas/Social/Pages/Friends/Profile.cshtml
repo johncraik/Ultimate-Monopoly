@@ -15,6 +15,9 @@
         <h1 class="mb-1 text-truncate">@Model.User.DisplayName</h1>
         <p class="text-body-secondary mb-0">@@@Model.User.Username</p>
     </div>
+    <a asp-area="Social" asp-page="/Messages/Index" asp-route-friendId="@Model.User.UserId" class="btn btn-primary">
+        <i class="bi bi-chat-dots me-1"></i>Message
+    </a>
 </div>
 
 <div class="mb-3">

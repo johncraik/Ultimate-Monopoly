@@ -1,0 +1,55 @@
+@model UltimateMonopoly.Models.ViewModels.Social.ConversationView
+
+<div class="card-header d-flex align-items-center gap-2 py-2" id="msgHeader" data-thread-id="@Model.ThreadId">
+    <profile-circle user="Model.Friend" size="Sm" />
+    <span class="fw-semibold flex-grow-1 text-truncate">@Model.Friend.DisplayName</span>
+    <a asp-area="Social" asp-page="/Friends/Profile" asp-route-userId="@Model.FriendUserId"
+       class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-person me-1"></i>View profile
+    </a>
+</div>
+
+<div class="card-body msg-body d-flex flex-column gap-2" id="msgBody">
+    @if (Model.Messages.Count == 0)
+    {
+        <p class="text-body-secondary small text-center my-auto">No messages yet — say hello!</p>
+    }
+    else
+    {
+        @foreach (var m in Model.Messages)
+        {
+            <div class="d-flex @(m.FromMe ? "justify-content-end" : "justify-content-start")">
+                <div class="msg-bubble @(m.FromMe ? "text-bg-primary" : "bg-body-tertiary border")">
+                    <div>@m.Text</div>
+                    <div class="small text-end mt-1 @(m.FromMe ? "text-white-50" : "text-body-secondary")">
+                        @m.SentAtUtc.ToLocalTime().ToString("HH:mm")
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (Model.LastReadAtUtc.HasValue)
+        {
+            <div class="d-flex justify-content-end msg-read-receipt">
+                <small class="text-body-secondary">Read @Model.LastReadAtUtc.Value.ToLocalTime().ToString("HH:mm")</small>
+            </div>
+        }
+    }
+</div>
+
+<div class="card-footer">
+    @if (Model.CanSend)
+    {
+        <form id="msgForm" class="d-flex gap-2" data-thread-id="@Model.ThreadId">
+            <input type="text" name="message" id="msgInput" class="form-control" autocomplete="off"
+                   maxlength="10000" placeholder="Type a message…" required />
+            <button type="submit" class="btn btn-primary" aria-label="Send"><i class="bi bi-send"></i></button>
+        </form>
+    }
+    else
+    {
+        <div class="text-body-secondary small text-center py-1">
+            <i class="bi bi-slash-circle me-1"></i>Your account is restricted and cannot send messages.
+        </div>
+    }
+</div>
