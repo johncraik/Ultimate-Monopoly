@@ -1,65 +1,34 @@
-@inject SignInManager<AppUser> SignInManager
 @{
     Layout = ViewData.TryGetValue("ParentLayout", out var parentLayout) && parentLayout != null
         ? parentLayout.ToString()
         : "/Pages/Shared/_Layout.cshtml";
 
-    var hasExternalLogins = (await SignInManager.GetExternalAuthenticationSchemesAsync()).Any();
+    var active = ViewData["ActivePage"] as string ?? "Account";
 
-    var navItems = new List<(string Page, string Label, string ActiveClass)>
-    {
-        ("./Index", "Profile", ManageNavPages.IndexNavClass(ViewContext)),
-        ("./Email", "Email", ManageNavPages.EmailNavClass(ViewContext)),
-        ("./ChangePassword", "Password", ManageNavPages.ChangePasswordNavClass(ViewContext))
-    };
+    bool InTab(params string[] pages) => pages.Contains(active, StringComparer.OrdinalIgnoreCase);
 
-    if (hasExternalLogins)
-    {
-        navItems.Add(("./ExternalLogins", "External Logins", ManageNavPages.ExternalLoginsNavClass(ViewContext)));
-    }
-
-    navItems.Add(("./TwoFactorAuthentication", "Two-Factor Auth", ManageNavPages.TwoFactorAuthenticationNavClass(ViewContext)));
-    navItems.Add(("./PersonalData", "Personal Data", ManageNavPages.PersonalDataNavClass(ViewContext)));
-
-    var currentLabel = navItems.FirstOrDefault(i => i.ActiveClass == "active").Label ?? "Account Settings";
+    // Sub-pages (e.g. EnableAuthenticator) keep their original ActivePage, so each tab owns its group.
+    var accountActive = InTab("Account", "Index", "Email") ? "active" : "";
+    var securityActive = InTab("Security", "ChangePassword", "SetPassword", "TwoFactorAuthentication",
+        "EnableAuthenticator", "ResetAuthenticator", "Disable2fa", "GenerateRecoveryCodes", "ShowRecoveryCodes") ? "active" : "";
+    var dataActive = InTab("PersonalData", "DownloadPersonalData", "DeletePersonalData") ? "active" : "";
 }
 
 <h2 class="mb-4">Account Settings</h2>
 
-<div class="d-lg-none mb-4">
-    <div class="dropdown">
-        <button class="btn btn-outline-secondary dropdown-toggle w-100 text-start d-flex justify-content-between align-items-center"
-                type="button" data-bs-toggle="dropdown" aria-expanded="false">
-            <span>@currentLabel</span>
-        </button>
-        <ul class="dropdown-menu w-100">
-            @foreach (var item in navItems)
-            {
-                <li><a class="dropdown-item @(item.ActiveClass == "active" ? "active" : null)" asp-page="@item.Page">@item.Label</a></li>
-            }
-        </ul>
-    </div>
-</div>
+<ul class="nav nav-tabs mb-4">
+    <li class="nav-item">
+        <a class="nav-link @accountActive" asp-page="./Index">Account</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link @securityActive" asp-page="./Security">Security</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link @dataActive" asp-page="./PersonalData">Personal Data</a>
+    </li>
+</ul>
 
-<div class="row">
-    <div class="col-lg-3 mb-4 d-none d-lg-block">
-        <div class="card">
-            <div class="card-body p-2">
-                <ul class="nav nav-pills flex-column">
-                    @foreach (var item in navItems)
-                    {
-                        <li class="nav-item">
-                            <a class="nav-link @item.ActiveClass" asp-page="@item.Page">@item.Label</a>
-                        </li>
-                    }
-                </ul>
-            </div>
-        </div>
-    </div>
-    <div class="col-lg-9">
-        @RenderBody()
-    </div>
-</div>
+@RenderBody()
 
 @section Scripts {
     @RenderSection("Scripts", required: false)

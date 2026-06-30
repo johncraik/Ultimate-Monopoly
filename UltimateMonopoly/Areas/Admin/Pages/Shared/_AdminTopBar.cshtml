@@ -1,0 +1,16 @@
+<header class="admin-topbar">
+    <a class="btn btn-sm btn-nav" href="/" title="Return to the app">
+        <i class="bi bi-arrow-left me-1"></i>Back to App
+    </a>
+
+    <span class="admin-topbar-title">
+        <i class="bi bi-shield-lock-fill"></i>
+        <span class="admin-title-text">Admin Centre</span>
+    </span>
+
+    <div class="d-flex align-items-center gap-2 ms-auto">
+        <partial name="_NotificationBell" />
+
+        <partial name="~/Pages/Shared/_ProfileDropdown.cshtml" />
+    </div>
+</header>

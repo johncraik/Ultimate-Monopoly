@@ -1,0 +1,27 @@
+@using UltimateMonopoly.Areas.Admin.Models.ViewModels.Dashboard
+@model MultiSeriesWidget
+@* Multi-series time chart — one coloured series per NamedSeries over a shared category axis. *@
+<div class="card h-100">
+    <div class="card-header">@if (!string.IsNullOrEmpty(Model.Icon)) { <i class="bi @Model.Icon me-2"></i> }@Model.Title</div>
+    <div class="card-body">
+        @if (Model.Series.All(s => s.Points.Count == 0))
+        {
+            <div class="text-body-secondary small">@Model.EmptyText</div>
+        }
+        else
+        {
+            <ejs-chart id="@Model.Id" background="transparent" height="@Model.Height">
+                <e-chart-primaryxaxis valueType="Category"></e-chart-primaryxaxis>
+                <e-chart-primaryyaxis></e-chart-primaryyaxis>
+                <e-series-collection>
+                    @foreach (var s in Model.Series)
+                    {
+                        <e-series dataSource="s.Points" type="@(Enum.Parse<Syncfusion.EJ2.Charts.ChartSeriesType>(s.SeriesType))" xName="Label" yName="Value" name="@s.Name" fill="@DashboardPalette.Hex(s.Tone)" columnWidth="0.6" opacity="0.85"></e-series>
+                    }
+                </e-series-collection>
+                <e-chart-tooltipsettings enable="true"></e-chart-tooltipsettings>
+                <e-chart-legendsettings visible="true" position="Top"></e-chart-legendsettings>
+            </ejs-chart>
+        }
+    </div>
+</div>

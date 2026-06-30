@@ -25,12 +25,9 @@ public class LeaderboardService
         _friendService = friendService;
     }
     
-    //TODO: Decide if profiles should be public facing (lean yes) or friends only.
-    //If public facing:
-    // - Only show colour, profile img, and username/display name
-    // - Respect BLOCKED users (both ways) with "unknown" profile view model (not hidden, but displayed as unknown)
-    // - Compare stats (side by side compare of 2 players) is available to friends only - only friends can see detailed stats
-    // - Only visible stats are win/draw/loss, games played, and win rate.
+    // Public-facing leaderboard: ranks all qualifying players by overall score (see PlayerScore),
+    // showing colour, avatar, and name plus W/D/L, games played, and win rate. Detailed side-by-side
+    // stats (the Compare page) are friends-only.
 
     public async Task<List<LeaderboardRecord>> GetLeaderboard()
     {
@@ -38,16 +35,22 @@ public class LeaderboardService
         var blockedProfiles = await _blockAndReportService.CheckAndReportExistingBlocks(_userInfo.UserId, 
             userProfiles.Select(u => u.UserId));
         var friendProfiles = await _friendService.AreFriends(userProfiles.Select(u => u.UserId));
+        var hiddenUserIds = await _profileService.GetHiddenUserIds(userProfiles);
         
         var leaderboardRecords = new List<LeaderboardRecord>();
         foreach (var up in userProfiles)
         {
             var blockCheck = blockedProfiles.FirstOrDefault(b => b.userId == up.UserId);
             var friendCheck = friendProfiles.FirstOrDefault(f => f.userId == up.UserId);
+            var hidden = hiddenUserIds.Contains(up.UserId);
             
             if(blockCheck == default || !blockCheck.Blocked)
             {
-                var lr = new LeaderboardRecord(up, friendCheck.Firends);
+                var profile = up;
+                if(!friendCheck.Firends && hidden)
+                    profile = new UserProfileViewModel(up.NumberOfWins, up.NumberOfLosses, up.NumberOfDraws);
+                
+                var lr = new LeaderboardRecord(profile, friendCheck.Firends);
                 leaderboardRecords.Add(lr);
                 continue;
             }

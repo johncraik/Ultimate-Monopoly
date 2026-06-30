@@ -1,0 +1,466 @@
+@page
+@model UltimateMonopoly.Pages.Guides.IndexModel
+@{
+    ViewData["Title"] = "Guides";
+
+    string TabClass(string n) => Model.ActiveTab == n ? "active" : "";
+    string PaneClass(string n) => Model.ActiveTab == n ? "tab-pane fade show active" : "tab-pane fade";
+    var isAuth = User.Identity?.IsAuthenticated == true;
+}
+
+<style>
+    /* Small icon chip for guide cards / rows. */
+    .guide-ico {
+        flex: 0 0 auto;
+        width: 2.5rem;
+        height: 2.5rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 0.6rem;
+        font-size: 1.25rem;
+        color: var(--bs-primary);
+        background: rgba(var(--bs-primary-rgb), 0.12);
+    }
+
+    /* Quick-start numbered steps — solid gradient circle, text left, image(s) right. */
+    .qs-step {
+        padding-block: 1.75rem;
+    }
+    .qs-step + .qs-step {
+        margin-top: 1.5rem;        /* clears the image above before the divider */
+        border-top: 1px solid var(--bs-border-color);
+    }
+    .qs-num {
+        flex: 0 0 auto;
+        width: 2.75rem;
+        height: 2.75rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #fff;
+        background: linear-gradient(135deg, var(--bs-primary), var(--bs-info));
+        box-shadow: 0 0.5rem 1rem rgba(var(--bs-primary-rgb), 0.35);
+    }
+    .qs-img {
+        width: 100%;
+        border-radius: var(--bs-border-radius-lg);
+        border: 1px solid var(--bs-border-color);
+        box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.35);
+    }
+    .qs-img + .qs-img {
+        margin-top: 0.75rem;
+    }
+</style>
+
+<div class="py-4">
+
+    @* ── Header ─────────────────────────────────────────────────────────── *@
+    <div class="mb-4">
+        <h1 class="display-6 fw-bold mb-2">
+            <i class="bi bi-mortarboard text-primary me-2"></i>Guides
+        </h1>
+        <p class="lead text-body-secondary mb-0">
+            New here? Start with the quick-start flow, then dig into the detailed guides.
+        </p>
+    </div>
+
+    @* ── Tabs ───────────────────────────────────────────────────────────── *@
+    <ul class="nav nav-tabs sticky-tabs mb-4" id="guidesTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link @TabClass("quickstart")" data-bs-toggle="tab" data-bs-target="#tab-quickstart" type="button" role="tab">
+                <i class="bi bi-rocket-takeoff me-1"></i> Quick Start
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link @TabClass("guides")" data-bs-toggle="tab" data-bs-target="#tab-guides" type="button" role="tab">
+                <i class="bi bi-journals me-1"></i> Guides
+            </button>
+        </li>
+        @if (isAuth)
+        {
+            <li class="nav-item" role="presentation">
+                <button class="nav-link @TabClass("contact")" data-bs-toggle="tab" data-bs-target="#tab-contact" type="button" role="tab">
+                    <i class="bi bi-envelope me-1"></i> Contact
+                </button>
+            </li>
+        }
+    </ul>
+
+    <div class="tab-content">
+
+        @* ---------- Quick Start ---------- *@
+        <div class="@PaneClass("quickstart")" id="tab-quickstart" role="tabpanel">
+            <p class="text-body-secondary mb-2">From zero to playing in a few short steps.</p>
+
+            <div class="qs-steps">
+
+                @* ── Step 1 — Create an account / log in ── *@
+                <div class="qs-step row g-4 align-items-center">
+                    <div class="col-12 col-lg-7">
+                        <div class="d-flex gap-3">
+                            <span class="qs-num">1</span>
+                            <div class="min-w-0">
+                                <h3 class="h5 fw-bold mb-2">Create an account / log in</h3>
+                                <p class="text-body-secondary mb-2">
+                                    You'll need an account to host or join a game.
+                                </p>
+                                <p class="text-body-secondary mb-2">
+                                    <strong class="text-body">New here?</strong> Click <strong>Register</strong> in the
+                                    top-right, fill in your details and submit. To keep accounts secure, registering
+                                    requires a <strong>confirmed email address</strong> — so you won't be logged in
+                                    automatically. We'll email you a confirmation link: open it to verify your address.
+                                    If it hasn't arrived within a minute or two, <strong>check your spam / junk folder</strong>
+                                    just in case. Once your email is confirmed, head back and log in.
+                                </p>
+                                <p class="text-body-secondary mb-3">
+                                    <strong class="text-body">Already registered?</strong> Just click <strong>Login</strong>
+                                    and enter your username or email, and password.
+                                </p>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <a asp-area="Identity" asp-page="/Account/Login" target="_blank" rel="noopener" class="btn btn-nav-info">
+                                        <i class="bi bi-box-arrow-in-right me-1"></i> Login
+                                    </a>
+                                    <a asp-area="Identity" asp-page="/Account/Register" target="_blank" rel="noopener" class="btn btn-hero-primary">
+                                        <i class="bi bi-person-plus me-1"></i> Register
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-lg-5">
+                        <img src="/img/register.png" class="qs-img" alt="The registration form" loading="lazy" />
+                    </div>
+                </div>
+
+                @* ── Step 2 — Customise your profile (optional) ── *@
+                <div class="qs-step row g-4 align-items-center">
+                    <div class="col-12 col-lg-7">
+                        <div class="d-flex gap-3">
+                            <span class="qs-num">2</span>
+                            <div class="min-w-0">
+                                <h3 class="h5 fw-bold mb-2 d-flex align-items-center flex-wrap gap-2">
+                                    Customise your profile
+                                    <span class="badge rounded-pill text-bg-secondary">Optional</span>
+                                </h3>
+                                <p class="text-body-secondary mb-2">
+                                    Make yourself recognisable at the table with your own avatar and colour. It's
+                                    completely optional — set it up now, or come back to it any time.
+                                </p>
+                                <p class="text-body-secondary mb-2">
+                                    Open your <strong>Profile</strong> (the menu top-right → <strong>Profile</strong>,
+                                    or the button below). On the <strong>Avatar Image</strong> tab, click any avatar to
+                                    choose it. Then switch to the <strong>Colour</strong> tab and pick a background colour —
+                                    the preview updates as you go (leave it unset for a deep-black background).
+                                </p>
+                                <p class="text-body-secondary mb-3">
+                                    On either tab, click <strong>Update</strong> to save. Your new look then appears
+                                    everywhere you show up in games.
+                                </p>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <a asp-area="Identity" asp-page="/Profile/Index" target="_blank" rel="noopener" class="btn btn-hero-primary">
+                                        <i class="bi bi-person-gear me-1"></i> Customise my profile
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-lg-5">
+                        <img src="/img/customise.png" class="qs-img" alt="Customising your profile avatar and colour" loading="lazy" />
+                    </div>
+                </div>
+
+                @* ── Step 3 — Add friends ── *@
+                <div class="qs-step row g-4 align-items-center">
+                    <div class="col-12 col-lg-7">
+                        <div class="d-flex gap-3">
+                            <span class="qs-num">3</span>
+                            <div class="min-w-0">
+                                <h3 class="h5 fw-bold mb-2">Add friends</h3>
+                                <p class="text-body-secondary mb-2">
+                                    To play together, you'll need to be friends first.
+                                </p>
+                                <p class="text-body-secondary mb-2">
+                                    Add someone by typing their <strong>username</strong> on the <strong>Add Friend</strong>
+                                    tab and sending a request — they'll be notified and can accept it. The other way round,
+                                    when a player adds you their request shows up on the <strong>Requests</strong>
+                                    tab, where you can accept the ones you want to play with.
+                                </p>
+                                <p class="text-body-secondary mb-3">
+                                    Once a request is accepted either way, you're friends and can invite each other to games.
+                                </p>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <a asp-area="Social" asp-page="/Friends/Index" asp-route-tab="requests" target="_blank" rel="noopener" class="btn btn-nav-info">
+                                        <i class="bi bi-person-lines-fill me-1"></i> View Friend Requests
+                                    </a>
+                                    <a asp-area="Social" asp-page="/Friends/Index" asp-route-tab="add" target="_blank" rel="noopener" class="btn btn-hero-primary">
+                                        <i class="bi bi-person-plus me-1"></i> Add Friends
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-lg-5">
+                        <img src="/img/add-friend.png" class="qs-img" alt="Adding a friend by username" loading="lazy" />
+                    </div>
+                </div>
+
+                @* ── Step 4 — Host (4a) or join (4b) a game ── *@
+                <div class="qs-step row g-4">
+                    @* 4a — Host a game *@
+                    <div class="col-12 col-lg-6">
+                        <div class="d-flex gap-3">
+                            <span class="qs-num">4a</span>
+                            <div class="min-w-0">
+                                <h3 class="h5 fw-bold mb-2">Host a game</h3>
+                                <p class="text-body-secondary mb-2">
+                                    One person hosts on a big screen — a <strong>tablet, laptop or desktop</strong>
+                                    (not a phone; the shared board needs the room).
+                                </p>
+                                <p class="text-body-secondary mb-0">
+                                    Open <strong>New Game</strong> (Games menu → New Game), give it a name (or leave it
+                                    blank for a random one), pick a <strong>board</strong> and a <strong>rounding rule</strong>,
+                                    then hit <strong>Create Game</strong>. You'll land in the game lobby, ready for players to join.
+                                </p>
+                                <div class="d-flex flex-wrap gap-2 mt-3">
+                                    <a asp-area="" asp-page="/Games/Index" target="_blank" rel="noopener" class="btn btn-hero-primary">
+                                        <i class="bi bi-plus-circle me-1"></i> Create a game
+                                    </a>
+                                </div>
+                                <img src="/img/create-game.png" class="qs-img mt-3" alt="Creating a new game" loading="lazy" />
+                            </div>
+                        </div>
+                    </div>
+
+                    @* 4b — Join a game *@
+                    <div class="col-12 col-lg-6">
+                        <div class="d-flex gap-3">
+                            <span class="qs-num">4b</span>
+                            <div class="min-w-0">
+                                <h3 class="h5 fw-bold mb-2">Join a game</h3>
+                                <p class="text-body-secondary mb-2">
+                                    Everyone else joins the host's game. There are two ways in:
+                                </p>
+                                <ul class="text-body-secondary mb-0 ps-3">
+                                    <li class="mb-1">Enter the <strong>join code</strong> shown on the host's screen
+                                        (e.g. <code>MP4K7Q2</code>) on the <strong>Join Game</strong> page.</li>
+                                    <li>Or <strong>scan the QR code</strong> on the host's tablet/laptop with your phone —
+                                        it opens the game straight away.</li>
+                                </ul>
+                                <div class="d-flex flex-wrap gap-2 mt-3">
+                                    <a asp-area="" asp-page="/Games/Join" target="_blank" rel="noopener" class="btn btn-hero-primary">
+                                        <i class="bi bi-box-arrow-in-right me-1"></i> Join a game
+                                    </a>
+                                </div>
+                                <img src="/img/join-game.png" class="qs-img mt-3" alt="Joining a game by code or QR" loading="lazy" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                @* ── Step 5 — Use your phones ── *@
+                <div class="qs-step row g-4 align-items-center">
+                    <div class="col-12 col-lg-7">
+                        <div class="d-flex gap-3">
+                            <span class="qs-num">5</span>
+                            <div class="min-w-0">
+                                <h3 class="h5 fw-bold mb-2">Use your phones</h3>
+                                <p class="text-body-secondary mb-2">
+                                    The board stays on the host's big screen, while each player uses their own
+                                    <strong>phone</strong> as a private controller — rolling dice, checking properties,
+                                    making deals and more.
+                                </p>
+                                <p class="text-body-secondary mb-2">Everyone can hop onto their phone two ways:</p>
+                                <ul class="text-body-secondary mb-0 ps-3">
+                                    <li class="mb-1"><strong>Scan the QR code</strong> on the host's screen (quickest), or</li>
+                                    <li>Open <strong>My Games</strong> or <strong>Joined Games</strong> and pick the game from
+                                        the <strong>Setup</strong> tab (while it's still being set up) or the
+                                        <strong>In Play</strong> tab (once it's started).</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-lg-5">
+                        <img src="/img/setup-phones.png" class="qs-img" alt="Opening the game on your phone" loading="lazy" />
+                    </div>
+                </div>
+
+                @* ── Step 6 — Start & play (the finisher, no image) ── *@
+                <div class="qs-step">
+                    <div class="d-flex gap-3">
+                        <span class="qs-num">6</span>
+                        <div class="min-w-0">
+                            <h3 class="h5 fw-bold mb-2">Start &amp; play the game!</h3>
+                            <p class="text-body-secondary mb-2">
+                                Each player picks their personal <strong>dice number</strong> during setup. Once everyone's
+                                ready, the host presses <strong>Start Game</strong> — and you're playing!
+                            </p>
+                            <p class="text-body-secondary mb-3">
+                                The host's big screen shows the shared <strong>board</strong>: what's sitting in
+                                <strong>Free Parking</strong>, which <strong>properties</strong> are still available, how many
+                                <strong>houses and hotels</strong> are left, every <strong>rule the game engine applies</strong>
+                                as it happens, and the full <strong>list of players</strong>.
+                            </p>
+
+                            <p class="text-body-secondary mb-3">
+                                You take your turn from your phone. Your player screen has five tabs:
+                            </p>
+
+                            <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-5 g-3 mb-3">
+                                <div class="col">
+                                    <div class="card h-100">
+                                        <div class="card-body">
+                                            <div class="d-flex align-items-center gap-2 mb-2">
+                                                <span class="guide-ico"><i class="bi bi-person-fill"></i></span>
+                                                <h4 class="h6 mb-0">Profile</h4>
+                                            </div>
+                                            <p class="small text-body-secondary mb-0">
+                                                Your money and key metrics, where you are on the board, and which sets
+                                                you've handed into Free Parking.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col">
+                                    <div class="card h-100">
+                                        <div class="card-body">
+                                            <div class="d-flex align-items-center gap-2 mb-2">
+                                                <span class="guide-ico"><i class="bi bi-houses-fill"></i></span>
+                                                <h4 class="h6 mb-0">Properties</h4>
+                                            </div>
+                                            <p class="small text-body-secondary mb-0">
+                                                Every property you own, grouped by set — build or sell houses and hotels,
+                                                mortgage or unmortgage, and un-reserve.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col">
+                                    <div class="card h-100">
+                                        <div class="card-body">
+                                            <div class="d-flex align-items-center gap-2 mb-2">
+                                                <span class="guide-ico"><i class="bi bi-card-text"></i></span>
+                                                <h4 class="h6 mb-0">Cards</h4>
+                                            </div>
+                                            <p class="small text-body-secondary mb-0">
+                                                All the cards you hold, with <strong>Play</strong> buttons for the ones you
+                                                can play at the start of your turn.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col">
+                                    <div class="card h-100">
+                                        <div class="card-body">
+                                            <div class="d-flex align-items-center gap-2 mb-2">
+                                                <span class="guide-ico"><i class="bi bi-cash-coin"></i></span>
+                                                <h4 class="h6 mb-0">Loans</h4>
+                                            </div>
+                                            <p class="small text-body-secondary mb-0">
+                                                Any bank loans you've taken out, how much you still owe, and the option to
+                                                repay them.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col">
+                                    <div class="card h-100">
+                                        <div class="card-body">
+                                            <div class="d-flex align-items-center gap-2 mb-2">
+                                                <span class="guide-ico"><i class="bi bi-arrow-left-right"></i></span>
+                                                <h4 class="h6 mb-0">Deal</h4>
+                                            </div>
+                                            <p class="small text-body-secondary mb-0">
+                                                Propose a deal to another player — pick properties and set money to give or
+                                                take on each side.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <p class="text-body-secondary mb-0">
+                                Every player also appears in the <strong>player list</strong> on the host's screen, so the
+                                host can open and control any player's screen right from the tablet/laptop — just tap a
+                                player in the list.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        @* ---------- Guides (coming soon — content backend deferred to V2) ---------- *@
+        <div class="@PaneClass("guides")" id="tab-guides" role="tabpanel">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center text-body-secondary py-5">
+                    <i class="bi bi-journals display-5 d-block mb-3 opacity-50"></i>
+                    <h2 class="h4 text-body mb-2">In-depth guides are on the way</h2>
+                    <p class="mb-1">Step-by-step guides for every part of the game are coming soon.</p>
+                    <p class="mb-0">
+                        In the meantime, the <strong>Quick Start</strong> tab gets you playing, and the
+                        <a asp-area="" asp-page="/Rules">full rulebook</a> covers every rule in detail.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        @* ---------- Contact (authenticated only) ---------- *@
+        @if (isAuth)
+        {
+            <div class="@PaneClass("contact")" id="tab-contact" role="tabpanel">
+                <div class="row justify-content-center">
+                    <div class="col-12 col-lg-8 col-xl-7">
+                        @if (Model.StatusMessage is not null)
+                        {
+                            <div class="alert alert-@(Model.StatusKind ?? "info") alert-dismissible fade show" role="alert">
+                                @Model.StatusMessage
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        }
+                        <div class="card">
+                            <div class="card-header fw-semibold"><i class="bi bi-envelope me-2"></i>Get in touch</div>
+                            <div class="card-body">
+                                <p class="text-body-secondary">
+                                    Have a question, hit a problem, or want to suggest something? Send us a message and
+                                    we'll reply by email.
+                                </p>
+                                <form method="post" asp-page-handler="Contact">
+                                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                                    <div class="mb-3">
+                                        <label class="form-label" asp-for="Contact.Email"></label>
+                                        <input class="form-control" asp-for="Contact.Email" type="email" autocomplete="email" />
+                                        <span class="text-danger small" asp-validation-for="Contact.Email"></span>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label" asp-for="Contact.Subject"></label>
+                                        <input class="form-control" asp-for="Contact.Subject" />
+                                        <span class="text-danger small" asp-validation-for="Contact.Subject"></span>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label" asp-for="Contact.Message"></label>
+                                        <textarea class="form-control" asp-for="Contact.Message" rows="6"></textarea>
+                                        <span class="text-danger small" asp-validation-for="Contact.Message"></span>
+                                    </div>
+                                    <div class="d-flex justify-content-end">
+                                        <button type="submit" class="btn btn-hero-primary">
+                                            <i class="bi bi-send me-1"></i> Send message
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

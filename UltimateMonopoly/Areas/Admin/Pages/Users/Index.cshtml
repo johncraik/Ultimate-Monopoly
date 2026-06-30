@@ -1,0 +1,66 @@
+@page
+@model UltimateMonopoly.Areas.Admin.Pages.Users.IndexModel
+@using UltimateMonopoly.Areas.Admin.Enums
+@{
+    ViewData["Title"] = "Users";
+
+    string RChecked(UserManagementFilter v) => Model.RestrictedFilter == v ? "checked" : "";
+    string DChecked(UserManagementFilter v) => Model.DisabledFilter == v ? "checked" : "";
+}
+
+<div class="d-flex align-items-center gap-3 mb-4">
+    <span class="admin-page-ico bg-info-subtle text-info"><i class="bi bi-people"></i></span>
+    <div>
+        <h1 class="h3 mb-1">User Management</h1>
+        <p class="text-body-secondary mb-0">Browse, filter, and search every user.</p>
+    </div>
+</div>
+
+@* Filters + search. A plain GET form is the no-JS fallback; user-management.js intercepts changes
+   and re-fetches just the table partial (the ?handler=Table endpoint). *@
+<form id="user-filters" method="get" class="card mb-3">
+    <div class="card-body">
+        <div class="row g-3 align-items-end">
+            <div class="col-12 col-xl-5">
+                <label class="form-label small text-body-secondary mb-1" for="user-search">Search</label>
+                <div class="input-group">
+                    <input type="search" class="form-control" id="user-search" name="Search" value="@Model.Search"
+                           placeholder="Username, name, email, phone…" autocomplete="off" />
+                    <button class="btn btn-primary" type="submit" aria-label="Search"><i class="bi bi-search"></i></button>
+                </div>
+            </div>
+
+            <div class="col-12 col-xl">
+                <label class="form-label small text-body-secondary mb-1">Restricted Users Filter</label>
+                <div class="btn-group w-100" role="group" aria-label="Restricted users filter">
+                    <input type="radio" class="btn-check" name="RestrictedFilter" id="rf-all" value="None" autocomplete="off" @RChecked(UserManagementFilter.None) />
+                    <label class="btn btn-outline-secondary" for="rf-all">All</label>
+                    <input type="radio" class="btn-check" name="RestrictedFilter" id="rf-not" value="NotRestricted" autocomplete="off" @RChecked(UserManagementFilter.NotRestricted) />
+                    <label class="btn btn-outline-secondary" for="rf-not">Non-Restricted</label>
+                    <input type="radio" class="btn-check" name="RestrictedFilter" id="rf-yes" value="Restricted" autocomplete="off" @RChecked(UserManagementFilter.Restricted) />
+                    <label class="btn btn-outline-secondary" for="rf-yes">Restricted</label>
+                </div>
+            </div>
+
+            <div class="col-12 col-xl">
+                <label class="form-label small text-body-secondary mb-1">Disabled Users Filter</label>
+                <div class="btn-group w-100" role="group" aria-label="Disabled users filter">
+                    <input type="radio" class="btn-check" name="DisabledFilter" id="df-all" value="None" autocomplete="off" @DChecked(UserManagementFilter.None) />
+                    <label class="btn btn-outline-secondary" for="df-all">All</label>
+                    <input type="radio" class="btn-check" name="DisabledFilter" id="df-en" value="Enabled" autocomplete="off" @DChecked(UserManagementFilter.Enabled) />
+                    <label class="btn btn-outline-secondary" for="df-en">Enabled</label>
+                    <input type="radio" class="btn-check" name="DisabledFilter" id="df-dis" value="Disabled" autocomplete="off" @DChecked(UserManagementFilter.Disabled) />
+                    <label class="btn btn-outline-secondary" for="df-dis">Disabled</label>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<div id="users-table">
+    <partial name="_UsersTable" model="Model.TableModel" />
+</div>
+
+@section Scripts {
+    <script src="~/scripts/admin/user-management.js" asp-append-version="true"></script>
+}

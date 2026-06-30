@@ -1,0 +1,127 @@
+@page "{issueId}"
+@model UltimateMonopoly.Areas.Admin.Pages.Logs.Issues.ContactModel
+@{
+    ViewData["Title"] = "Contact Reporter";
+    var i = Model.Issue;
+}
+
+<div class="d-flex align-items-center gap-3 mb-4">
+    <a asp-area="Admin" asp-page="Index" class="btn btn-sm btn-outline-secondary" title="Back to reported issues">
+        <i class="bi bi-arrow-left"></i>
+    </a>
+    <span class="admin-page-ico bg-primary-subtle text-primary"><i class="bi bi-envelope"></i></span>
+    <div>
+        <h1 class="h3 mb-1">Contact Reporter</h1>
+        <p class="text-body-secondary mb-0">Send a reply to the person who reported this @i.TypeLabel.</p>
+    </div>
+</div>
+
+<alert type="Success" message="@(TempData["Success"] as string)" />
+<alert type="Error" message="@(TempData["Error"] as string)" />
+
+@if (i.AlreadyContacted)
+{
+    <div class="alert alert-warning d-flex align-items-start gap-2" role="alert">
+        <i class="bi bi-exclamation-triangle-fill mt-1"></i>
+        <div>
+            <strong>This reporter has already been contacted about this issue@(i.PreviousContactCount > 1 ? $" ({i.PreviousContactCount} times)" : "").</strong>
+            <div class="small">
+                Most recent: @i.LastContactedRelative@(i.LastContactedBy != null ? $" by {i.LastContactedBy}" : "") (@i.LastContactedDate). Double-check before sending again.
+            </div>
+        </div>
+    </div>
+}
+
+<div class="row g-4">
+    @* ---------- LEFT: the issue + reporter context ---------- *@
+    <div class="col-12 col-xl-5">
+        <div class="card mb-4">
+            <div class="card-header d-flex align-items-center justify-content-between">
+                <span><i class="bi bi-bug me-2"></i>Issue</span>
+                <span class="badge rounded-pill @(i.Type == JC.Github.Models.IssueType.Bug ? "text-bg-danger" : "text-bg-info")">@i.TypeDisplay</span>
+            </div>
+            <div class="card-body">
+                <div class="admin-detail-group">
+                    <div class="admin-detail-row">
+                        <span class="admin-detail-label"><i class="bi bi-fingerprint"></i>Issue ID</span>
+                        <code class="admin-detail-value user-id-copy" role="button" data-copy="@i.IssueId" title="Click to copy">@i.IssueId</code>
+                    </div>
+                    <div class="admin-detail-row">
+                        <span class="admin-detail-label"><i class="bi bi-calendar-event"></i>Reported</span>
+                        <span class="admin-detail-value">@i.CreatedDate</span>
+                    </div>
+                    <div class="admin-detail-row">
+                        <span class="admin-detail-label"><i class="bi bi-person"></i>Reporter</span>
+                        <span class="admin-detail-value">@i.ReporterName</span>
+                    </div>
+                    @if (!string.IsNullOrEmpty(i.ReporterEmail))
+                    {
+                        <div class="admin-detail-row">
+                            <span class="admin-detail-label"><i class="bi bi-envelope"></i>Email</span>
+                            <span class="admin-detail-value text-break">@i.ReporterEmail</span>
+                        </div>
+                    }
+                </div>
+
+                <div class="small text-body-secondary text-uppercase mb-1 mt-3">Original report</div>
+                <div class="admin-log-detail">@i.Description</div>
+            </div>
+        </div>
+    </div>
+
+    @* ---------- RIGHT: compose, or the reason we can't ---------- *@
+    <div class="col-12 col-xl-7">
+        @if (i.CanContact)
+        {
+            @if (!i.EmailConfirmed)
+            {
+                <div class="alert alert-warning d-flex align-items-center gap-2" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    <div>This reporter hasn't confirmed their email address — the message may not reach them.</div>
+                </div>
+            }
+
+            <div class="card">
+                <div class="card-header"><i class="bi bi-pencil-square me-2"></i>Compose message</div>
+                <div class="card-body">
+                    <form method="post">
+                        <input type="hidden" asp-for="IssueId" />
+
+                        <div asp-validation-summary="ModelOnly" class="text-danger small mb-2"></div>
+
+                        <div class="mb-3">
+                            <label class="form-label" asp-for="Subject">Subject</label>
+                            <input class="form-control" asp-for="Subject" maxlength="200" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" asp-for="Message">Message</label>
+                            <textarea class="form-control" asp-for="Message" rows="10" placeholder="Write your reply to the reporter…"></textarea>
+                            <span asp-validation-for="Message" class="text-danger small"></span>
+                        </div>
+
+                        <p class="small text-body-secondary">
+                            The reporter receives a greeting, your message, and a copy of their original report.
+                            Nothing about GitHub or their device is included.
+                        </p>
+
+                        <div class="d-flex justify-content-end">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-send me-1"></i>Send email
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="card">
+                <div class="card-body text-center text-body-secondary py-5">
+                    <i class="bi bi-person-x d-block fs-3 mb-2"></i>
+                    <div class="fw-semibold">Can't contact this reporter</div>
+                    <div class="small">@i.BlockReason</div>
+                </div>
+            </div>
+        }
+    </div>
+</div>

@@ -1,3 +1,4 @@
+using MP.GameEngine.Abstractions.Cards;
 using MP.GameEngine.Enums.Cards;
 using MP.GameEngine.Models.Snapshot.Cards;
 
@@ -46,40 +47,40 @@ public static class CardDeckHelper
             switch (type)
             {
                 case CardType.Chance:
-                    model.ChanceCards = new Queue<CardModel>(cs);
+                    model.PopulateChanceCards(cs);
                     break;
                 case CardType.ComChest:
-                    model.CommunityChestCards = new Queue<CardModel>(cs);
+                    model.PopulateComChestCards(cs);
                     break;
                 case CardType.PercentageChance:
-                    model.PercentChanceCards = new Queue<CardModel>(cs);
+                    model.PopulatePercentChanceCards(cs);
                     break;
                 case CardType.PercentageComChest:
-                    model.PercentCommunityChestCards = new Queue<CardModel>(cs);
+                    model.PopulatePercentComChestCards(cs);
                     break;
                 case CardType.Third:
-                    model.ThirdCards = new Queue<CardModel>(cs);
+                    model.PopulateThirdCards(cs);
                     break;
                 case CardType.Double:
-                    model.DoubleCards = new Queue<CardModel>(cs);
+                    model.PopulateDoubleCards(cs);
                     break;
                 case CardType.Triple:
-                    model.TripleCards = new Queue<CardModel>(cs);
+                    model.PopulateTripleCards(cs);
                     break;
                 case CardType.Tax:
-                    model.TaxCards = new Queue<CardModel>(cs);
+                    model.PopulateTaxCards(cs);
                     break;
                 case CardType.Go:
-                    model.GoCards = new Queue<CardModel>(cs);
+                    model.PopulateGoCards(cs);
                     break;
                 case CardType.JustVisiting:
-                    model.JustVisitingCards = new Queue<CardModel>(cs);
+                    model.PopulateJustVisitingCards(cs);
                     break;
                 case CardType.FreeParking:
-                    model.FreeParkingCards = new Queue<CardModel>(cs);
+                    model.PopulateFreeParkingCards(cs);
                     break;
                 case CardType.GoToJail:
-                    model.GoToJailCards = new Queue<CardModel>(cs);
+                    model.PopulateGoToJailCards(cs);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);

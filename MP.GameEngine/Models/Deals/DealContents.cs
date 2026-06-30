@@ -24,4 +24,12 @@ public sealed record DealContents
 
     /// <summary>Board indexes of the properties the counter party gives the proposer.</summary>
     public IReadOnlyList<ushort> PropertiesFromCounterParty { get; init; } = [];
+
+    /// <summary>
+    /// True when neither side offers anything — no money and no property either way. Such a deal is a
+    /// no-op ("nothing for nothing") and is rejected before it reaches the counter party (issue #17).
+    /// </summary>
+    public bool IsEmpty =>
+        MoneyFromProposer == 0 && MoneyFromCounterParty == 0
+        && PropertiesFromProposer.Count == 0 && PropertiesFromCounterParty.Count == 0;
 }

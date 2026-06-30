@@ -2,10 +2,12 @@ using JC.Core.Extensions;
 using JC.Core.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using MP.GameEngine.Models.Boards;
 using UltimateMonopoly.Enums;
 using UltimateMonopoly.Models.DataModels.Games;
 using UltimateMonopoly.Models.ViewModels.Social;
 using UltimateMonopoly.Services;
+using UltimateMonopoly.Services.Cache;
 using UltimateMonopoly.Services.Friends;
 using UltimateMonopoly.Services.Games;
 using UltimateMonopoly.Services.Statistics;
@@ -16,18 +18,21 @@ public class GameStatsModel : PageModel
 {
     private readonly GameStatsService _gameStats;
     private readonly GameService _game;
+    private readonly BoardCacheService _boardCache;
     private readonly ProfileService _profile;
     private readonly BlockAndReportService _blockAndReport;
     private readonly IUserInfo _userInfo;
 
     public GameStatsModel(GameStatsService gameStats,
         GameService game,
+        BoardCacheService boardCache,
         ProfileService profile,
         BlockAndReportService blockAndReport,
         IUserInfo userInfo)
     {
         _gameStats = gameStats;
         _game = game;
+        _boardCache = boardCache;
         _profile = profile;
         _blockAndReport = blockAndReport;
         _userInfo = userInfo;
@@ -43,7 +48,7 @@ public class GameStatsModel : PageModel
 
     public string GameName { get; private set; } = "";
     public string RoundingRule { get; private set; } = "";
-    public string BoardName { get; private set; } = "";
+    public Board Board { get; private set; }
     public PlayerGameOutcome? Outcome { get; private set; }
 
     public async Task<IActionResult> OnGetAsync(string gameId, string userId)
@@ -72,8 +77,11 @@ public class GameStatsModel : PageModel
         Player = player;
         GameName = game.Name;
         RoundingRule = game.RoundingRule.GetDescription();
-        BoardName = string.IsNullOrEmpty(game.BoardId) ? "Default Board" : game.BoardSkin?.Name ?? "Default Board";
         Outcome = gamePlayer.PlayerGameOutcome;
+        
+        var boards = await _boardCache.GetAllBoards();
+        Board = boards.FirstOrDefault(b => b.BoardId == game.BoardId) 
+                ?? boards.First(b => b.BoardId == null); //Default always included
 
         // Game/player already loaded above, so no need to include them on the stat query.
         Stat = await _gameStats.GetPlayerGameStatistics(gameId, userId, includeGame: false, includeGamePlayer: false);

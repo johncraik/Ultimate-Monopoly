@@ -1,0 +1,63 @@
+@page "{tableName}"
+@model UltimateMonopoly.Areas.Admin.Pages.Audit.Data.DataTableModel
+@using JC.Core.Enums
+@{
+    ViewData["Title"] = "Data Trail";
+    string AChecked(AuditAction? v) => Model.Action == v ? "checked" : "";
+}
+
+<div class="d-flex align-items-center gap-3 mb-4">
+    <a asp-area="Admin" asp-page="/Audit/Data/Index" class="btn btn-sm btn-outline-secondary" title="Back to tables">
+        <i class="bi bi-arrow-left"></i>
+    </a>
+    <span class="admin-page-ico bg-warning-subtle text-warning"><i class="bi bi-clipboard-data"></i></span>
+    <div class="min-w-0">
+        <h1 class="h3 mb-1 text-truncate">Data Trail</h1>
+        <p class="text-body-secondary mb-0 text-truncate">
+            Every audited change to the <span class="fw-semibold">@Model.TableName</span> table.
+        </p>
+    </div>
+</div>
+
+@* Search (within the table) + action filter. A plain GET form is the no-JS fallback; audit-trail.js
+   intercepts changes and re-fetches just the table partial (?handler=Table). *@
+<form id="audit-filters" method="get" class="card mb-3">
+    <div class="card-body">
+        <div class="row g-3 align-items-end">
+            <div class="col-12 col-xl-5">
+                <label class="form-label small text-body-secondary mb-1" for="audit-search">Search</label>
+                <div class="input-group">
+                    <input type="search" class="form-control" id="audit-search" name="Search" value="@Model.Search"
+                           placeholder="User name, id, entity key…" autocomplete="off" />
+                    <button class="btn btn-primary" type="submit" aria-label="Search"><i class="bi bi-search"></i></button>
+                </div>
+            </div>
+            <div class="col-12 col-xl">
+                <label class="form-label small text-body-secondary mb-1">Action</label>
+                <div class="btn-group w-100 flex-wrap" role="group" aria-label="Action filter">
+                    <input type="radio" class="btn-check" name="Action" id="ac-all" value="" autocomplete="off" @AChecked(null) />
+                    <label class="btn btn-outline-secondary" for="ac-all">All</label>
+                    <input type="radio" class="btn-check" name="Action" id="ac-create" value="Create" autocomplete="off" @AChecked(AuditAction.Create) />
+                    <label class="btn btn-outline-secondary" for="ac-create">Create</label>
+                    <input type="radio" class="btn-check" name="Action" id="ac-update" value="Update" autocomplete="off" @AChecked(AuditAction.Update) />
+                    <label class="btn btn-outline-secondary" for="ac-update">Update</label>
+                    <input type="radio" class="btn-check" name="Action" id="ac-soft" value="SoftDelete" autocomplete="off" @AChecked(AuditAction.SoftDelete) />
+                    <label class="btn btn-outline-secondary" for="ac-soft">Soft-delete</label>
+                    <input type="radio" class="btn-check" name="Action" id="ac-del" value="Delete" autocomplete="off" @AChecked(AuditAction.Delete) />
+                    <label class="btn btn-outline-secondary" for="ac-del">Delete</label>
+                    <input type="radio" class="btn-check" name="Action" id="ac-restore" value="Restore" autocomplete="off" @AChecked(AuditAction.Restore) />
+                    <label class="btn btn-outline-secondary" for="ac-restore">Restore</label>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<div id="audit-table">
+    <partial name="~/Areas/Admin/Pages/Audit/_AuditTable.cshtml" model="Model.TableModel" />
+</div>
+
+@section Scripts {
+    <script src="~/scripts/admin/copy.js" asp-append-version="true"></script>
+    <script src="~/scripts/admin/audit-trail.js" asp-append-version="true"></script>
+}

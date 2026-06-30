@@ -38,18 +38,23 @@ public class MovementStatsService : IStatsService
                 .ToList();
 
             turnRolls += (uint)playerRolls.Count(dr => dr.IsTurnRoll);
-            cardRolls += 0; //TODO: Implement card rolls
+            //Card rolls (dice-off / multiplier card rolls) are the non-turn rolls — 1-2 dice, no third die.
+            cardRolls += (uint)playerRolls.Count(dr => !dr.IsTurnRoll);
 
-            //Doubles and triples:
+            //Doubles and triples (turn rolls only carry these types; card rolls are always Normal):
             doublesRolled += (uint)playerRolls.Count(dr => dr.RollType == DiceRollType.Double);
             triplesRolled += (uint)playerRolls.Count(dr => dr.RollType == DiceRollType.Triple);
 
-            //Your number
+            //Your number — TURN rolls only (a card roll's two dice could otherwise false-match a player's
+            //number) and never a triple (a triple is its own mechanic, not a dice-number hit — mirrors
+            //PlayerModel.IsDiceNumber).
             someoneRolledNumber += (uint)diceRolls.Count(dr => dr.PlayerId != player.PlayerId
-                                                               && ((dr.Die1 == player.Dice1 && dr.Die2 == player.Dice2) 
+                                                               && dr.IsTurnRoll && dr.RollType != DiceRollType.Triple
+                                                               && ((dr.Die1 == player.Dice1 && dr.Die2 == player.Dice2)
                                                                    || (dr.Die1 == player.Dice2 && dr.Die2 == player.Dice1)));
-            youRolledNumber += (uint)playerRolls.Count(dr => (dr.Die1 == player.Dice1 && dr.Die2 == player.Dice2) 
-                                                             || (dr.Die1 == player.Dice2 && dr.Die2 == player.Dice1));
+            youRolledNumber += (uint)playerRolls.Count(dr => dr.IsTurnRoll && dr.RollType != DiceRollType.Triple
+                                                             && ((dr.Die1 == player.Dice1 && dr.Die2 == player.Dice2)
+                                                                 || (dr.Die1 == player.Dice2 && dr.Die2 == player.Dice1)));
 
             //Movements:
 
@@ -123,7 +128,21 @@ public class MovementStatsService : IStatsService
         record.TotalDistanceTraveledClockwise = distanceClockwise;
         record.TotalDistanceTraveledCounterClockwise = distanceAntiClockwise;
         
-        record.MostLandedOnBoardIndex = landOnIndexes.MaxBy(kv => kv.Value).Key;
+        //Guard the empty case: MaxBy on an empty sequence throws for a value-type element (KeyValuePair),
+        //so a player with no counted landings (finished / cancel-edge / drawn / early-bankrupt / no-move)
+        //would otherwise throw and sink the WHOLE game's stats projection (H-03). Default to GO (index 0)
+        //with a 0 count, so the record stays internally consistent.
+        if (landOnIndexes.Count > 0)
+        {
+            var mostLanded = landOnIndexes.MaxBy(kv => kv.Value);
+            record.MostLandedOnBoardIndex = mostLanded.Key;
+            record.MostLandedOnBoardIndexCount = mostLanded.Value;
+        }
+        else
+        {
+            record.MostLandedOnBoardIndex = IndexHelper.GoSpace;
+            record.MostLandedOnBoardIndexCount = 0;
+        }
         record.TimesLandedOnGo = landOnIndexes.TryGetValue(IndexHelper.GoSpace, out var goCount) ? goCount : 0;
         record.TimesLandedOnFreeParking = landOnIndexes.TryGetValue(IndexHelper.FreeParkingSpace, out var fpCount) ? fpCount : 0;
         

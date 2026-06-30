@@ -1,0 +1,106 @@
+@using JC.Core.Extensions
+@using Microsoft.AspNetCore.Html
+@model UltimateMonopoly.Areas.Admin.Models.ViewModels.Logs.AdminLogTableModel
+@{
+    // Pagination links carry the current search + filters (no handler) so a no-JS click reloads the full
+    // page; admin-logs.js upgrades the click to a ?handler=Table partial fetch.
+    var hrefFormat = $"?Search={Uri.EscapeDataString(Model.Search ?? "")}" +
+                     $"&Action={Model.Action}&TargetType={Model.TargetType}&pageNumber={{0}}";
+
+    // Current Admin — tri-state: null (unresolved actor) → grey minus; false (no longer an admin) → amber
+    // warning; true (still an admin) → green tick.
+    Func<bool?, IHtmlContent> adminFlag = v => new HtmlString(v switch
+    {
+        true => "<i class=\"bi bi-check-circle-fill text-success\" title=\"Currently an admin\"></i>",
+        false => "<i class=\"bi bi-exclamation-circle-fill text-warning\" title=\"No longer an admin\"></i>",
+        _ => "<i class=\"bi bi-dash-circle-fill text-secondary\" title=\"Unknown\"></i>"
+    });
+}
+
+<div class="d-flex align-items-center justify-content-between mb-2">
+    <span class="small text-body-secondary">Showing @Model.Logs.Count.ToString("N0") of @Model.Logs.TotalCount.ToString("N0") log(s)</span>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-hover table-sm align-middle admin-audit-table mb-0">
+        <thead>
+            <tr class="text-body-secondary small text-uppercase">
+                <th class="admin-id-col">Log ID</th>
+                <th>Admin</th>
+                <th>Action</th>
+                <th>Target</th>
+                <th>Log Date</th>
+                <th>When</th>
+                <th>Details</th>
+                <th class="audit-col-flag text-center">Current Admin</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.Logs.Count == 0)
+            {
+                <tr><td colspan="8" class="text-center text-body-secondary py-4">No admin logs match.</td></tr>
+            }
+            else
+            {
+                foreach (var l in Model.Logs)
+                {
+                    var detailId = $"al-{l.LogId}";
+                    @* Click the row to toggle the detail row below (independent collapse — many can be open).
+                       No data-href, so clickable-rows.js leaves it alone. *@
+                    <tr class="audit-row" role="button" data-bs-toggle="collapse" data-bs-target="#@detailId" aria-expanded="false" aria-controls="@detailId">
+                        <td class="admin-id-col">
+                            <code class="user-id-copy" role="button" title="@l.LogId" data-copy="@l.LogId">@l.LogId.Truncate(8, "…")</code>
+                        </td>
+                        <td class="min-w-0">
+                            <div class="fw-semibold text-truncate">@l.Username</div>
+                            @if (l.UserId != "-")
+                            {
+                                <code class="user-id-copy small text-body-secondary" role="button" title="@l.UserId" data-copy="@l.UserId">@l.UserId.Truncate(12, "…")</code>
+                            }
+                            else
+                            {
+                                <span class="small text-body-secondary">—</span>
+                            }
+                        </td>
+                        <td>@l.ActionDisplay</td>
+                        <td class="min-w-0">
+                            <div class="fw-semibold text-truncate">@l.TargetDisplay</div>
+                            @if (l.TargetId != "N/A")
+                            {
+                                <code class="user-id-copy small text-body-secondary" role="button" title="@l.TargetId" data-copy="@l.TargetId">@l.TargetId.Truncate(12, "…")</code>
+                            }
+                            else
+                            {
+                                <span class="small text-body-secondary">—</span>
+                            }
+                        </td>
+                        <td>@l.LogDate</td>
+                        <td class="text-body-secondary">@l.RelativeDate</td>
+                        <td><span title="@l.Details">@l.Details.Truncate(10, "...")</span></td>
+                        <td class="audit-col-flag text-center">@adminFlag(l.TargetIsAdmin)</td>
+                    </tr>
+                    @* The detail row — the full log detail. *@
+                    <tr class="audit-detail">
+                        <td colspan="8" class="p-0 border-0">
+                            <div id="@detailId" class="collapse">
+                                @* Background + padding on this wrapper, not the .row (a gutter row's negative
+                                   top margin would bleed its background up into the clicked row). *@
+                                <div class="bg-body-tertiary p-3">
+                                    <div class="small text-body-secondary text-uppercase mb-2">Details</div>
+                                    <div class="admin-log-detail">@l.Details</div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+@if (!Model.Preview)
+{
+    <div class="mt-3 d-flex justify-content-center">
+        <pagination model="Model.Logs" href-format="@hrefFormat" />
+    </div>
+}

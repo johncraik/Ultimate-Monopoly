@@ -43,7 +43,7 @@
         ]
     },
     {
-        "RawText": "Each player, excluding you, must hand in a property into free parking (it does not get recorded and can be from a set you have handed in before). You will receive all properties in free parking.",
+        "RawText": "Each player, excluding you, must hand in a property into free parking (it does not get recorded and can be from a set you have handed in before). You will receive all properties in free parking (if free parking has money).",
         "CardType": "FreeParking",
         "ConditionType": "None",
         "Groups": [
@@ -53,10 +53,6 @@
                         "$type": "Property",
                         "Kind": 1,
                         "Target": 2
-                    },
-                    {
-                        "$type": "Property",
-                        "Kind": 3
                     }
                 ]
             }

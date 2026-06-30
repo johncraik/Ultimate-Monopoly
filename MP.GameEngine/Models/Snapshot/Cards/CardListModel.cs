@@ -1,86 +1,114 @@
+using MP.GameEngine.Abstractions.Cards;
 using MP.GameEngine.Enums.Cards;
 using MP.GameEngine.Helpers.Cards;
 
 namespace MP.GameEngine.Models.Snapshot.Cards;
 
 /// <summary>
-/// The per-type card decks held on the game model — one <see cref="Queue{CardModel}"/> per
-/// <see cref="CardType"/>. The queue order <i>is</i> the deck: drawing dequeues the front, returning
-/// enqueues the back, and the order persists in the snapshot so draws replay deterministically
-/// (cards-design.md §9). Prefer the type-keyed <see cref="Has"/>/<see cref="Take"/>/<see cref="HandBack"/>.
+/// The per-type card decks held on the game model — one <see cref="Queue{T}"/> of <b>card ids</b> per
+/// <see cref="CardType"/>; the full card definitions live in the card cache and are resolved on draw
+/// (<see cref="Take"/>). The queue order <i>is</i> the deck: drawing dequeues the front, returning
+/// enqueues the back, and the id order persists in the snapshot so draws replay deterministically
+/// (cards-design.md §9) while keeping the snapshot lean. Use <see cref="Take"/> / <see cref="HandBack"/>.
 /// </summary>
 public class CardListModel
 {
     /// <summary>
     /// Chance card list
     /// </summary>
-    public Queue<CardModel> ChanceCards { get; set; } = [];
-
+    public Queue<string> ChanceCards { get; set; } = [];
+    internal void PopulateChanceCards(IEnumerable<CardModel> cards)
+        => ChanceCards = new Queue<string>(cards.Select(c => c.CardId));
+    
+    
     /// <summary>
     /// Community chest card list
     /// </summary>
-    public Queue<CardModel> CommunityChestCards { get; set; } = [];
+    public Queue<string> CommunityChestCards { get; set; } = [];
+    internal void PopulateComChestCards(IEnumerable<CardModel> cards)
+        => CommunityChestCards = new Queue<string>(cards.Select(c => c.CardId));
 
     /// <summary>
     /// Percentage chance list
     /// </summary>
-    public Queue<CardModel> PercentChanceCards { get; set; } = [];
+    public Queue<string> PercentChanceCards { get; set; } = [];
+    internal void PopulatePercentChanceCards(IEnumerable<CardModel> cards)
+        => PercentChanceCards = new Queue<string>(cards.Select(c => c.CardId));
 
     /// <summary>
     /// Percentage community chest list
     /// </summary>
-    public Queue<CardModel> PercentCommunityChestCards { get; set; } = [];
+    public Queue<string> PercentCommunityChestCards { get; set; } = [];
+    internal void PopulatePercentComChestCards(IEnumerable<CardModel> cards)
+        => PercentCommunityChestCards = new Queue<string>(cards.Select(c => c.CardId));
 
     /// <summary>
     /// Third cards list
     /// </summary>
-    public Queue<CardModel> ThirdCards { get; set; } = [];
+    public Queue<string> ThirdCards { get; set; } = [];
+    internal void PopulateThirdCards(IEnumerable<CardModel> cards)
+        => ThirdCards = new Queue<string>(cards.Select(c => c.CardId));
 
     /// <summary>
     /// Double cards list
     /// </summary>
-    public Queue<CardModel> DoubleCards { get; set; } = [];
+    public Queue<string> DoubleCards { get; set; } = [];
+    internal void PopulateDoubleCards(IEnumerable<CardModel> cards)
+        => DoubleCards = new Queue<string>(cards.Select(c => c.CardId));
 
     /// <summary>
     /// Triple cards list
     /// </summary>
-    public Queue<CardModel> TripleCards { get; set; } = [];
+    public Queue<string> TripleCards { get; set; } = [];
+    internal void PopulateTripleCards(IEnumerable<CardModel> cards)
+        => TripleCards = new Queue<string>(cards.Select(c => c.CardId));
 
     /// <summary>
     /// Tax cards list
     /// </summary>
-    public Queue<CardModel> TaxCards { get; set; } = [];
+    public Queue<string> TaxCards { get; set; } = [];
+    internal void PopulateTaxCards(IEnumerable<CardModel> cards)
+        => TaxCards = new Queue<string>(cards.Select(c => c.CardId));
 
     /// <summary>
     /// Go cards list
     /// </summary>
-    public Queue<CardModel> GoCards { get; set; } = [];
+    public Queue<string> GoCards { get; set; } = [];
+    internal void PopulateGoCards(IEnumerable<CardModel> cards)
+        => GoCards = new Queue<string>(cards.Select(c => c.CardId));
 
     /// <summary>
     /// Just visiting cards list
     /// </summary>
-    public Queue<CardModel> JustVisitingCards { get; set; } = [];
+    public Queue<string> JustVisitingCards { get; set; } = [];
+    internal void PopulateJustVisitingCards(IEnumerable<CardModel> cards)
+        => JustVisitingCards = new Queue<string>(cards.Select(c => c.CardId));
 
     /// <summary>
     /// Free parking cards list
     /// </summary>
-    public Queue<CardModel> FreeParkingCards { get; set; } = [];
+    public Queue<string> FreeParkingCards { get; set; } = [];
+    internal void PopulateFreeParkingCards(IEnumerable<CardModel> cards)
+        => FreeParkingCards = new Queue<string>(cards.Select(c => c.CardId));
 
     /// <summary>
     /// Go to jail cards list
     /// </summary>
-    public Queue<CardModel> GoToJailCards { get; set; } = [];
-
+    public Queue<string> GoToJailCards { get; set; } = [];
+    internal void PopulateGoToJailCards(IEnumerable<CardModel> cards)
+        => GoToJailCards = new Queue<string>(cards.Select(c => c.CardId));
+    
+    
     /// <summary>Parameterless constructor for serialisation (empty decks).</summary>
     public CardListModel()
     {
     }
 
 
-    /// <summary>Builds the shuffled per-type decks from a master card list (cards-design.md §9).</summary>
+    /// <summary>Builds the shuffled per-type decks (as card-id queues) from a master card list (cards-design.md §9).</summary>
     /// <param name="cards">The full card list to deal into per-type decks.</param>
     // Chains to the copy ctor: BuildCardDecks returns a populated CardListModel, which the copy
-    // ctor deep-copies into this. (An expression-bodied `=> BuildCardDecks(cards)` would discard
+    // ctor copies into this. (An expression-bodied `=> BuildCardDecks(cards)` would discard
     // the result and leave the decks empty.)
     public CardListModel(IEnumerable<CardModel> cards)
         : this(CardDeckHelper.BuildCardDecks(cards))
@@ -88,31 +116,31 @@ public class CardListModel
     }
 
 
-    /// <summary>Deep-copy constructor for the working-copy clone — copies every deck and its cards.</summary>
+    /// <summary>Copy constructor for the working-copy clone — copies every deck's card-id queue.</summary>
     public CardListModel(CardListModel model)
     {
-        ChanceCards = new Queue<CardModel>(model.ChanceCards.Select(c => new CardModel(c)));
-        CommunityChestCards = new Queue<CardModel>(model.CommunityChestCards.Select(c => new CardModel(c)));
+        ChanceCards = new Queue<string>(model.ChanceCards);
+        CommunityChestCards = new Queue<string>(model.CommunityChestCards);
         
-        PercentChanceCards = new Queue<CardModel>(model.PercentChanceCards.Select(c => new CardModel(c)));
-        PercentCommunityChestCards = new Queue<CardModel>(model.PercentCommunityChestCards.Select(c => new CardModel(c)));
-        ThirdCards = new Queue<CardModel>(model.ThirdCards.Select(c => new CardModel(c)));
+        PercentChanceCards = new Queue<string>(model.PercentChanceCards);
+        PercentCommunityChestCards = new Queue<string>(model.PercentCommunityChestCards);
+        ThirdCards = new Queue<string>(model.ThirdCards);
         
-        DoubleCards = new Queue<CardModel>(model.DoubleCards.Select(c => new CardModel(c)));
-        TripleCards = new Queue<CardModel>(model.TripleCards.Select(c => new CardModel(c)));
+        DoubleCards = new Queue<string>(model.DoubleCards);
+        TripleCards = new Queue<string>(model.TripleCards);
         
-        TaxCards = new Queue<CardModel>(model.TaxCards.Select(c => new CardModel(c)));
+        TaxCards = new Queue<string>(model.TaxCards);
         
-        GoCards = new Queue<CardModel>(model.GoCards.Select(c => new CardModel(c)));
-        JustVisitingCards = new Queue<CardModel>(model.JustVisitingCards.Select(c => new CardModel(c)));
-        FreeParkingCards = new Queue<CardModel>(model.FreeParkingCards.Select(c => new CardModel(c)));
-        GoToJailCards = new Queue<CardModel>(model.GoToJailCards.Select(c => new CardModel(c)));
+        GoCards = new Queue<string>(model.GoCards);
+        JustVisitingCards = new Queue<string>(model.JustVisitingCards);
+        FreeParkingCards = new Queue<string>(model.FreeParkingCards);
+        GoToJailCards = new Queue<string>(model.GoToJailCards);
     }
 
 
     /// <summary>Returns the live deck queue for <paramref name="cardType"/> (the shared backing of <see cref="Has"/>/<see cref="Take"/>/<see cref="HandBack"/>).</summary>
     /// <exception cref="ArgumentOutOfRangeException">An unknown <see cref="CardType"/> was passed.</exception>
-    private Queue<CardModel> DeckFor(CardType cardType)
+    private Queue<string> DeckFor(CardType cardType)
       => cardType switch
       {
           CardType.Chance              => ChanceCards,                                                                                                                                                                                       
@@ -129,60 +157,26 @@ public class CardListModel
           CardType.GoToJail            => GoToJailCards,                                                                                                                                                                                     
           _ => throw new ArgumentOutOfRangeException(nameof(cardType), cardType, null)                                                                                                                                                       
       };
-    
-    /// <summary>Whether <paramref name="cardType"/>'s deck has any cards left to draw.</summary>
-    public bool Has(CardType cardType) => DeckFor(cardType).Count > 0;
-    /// <summary>Draws the next card off the front of <paramref name="cardType"/>'s deck, or null if the deck is empty.</summary>
-    public CardModel? Take(CardType cardType) => Has(cardType) ? DeckFor(cardType).Dequeue() : null;
-    /// <summary>Returns a spent/played card to the back of <paramref name="cardType"/>'s deck.</summary>
-    public void HandBack(CardType cardType, CardModel c) => DeckFor(cardType).Enqueue(c);
-    
-    
-    public bool HasChanceCards => ChanceCards.Count > 0;
-    public CardModel? TakeChance() => HasChanceCards ? ChanceCards.Dequeue() : null;
-    public void HandBackChance(CardModel c) => ChanceCards.Enqueue(c);
-    
-    public bool HasCommunityChestCards => CommunityChestCards.Count > 0;
-    public CardModel? TakeCommunityChest() => HasCommunityChestCards ? CommunityChestCards.Dequeue() : null;
-    public void HandBackCommunityChest(CardModel c) => CommunityChestCards.Enqueue(c);
-    
-    public bool HasPercentChanceCards => PercentChanceCards.Count > 0;
-    public CardModel? TakePercentChance() => HasPercentChanceCards ? PercentChanceCards.Dequeue() : null;
-    public void HandBackPercentChance(CardModel c) => PercentChanceCards.Enqueue(c);
-    
-    public bool HasPercentCommunityChestCards => PercentCommunityChestCards.Count > 0;
-    public CardModel? TakePercentCommunityChest() => HasPercentCommunityChestCards ? PercentCommunityChestCards.Dequeue() : null;
-    public void HandBackPercentCommunityChest(CardModel c) => PercentCommunityChestCards.Enqueue(c);
-    
-    public bool HasThirdCards => ThirdCards.Count > 0;
-    public CardModel? TakeThird() => HasThirdCards ? ThirdCards.Dequeue() : null;
-    public void HandBackThird(CardModel c) => ThirdCards.Enqueue(c);
-    
-    public bool HasDoubleCards => DoubleCards.Count > 0;
-    public CardModel? TakeDouble() => HasDoubleCards ? DoubleCards.Dequeue() : null;
-    public void HandBackDouble(CardModel c) => DoubleCards.Enqueue(c);
-    
-    public bool HasTripleCards => TripleCards.Count > 0;
-    public CardModel? TakeTriple() => HasTripleCards ? TripleCards.Dequeue() : null;
-    public void HandBackTriple(CardModel c) => TripleCards.Enqueue(c);
-    
-    public bool HasTaxCards => TaxCards.Count > 0;
-    public CardModel? TakeTax() => HasTaxCards ? TaxCards.Dequeue() : null;
-    public void HandBackTax(CardModel c) => TaxCards.Enqueue(c);
-    
-    public bool HasGoCards => GoCards.Count > 0;
-    public CardModel? TakeGo() => HasGoCards ? GoCards.Dequeue() : null;
-    public void HandBackGo(CardModel c) => GoCards.Enqueue(c);
-    
-    public bool HasJustVisitingCards => JustVisitingCards.Count > 0;
-    public CardModel? TakeJustVisiting() => HasJustVisitingCards ? JustVisitingCards.Dequeue() : null;
-    public void HandBackJustVisiting(CardModel c) => JustVisitingCards.Enqueue(c);
-    
-    public bool HasFreeParkingCards => FreeParkingCards.Count > 0;
-    public CardModel? TakeFreeParking() => HasFreeParkingCards ? FreeParkingCards.Dequeue() : null;
-    public void HandBackFreeParking(CardModel c) => FreeParkingCards.Enqueue(c);
-    
-    public bool HasGoToJailCards => GoToJailCards.Count > 0;
-    public CardModel? TakeGoToJail() => HasGoToJailCards ? GoToJailCards.Dequeue() : null;
-    public void HandBackGoToJail(CardModel c) => GoToJailCards.Enqueue(c);
+
+
+    /// <summary>Whether <paramref name="cardType"/>'s deck has any card ids left to draw.</summary>
+    private bool Has(CardType cardType) => DeckFor(cardType).Count > 0;
+
+    /// <summary>
+    /// Draws the next card id off the front of <paramref name="cardType"/>'s deck and resolves it via
+    /// <paramref name="cache"/> to a <b>fresh <see cref="CardModel"/> clone</b> — never the shared cached
+    /// instance, so the returned card can be mutated and held without corrupting the cache or other games.
+    /// Returns null if the deck is empty.
+    /// </summary>
+    public async Task<CardModel?> Take(ICardCacheService cache, CardType cardType)
+    {
+        var id = Has(cardType) ? DeckFor(cardType).Dequeue() : null;
+        if (string.IsNullOrEmpty(id)) return null;
+
+        var sharedCardModel = await cache.GetCard(id);
+        return sharedCardModel == null ? null : new CardModel(sharedCardModel);
+    }
+
+    /// <summary>Returns a spent/played card to the back of its type's deck by enqueuing its id (cards-design.md §9.4).</summary>
+    public void HandBack(CardType cardType, CardModel c) => DeckFor(cardType).Enqueue(c.CardId);
 }

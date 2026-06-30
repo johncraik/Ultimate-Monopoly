@@ -1,15 +1,35 @@
-﻿@page
+@page
 @model ConfirmEmailModel
 @{
     ViewData["Title"] = "Confirm Email";
 }
 
-<div class="container text-center" style="max-width: 640px;">
-    <div class="card">
-        <div class="card-body">
-            <h2 class="mb-3">Confirm Email</h2>
-            <partial name="_StatusMessage" model="Model.StatusMessage" />
-            <a asp-page="./Login" class="btn btn-primary w-100">Log in</a>
+<div class="mx-auto" style="max-width: 560px;">
+    <div class="card text-center">
+        <div class="card-body p-4 p-md-5">
+            @if (Model.Succeeded)
+            {
+                <div class="display-4 text-success mb-3"><i class="bi bi-check-circle-fill"></i></div>
+                <h1 class="h3 mb-2">Email confirmed</h1>
+                <p class="text-body-secondary mb-4">
+                    Thanks — your email address is verified and your account is ready. You can now log in.
+                </p>
+                <a asp-page="./Login" class="btn btn-hero-primary btn-lg w-100">
+                    <i class="bi bi-box-arrow-in-right me-1"></i> Log in
+                </a>
+            }
+            else
+            {
+                <div class="display-4 text-danger mb-3"><i class="bi bi-x-circle-fill"></i></div>
+                <h1 class="h3 mb-2">We couldn't confirm your email</h1>
+                <p class="text-body-secondary mb-4">
+                    This confirmation link is invalid or has expired. Request a fresh one and we'll email it to you.
+                </p>
+                <a asp-page="./ResendEmailConfirmation" class="btn btn-hero-primary btn-lg w-100">
+                    <i class="bi bi-envelope-arrow-up me-1"></i> Resend confirmation email
+                </a>
+                <a asp-page="./Login" class="btn btn-nav-info btn-lg w-100 mt-2">Back to login</a>
+            }
         </div>
     </div>
 </div>

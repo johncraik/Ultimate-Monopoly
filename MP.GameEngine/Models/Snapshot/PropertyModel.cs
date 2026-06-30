@@ -15,7 +15,6 @@ public class PropertyModel
     public StreetRuleQualifier StreetRuleQualifier { get; set; }
 
     public bool IsPurged { get; set; }
-    public bool HasBeenPurged { get; set; }
     
     public bool HasBeenBuiltOnThisTurn { get; set; }
     
@@ -37,7 +36,6 @@ public class PropertyModel
         RentLevel = model.RentLevel;
         
         IsPurged = model.IsPurged;
-        HasBeenPurged = model.HasBeenPurged;
         HasBeenBuiltOnThisTurn = model.HasBeenBuiltOnThisTurn;
         
         StreetRuleQualifier = model.StreetRuleQualifier;
@@ -76,7 +74,6 @@ public class PropertyModel
         
         OwnerPlayerId = playerId;
         IsPurged = false;
-        HasBeenPurged = false;
         StreetRuleQualifier = StreetRuleQualifier.NeverBuiltOn;
 
         if (transferBetweenPlayers) return;

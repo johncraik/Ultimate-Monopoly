@@ -108,8 +108,12 @@
                     .map(i => Number(i.dataset.targetIndex));
                 const countEl = promptEl.querySelector('[data-target-count]');
                 const count = countEl ? Number(countEl.dataset.targetCount) : selected.length;
-                if (selected.length !== count)
-                    return { error: count === 1 ? 'Select one property.' : ('Select exactly ' + count + ' properties.') };
+                // Clamp to the number of available options so a count larger than the option
+                // list can't make the submit gate unreachable (R-01); mirrors PromptValidator.
+                const available = promptEl.querySelectorAll('input.btn-check[data-target-index]').length;
+                const required = Math.min(count, available);
+                if (selected.length !== required)
+                    return { error: required === 1 ? 'Select one property.' : ('Select exactly ' + required + ' properties.') };
                 return { response: { '$type': 'TargetProperty', promptId: promptId, selectedBoardIndexes: selected } };
             }
 
@@ -119,8 +123,12 @@
                     .map(i => i.dataset.targetPlayerId);
                 const countEl = promptEl.querySelector('[data-target-count]');
                 const count = countEl ? Number(countEl.dataset.targetCount) : selected.length;
-                if (selected.length !== count)
-                    return { error: count === 1 ? 'Select one player.' : ('Select exactly ' + count + ' players.') };
+                // Clamp to the number of available options so a count larger than the option
+                // list can't make the submit gate unreachable (R-01); mirrors PromptValidator.
+                const available = promptEl.querySelectorAll('input.btn-check[data-target-player-id]').length;
+                const required = Math.min(count, available);
+                if (selected.length !== required)
+                    return { error: required === 1 ? 'Select one player.' : ('Select exactly ' + required + ' players.') };
                 return { response: { '$type': 'TargetPlayer', promptId: promptId, selectedPlayerIds: selected } };
             }
 

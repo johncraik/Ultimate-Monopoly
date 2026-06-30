@@ -25,20 +25,26 @@ public class JailStatsService : IStatsService
 
         // Leaving jail. Every exit path advances the player off the jail space to Just Visiting,
         // so each leave is a PlayerMoved whose InitialBoardIndex is the jail space. The path is
-        // told apart by what else the exit emitted: paying charges a JailFee, a card plays its
-        // (future) card receipt — and whatever is left over was a doubles/triples escape.
+        // told apart by what else the exit emitted: paying charges a JailFee, a release card emits a
+        // CardPlayedReceipt flagged IsJailRelease — and whatever is left over was a doubles/triples escape.
         var leftByPaying = events
             .OfType<FinancialTransactionReceipt>()
             .Count(e => e.PlayerId == playerId && e.Reason == FinancialReason.JailFee && e.Amount < 0);
 
-        const int leftByCard = 0; // TODO: card-driven jail exit, once a card-play receipt exists.
+        // Card-driven exit: a Get-Out-of-Jail-Free (JailKind.Release) play, flagged on the receipt (M-06).
+        // NOTE: IsJailRelease only populates for games whose receipts were serialised after the flag was
+        // added — older games read 0 here and that exit falls into the dice bucket below; a recompute
+        // can't backfill an unstored field (same caveat as the immunity stat).
+        var leftByCard = events
+            .OfType<CardPlayedReceipt>()
+            .Count(e => e.PlayerId == playerId && e.IsJailRelease);
 
         var totalLeaves = events
             .OfType<PlayerMovedReceipt>()
             .Count(e => e.PlayerId == playerId && e.InitialBoardIndex == IndexHelper.JailSpace);
 
         record.TimesLeftJailByPaying = (uint)leftByPaying;
-        record.TimesLeftJailByPlayingCard = leftByCard;
+        record.TimesLeftJailByPlayingCard = (uint)leftByCard;
         record.TimesLeftJailByDice = (uint)Math.Max(0, totalLeaves - leftByPaying - leftByCard);
 
         // Jail turns — the player's own turn-starts spent in the jail space. The snapshot is

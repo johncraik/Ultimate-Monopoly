@@ -83,17 +83,29 @@ $prop-colours: (
 );
 
 $card-chance: #fa1924;
+$card-play-chance: #94131a;
 $card-com-chest: #4076f5;
+$card-play-com-chest: #123380;
 $card-percent-chance: #e38b20;
+$card-play-percent-chance: #ebaf67;
 $card-percent-com-chest: #8953f5;
+$card-play-percent-com-chest: #321b61;
 $card-third: #30a644;
+$card-play-third: #11d432;
 $card-double: #3d9188;
+$card-play-double: #3bedda;
 $card-triple: #e267f0;
+$card-play-triple: #a609b8;
 $card-tax: #79859c;
+$card-play-tax: #4b5a75;
 $card-go: #ed5c5c;
+$card-play-go: #de9292;
 $card-jv: #825f3c;
+$card-play-jv: #573a1d;
 $card-fp: #3b5e3a;
+$card-play-fp: #164015;
 $card-jail: #5f5287;
+$card-play-jail: #9b8fbf;
 
 $card-colours:(
   "chance": $card-chance,
@@ -155,6 +167,28 @@ html {
     --bs-body-color: #{$body-color};
     --bs-border-color: #{$border-color};
   }
+}
+
+// ------------------------------------------------------------------
+// Default app background — a soft two-tone accent fade (primary top-left,
+// info top-right) behind EVERY page, on a fixed pseudo so it stays anchored
+// to the viewport as you scroll. Full-bleed by nature, so it can never be
+// "chopped" by a width wrapper. Subtle enough to keep content legible.
+// ------------------------------------------------------------------
+body {
+  min-height: 100vh;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;            // behind all content; above the flat body background
+  pointer-events: none;
+  background:
+    radial-gradient(75% 65% at 8% -8%,  rgba($primary, 0.30), transparent 62%),
+    radial-gradient(70% 60% at 96% -2%, rgba($info, 0.28), transparent 60%),
+    radial-gradient(80% 70% at 50% 115%, rgba($primary, 0.14), transparent 65%);
 }
 
 // ------------------------------------------------------------------
@@ -511,6 +545,199 @@ $hero-box-shadow-hover: 0 8px 24px rgba($black, 0.7), 0 2px 8px rgba($black, 0.5
 }
 
 // ------------------------------------------------------------------
+// .app-shell / .app-footer — standard-layout shell with a sticky footer
+// (the game layout doesn't use .app-shell, so its full-screen play UI is untouched).
+// ------------------------------------------------------------------
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.app-shell > main {
+  flex: 1 0 auto;   // grow to fill so the footer sits at the bottom on short pages
+}
+
+.app-footer {
+  border-top: 1px solid var(--bs-border-color);
+  background-color: rgba(var(--bs-body-bg-rgb), 0.55);
+}
+
+.app-footer-grid {
+  display: grid;
+  grid-template-columns: 1fr;   // stacked on mobile
+  gap: 0.25rem;
+  align-items: center;
+}
+@include media-breakpoint-up(lg) {
+  .app-footer-grid { grid-template-columns: 1fr auto 1fr; }   // centre truly centred, links right
+}
+
+.app-footer-link {
+  color: var(--bs-secondary-color);
+  text-decoration: none;
+
+  &:hover { color: var(--bs-primary); }
+}
+
+// ------------------------------------------------------------------
+// .nav-mega — hover / tap "mega" nav dropdowns. A full-width (max 600px)
+// card floats below the bar (desktop, absolute against the sticky navbar) or
+// out of the open burger menu (mobile, fixed just below the bar). Each block
+// is icon + title + small desc, highlighted on hover. Opened on hover (desktop)
+// or a tap of the title; closed by the ✕, a second tap, or an outside click —
+// one open at a time (navbar.js). Dividers per the agreed Games / Social grids.
+// ------------------------------------------------------------------
+.nav-mega { position: relative; }   // the card anchors to (and centres under) the button
+
+.nav-mega-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.nav-mega-caret {
+  font-size: 0.7rem;
+  transition: transform 0.2s ease;
+}
+.nav-mega.open .nav-mega-caret { transform: rotate(180deg); }
+
+// Keep the toggle highlighted (light bg + expanded underline, mirroring :hover)
+// while its dropdown is open — even once the pointer has moved onto the card.
+.nav-mega.open .nav-mega-toggle {
+  background-color: rgba(var(--bs-body-color-rgb), 0.10);
+
+  &::after { left: 0.75rem; right: 0.75rem; }
+}
+
+// Card drops flush below the button, centred on it: 600px wide, shrinking to the
+// full viewport width only when the screen is narrower than that. Shown only via
+// .open — navbar.js drives hover-intent + tap + ✕ + outside-click.
+.nav-mega-card {
+  --nav-mega-divider: rgba(var(--bs-body-color-rgb), 0.22);
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  z-index: 1035;
+  width: 600px;
+  max-width: calc(100vw - 1rem);
+  overflow: hidden;
+  border: 1px solid var(--bs-border-color);
+  border-radius: 1rem;
+  background-color: #2c2c2c;          // fully solid — floats above the page
+  box-shadow: 0 1.25rem 2.5rem rgba($black, 0.6), 0 0.25rem 0.75rem rgba($black, 0.45);
+
+  // hidden by default (subtle slide-down on open)
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateX(-50%) translateY(-0.4rem);
+  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+}
+
+.nav-mega.open > .nav-mega-card {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+
+.nav-mega-close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 2;
+  width: 1.9rem;
+  height: 1.9rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--bs-secondary-color);
+  font-size: 0.85rem;
+
+  &:hover {
+    background: rgba(var(--bs-body-color-rgb), 0.1);
+    color: var(--bs-body-color);
+  }
+}
+
+.nav-mega-item {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 1.15rem 1.25rem;
+  color: var(--bs-body-color);
+  text-decoration: none;
+  transition: background-color 0.12s ease;
+
+  &:hover {
+    background-color: rgba(var(--bs-primary-rgb), 0.12);
+    color: var(--bs-body-color);
+  }
+}
+
+.nav-mega-ico {
+  flex: 0 0 auto;
+  width: 2.2rem;
+  text-align: center;
+  font-size: 1.7rem;
+  line-height: 1;
+  color: var(--bs-primary);
+}
+.nav-mega-text { min-width: 0; }
+.nav-mega-title { display: block; font-weight: 600; line-height: 1.25; }
+.nav-mega-desc {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--bs-secondary-color);
+}
+
+// Grid — multi-column with the designed dividers at the full (lg+) width;
+// collapses to a single stacked column below lg so the content never overflows.
+.nav-mega-grid { display: grid; gap: 0; grid-template-columns: 1fr; }
+
+@include media-breakpoint-up(lg) {
+  .mega-3 { grid-template-columns: repeat(3, 1fr); }
+  .mega-2 { grid-template-columns: repeat(2, 1fr); }
+
+  // Games — vertical divider col 2|3 (items 2, 5); horizontal under cols 1–2 (items 1, 2).
+  .mega-games > :nth-child(2),
+  .mega-games > :nth-child(5) { border-right: 1px solid var(--nav-mega-divider); }
+  .mega-games > :nth-child(1),
+  .mega-games > :nth-child(2) { border-bottom: 1px solid var(--nav-mega-divider); }
+
+  // Social — full horizontal between the rows (items 1–3); vertical col 2|3 in row 2 (item 5).
+  .mega-social > :nth-child(1),
+  .mega-social > :nth-child(2),
+  .mega-social > :nth-child(3) { border-bottom: 1px solid var(--nav-mega-divider); }
+  .mega-social > :nth-child(5) { border-right: 1px solid var(--nav-mega-divider); }
+}
+
+// Stacked (below lg) — a simple visible divider between consecutive items.
+@include media-breakpoint-down(lg) {
+  .nav-mega-item + .nav-mega-item { border-top: 1px solid var(--nav-mega-divider); }
+}
+
+// Mobile: the panel drops INLINE directly under its title button in the open
+// burger menu (accordion-style), full menu width. Collapsed via display when closed.
+@include media-breakpoint-down(lg) {
+  .nav-mega-card {
+    position: static;
+    display: none;
+    width: 100%;
+    max-width: none;
+    margin-top: 0.4rem;
+    transform: none;
+    opacity: 1;
+    visibility: visible;
+    box-shadow: 0 0.5rem 1.5rem rgba($black, 0.5);
+  }
+
+  .nav-mega.open > .nav-mega-card { display: block; transform: none; }
+}
+
+// ------------------------------------------------------------------
 // .nav-toggler-morph — three-bar burger that morphs to an X
 // Pairs with Bootstrap's data-bs-toggle="collapse" (uses aria-expanded).
 // ------------------------------------------------------------------
@@ -554,6 +781,104 @@ $hero-box-shadow-hover: 0 8px 24px rgba($black, 0.7), 0 2px 8px rgba($black, 0.5
       top: calc(50% - 1px);
       transform: rotate(-45deg);
     }
+  }
+}
+
+// ------------------------------------------------------------------
+// .app-page — the app's own width wrapper, replacing Bootstrap's
+// .container* everywhere. The layout <main> is now full-bleed (full width),
+// so section backgrounds / accent glows can span the whole viewport; content
+// opts into .app-page for a centred max-width + responsive side gutters.
+// Modifiers tune the cap: --narrow for focused forms, --wide for the host area.
+// ------------------------------------------------------------------
+.app-page {
+  --app-page-max: 1500px;
+  width: 100%;
+  max-width: var(--app-page-max);
+  margin-inline: auto;
+  padding-inline: clamp(1rem, 4vw, 2rem);
+}
+
+.app-page--narrow { --app-page-max: 40rem; }    // ~640px — auth forms, focused content
+.app-page--wide   { --app-page-max: 1400px; }
+
+// The navbar previously laid its inner wrapper out via Bootstrap's
+// `.navbar > [class*="container-"]` rule; .app-page isn't a container, so
+// re-apply the same flex layout here.
+.navbar > .app-page {
+  display: flex;
+  flex-wrap: inherit;
+  align-items: center;
+  justify-content: space-between;
+}
+
+// ------------------------------------------------------------------
+// .game-tile — responsive game-list row (shared by the games pages and
+// the home hub). Container-query driven off the tile's OWN width (not the
+// viewport): while the tile is wide enough, the name sits beside the badge
+// and action buttons; once they no longer fit, the whole action group drops
+// to a full-width strip beneath the meta line and the name is allowed to
+// wrap in full instead of truncating. Adapts on the wide games pages and a
+// narrow hub column alike.
+// ------------------------------------------------------------------
+.game-tile {
+  container-type: inline-size;
+}
+
+.game-tile__body {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.game-tile__main {
+  flex: 1 1 auto;
+  min-width: 0;          // let the name truncate in the inline layout
+}
+
+.game-tile__name {
+  font-weight: 600;
+  white-space: nowrap;   // inline layout → one line, ellipsised
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.game-tile__actions {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;       // buttons themselves wrap before the whole group does
+  align-items: center;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+// Narrow tile → stack: the name wraps in full, and the badge + buttons become
+// a full-width strip beneath the meta line (set off by a hairline rule).
+@container (max-width: 34rem) {
+  .game-tile__body {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  .game-tile__name {
+    white-space: normal;
+  }
+
+  .game-tile__actions {
+    justify-content: flex-start;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--bs-border-color);
+  }
+}
+
+// Very old engines without container-query support fall back to a viewport
+// breakpoint so the row still stacks on small screens.
+@supports not (container-type: inline-size) {
+  @include media-breakpoint-down(sm) {
+    .game-tile__body { flex-direction: column; align-items: stretch; gap: 0.75rem; }
+    .game-tile__name { white-space: normal; }
+    .game-tile__actions { justify-content: flex-start; padding-top: 0.75rem; border-top: 1px solid var(--bs-border-color); }
   }
 }
 

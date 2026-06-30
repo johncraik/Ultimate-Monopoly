@@ -1,0 +1,63 @@
+@page
+@model UltimateMonopoly.Areas.Admin.Pages.Reports.IndexModel
+@using UltimateMonopoly.Areas.Admin.Enums
+@{
+    ViewData["Title"] = "Reports";
+
+    string RChecked(ReportResolution v) => Model.Resolution == v ? "checked" : "";
+}
+
+<div class="d-flex align-items-center gap-3 mb-4">
+    <span class="admin-page-ico bg-danger-subtle text-danger"><i class="bi bi-flag"></i></span>
+    <div>
+        <h1 class="h3 mb-1">Report Management</h1>
+        <p class="text-body-secondary mb-0">Review block-reports, filter by resolution, and act on the reported user.</p>
+    </div>
+</div>
+
+@* Filters + search. A plain GET form is the no-JS fallback; report-management.js intercepts changes
+   and re-fetches just the table partial (the ?handler=Table endpoint). *@
+<form id="report-filters" method="get" class="card mb-3">
+    <div class="card-body">
+        <div class="row g-3 align-items-end">
+            <div class="col-12 col-xl-4">
+                <label class="form-label small text-body-secondary mb-1" for="report-search">Search</label>
+                <div class="input-group">
+                    <input type="search" class="form-control" id="report-search" name="Search" value="@Model.Search"
+                           placeholder="Reported user id, message, reason…" autocomplete="off" />
+                    <button class="btn btn-primary" type="submit" aria-label="Search"><i class="bi bi-search"></i></button>
+                </div>
+            </div>
+
+            <div class="col-12 col-xl">
+                <label class="form-label small text-body-secondary mb-1">Resolution Filter</label>
+                <div class="btn-group w-100 flex-wrap" role="group" aria-label="Resolution filter">
+                    <input type="radio" class="btn-check" name="Resolution" id="res-any" value="AnyAction" autocomplete="off" @RChecked(ReportResolution.AnyAction) />
+                    <label class="btn btn-outline-secondary" for="res-any">Any</label>
+                    <input type="radio" class="btn-check" name="Resolution" id="res-open" value="Open" autocomplete="off" @RChecked(ReportResolution.Open) />
+                    <label class="btn btn-outline-secondary" for="res-open">Open</label>
+                    <input type="radio" class="btn-check" name="Resolution" id="res-handled" value="Handled" autocomplete="off" @RChecked(ReportResolution.Handled) />
+                    <label class="btn btn-outline-secondary" for="res-handled">Resolved</label>
+                    <input type="radio" class="btn-check" name="Resolution" id="res-restricted" value="AccountRestricted" autocomplete="off" @RChecked(ReportResolution.AccountRestricted) />
+                    <label class="btn btn-outline-secondary" for="res-restricted">Restricted</label>
+                    <input type="radio" class="btn-check" name="Resolution" id="res-disabled" value="AccountDisabled" autocomplete="off" @RChecked(ReportResolution.AccountDisabled) />
+                    <label class="btn btn-outline-secondary" for="res-disabled">Disabled</label>
+                    <input type="radio" class="btn-check" name="Resolution" id="res-full" value="FullAction" autocomplete="off" @RChecked(ReportResolution.FullAction) />
+                    <label class="btn btn-outline-secondary" for="res-full">Comprehensive</label>
+                    <input type="radio" class="btn-check" name="Resolution" id="res-deleted" value="AccountDeleted" autocomplete="off" @RChecked(ReportResolution.AccountDeleted) />
+                    <label class="btn btn-outline-secondary" for="res-deleted">Deleted</label>
+                    <input type="radio" class="btn-check" name="Resolution" id="res-all" value="AllActions" autocomplete="off" @RChecked(ReportResolution.AllActions) />
+                    <label class="btn btn-outline-secondary" for="res-all">All</label>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<div id="reports-table">
+    <partial name="_ReportsTable" model="Model.TableModel" />
+</div>
+
+@section Scripts {
+    <script src="~/scripts/admin/report-management.js" asp-append-version="true"></script>
+}

@@ -96,9 +96,9 @@ public class Game : AuditModel
         return true;
     }
 
-    public bool CancelGame()
+    public bool CancelGame(bool isAdmin = false)
     {
-        if(State == GameState.Finished || State == GameState.Cancelled)
+        if(!isAdmin && (State == GameState.Finished || State == GameState.Cancelled))
             return false;
         
         State = GameState.Cancelled;

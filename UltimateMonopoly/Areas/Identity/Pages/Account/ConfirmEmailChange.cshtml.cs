@@ -26,12 +26,8 @@ namespace UltimateMonopoly.Areas.Identity.Pages.Account
             _signInManager = signInManager;
         }
 
-        /// <summary>
-        ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-        ///     directly from your code. This API may change or be removed in future releases.
-        /// </summary>
-        [TempData]
-        public string StatusMessage { get; set; }
+        /// <summary>Whether the email change was confirmed — drives the success / error state on the page.</summary>
+        public bool Succeeded { get; private set; }
 
         public async Task<IActionResult> OnGetAsync(string userId, string email, string code)
         {
@@ -50,21 +46,15 @@ namespace UltimateMonopoly.Areas.Identity.Pages.Account
             var result = await _userManager.ChangeEmailAsync(user, email, code);
             if (!result.Succeeded)
             {
-                StatusMessage = "Error changing email.";
-                return Page();
+                return Page();   // Succeeded stays false → error state
             }
 
-            // In our UI email and user name are one and the same, so when we update the email
-            // we need to update the user name.
-            var setUserNameResult = await _userManager.SetUserNameAsync(user, email);
-            if (!setUserNameResult.Succeeded)
-            {
-                StatusMessage = "Error changing user name.";
-                return Page();
-            }
+            // Username is a separate, user-chosen field here (profanity-checked at register) — it is NOT
+            // tied to the email, so changing the email must leave the username alone. (The default Identity
+            // scaffold set the username to the new email; that assumption doesn't hold in this app.)
 
             await _signInManager.RefreshSignInAsync(user);
-            StatusMessage = "Thank you for confirming your email change.";
+            Succeeded = true;
             return Page();
         }
     }

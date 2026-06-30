@@ -1,0 +1,91 @@
+@model UltimateMonopoly.Areas.Admin.Models.ViewModels.RecentActivityModel
+@*  Each stream = a card (icon + title + "View all →") wrapping its existing table partial in preview mode.
+    A stream is hidden when its sub-model is null (Recent games unless SysAdmin; Admin logs unless gated in). *@
+
+<div class="mt-4">
+    <h2 class="h5 mb-3"><i class="bi bi-activity me-2"></i>Recent activity</h2>
+
+    <div class="row g-4">
+        @* ---------- LEFT: Message logs · Recent games ---------- *@
+        <div class="col-12 col-xl-6">
+            @if (Model.MessageLogs != null)
+            {
+                <div class="card mb-4">
+                    <div class="card-header d-flex align-items-center justify-content-between">
+                        <span><i class="bi bi-chat-dots me-2"></i>Message logs</span>
+                        <a href="@Model.MessageLogsUrl" class="small text-decoration-none">View all <i class="bi bi-arrow-right"></i></a>
+                    </div>
+                    <div class="card-body">
+                        <partial name="~/Areas/Admin/Pages/Logs/Messaging/_ThreadActivityLogsTable.cshtml" model="Model.MessageLogs" />
+                    </div>
+                </div>
+            }
+            @if (Model.RecentGames != null)
+            {
+                <div class="card mb-4">
+                    <div class="card-header d-flex align-items-center justify-content-between">
+                        <span><i class="bi bi-controller me-2"></i>Recent games</span>
+                        <a href="@Model.RecentGamesUrl" class="small text-decoration-none">View all <i class="bi bi-arrow-right"></i></a>
+                    </div>
+                    <div class="card-body">
+                        <partial name="~/Areas/Admin/Pages/Games/_GamesTable.cshtml" model="Model.RecentGames" />
+                    </div>
+                </div>
+            }
+        </div>
+
+        @* ---------- RIGHT: Admin logs · Email logs · Notifications ---------- *@
+        <div class="col-12 col-xl-6">
+            @if (Model.AdminLogs != null)
+            {
+                <div class="card mb-4">
+                    <div class="card-header d-flex align-items-center justify-content-between">
+                        <span><i class="bi bi-shield-lock me-2"></i>Admin logs</span>
+                        <a href="@Model.AdminLogsUrl" class="small text-decoration-none">View all <i class="bi bi-arrow-right"></i></a>
+                    </div>
+                    <div class="card-body">
+                        <partial name="~/Areas/Admin/Pages/Logs/_AdminLogsTable.cshtml" model="Model.AdminLogs" />
+                    </div>
+                </div>
+            }
+            @if (Model.EmailLogs != null)
+            {
+                <div class="card mb-4">
+                    <div class="card-header d-flex align-items-center justify-content-between">
+                        <span><i class="bi bi-envelope me-2"></i>Email logs</span>
+                        <a href="@Model.EmailLogsUrl" class="small text-decoration-none">View all <i class="bi bi-arrow-right"></i></a>
+                    </div>
+                    <div class="card-body">
+                        <partial name="~/Areas/Admin/Pages/Logs/Email/_EmailLogsTable.cshtml" model="Model.EmailLogs" />
+                    </div>
+                </div>
+            }
+            @if (Model.Notifications != null)
+            {
+                <div class="card mb-4">
+                    <div class="card-header d-flex align-items-center justify-content-between">
+                        <span><i class="bi bi-bell me-2"></i>Notifications</span>
+                        <a href="@Model.NotificationsUrl" class="small text-decoration-none">View all <i class="bi bi-arrow-right"></i></a>
+                    </div>
+                    <div class="card-body">
+                        <partial name="~/Areas/Admin/Pages/Logs/Notifications/_NotificationsTable.cshtml" model="Model.Notifications" />
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    @* ---------- Full-width: User trail ---------- *@
+    @if (Model.UserTrail != null)
+    {
+        <div class="card">
+            <div class="card-header d-flex align-items-center justify-content-between">
+                <span><i class="bi bi-clock-history me-2"></i>User trail</span>
+                <a href="@Model.UserTrailUrl" class="small text-decoration-none">View all <i class="bi bi-arrow-right"></i></a>
+            </div>
+            <div class="card-body">
+                <partial name="~/Areas/Admin/Pages/Audit/_AuditTable.cshtml" model="Model.UserTrail" />
+            </div>
+        </div>
+    }
+</div>

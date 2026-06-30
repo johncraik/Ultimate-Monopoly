@@ -44,6 +44,17 @@ public class UserService
     
     public async Task<AppUser?> GetUserByUsername(string username, bool? enabledFilter = true)
         => await QueryUsers(enabledFilter)
-            .FirstOrDefaultAsync(u => !string.IsNullOrEmpty(u.UserName) 
+            .FirstOrDefaultAsync(u => !string.IsNullOrEmpty(u.UserName)
                                       && u.UserName!.ToLower() == username.ToLower());
+
+    /// <summary>The ids of users in the given role (enabled-only by default) — e.g. the GithubManagers to
+    /// notify when an issue is reported.</summary>
+    public async Task<List<string>> GetUserIdsInRole(string roleName, bool? enabledFilter = true)
+        => await (from u in QueryUsers(enabledFilter)
+                  join ur in _context.UserRoles on u.Id equals ur.UserId
+                  join r in _context.Roles on ur.RoleId equals r.Id
+                  where r.Name == roleName
+                  select u.Id)
+            .Distinct()
+            .ToListAsync();
 }

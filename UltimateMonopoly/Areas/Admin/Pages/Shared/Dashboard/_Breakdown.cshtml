@@ -1,0 +1,32 @@
+@using UltimateMonopoly.Areas.Admin.Models.ViewModels.Dashboard
+@model BreakdownWidget
+@* Categorical breakdown — Syncfusion accumulation chart (donut or pie). *@
+@{
+    var data = Model.Segments.Select((s, i) => new
+    {
+        x = s.Label,
+        y = s.Value,
+        fill = s.Colour ?? DashboardPalette.Series[i % DashboardPalette.Series.Length]
+    }).ToList();
+    var inner = Model.Style == BreakdownStyle.Donut ? "62%" : "0%";
+    var hasData = Model.Segments.Any(s => s.Value > 0);
+}
+<div class="card h-100">
+    <div class="card-header">@if (!string.IsNullOrEmpty(Model.Icon)) { <i class="bi @Model.Icon me-2"></i> }@Model.Title</div>
+    <div class="card-body">
+        @if (!hasData)
+        {
+            <div class="text-body-secondary small">@Model.EmptyText</div>
+        }
+        else
+        {
+            <ejs-accumulationchart id="@Model.Id" background="transparent" height="240px">
+                <e-accumulation-series-collection>
+                    <e-accumulation-series dataSource="data" xName="x" yName="y" pointColorMapping="fill" innerRadius="@inner" radius="85%"></e-accumulation-series>
+                </e-accumulation-series-collection>
+                <e-accumulationchart-legendsettings visible="true" position="Bottom"></e-accumulationchart-legendsettings>
+                <e-accumulationchart-tooltipsettings enable="true"></e-accumulationchart-tooltipsettings>
+            </ejs-accumulationchart>
+        }
+    </div>
+</div>

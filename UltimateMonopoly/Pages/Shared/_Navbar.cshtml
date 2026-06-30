@@ -1,15 +1,17 @@
 @using JC.Communication.Notifications.Helpers
 @using JC.Communication.Notifications.Services
 @using JC.Core.Extensions
+@using JC.Identity.Authentication
 @using Microsoft.AspNetCore.Identity
 @using UltimateMonopoly.Data
 @using UltimateMonopoly.Services
+@using Microsoft.Extensions.Hosting
 @inject SignInManager<AppUser> SignInManager
 @inject NotificationCache NotificationCache
-@inject ProfileService ProfileService
+@inject Microsoft.AspNetCore.Hosting.IWebHostEnvironment Env
 
 <nav class="navbar navbar-expand-lg navbar-glass mb-4">
-    <div class="container-lg">
+    <div class="app-page">
         <partial name="_Branding"/>
 
         <button class="navbar-toggler nav-toggler-morph collapsed" type="button"
@@ -19,134 +21,141 @@
         </button>
 
         <div class="collapse navbar-collapse" id="mainNav">
-            @* TODO: replace href="#" once these pages exist *@
-            <ul class="navbar-nav mx-lg-auto mb-2 mb-lg-0 gap-lg-1">
-                <li class="nav-item dropdown">
-                    <button class="btn btn-nav dropdown-toggle" type="button"
-                            data-bs-toggle="dropdown" aria-expanded="false">Games</button>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" asp-area="" asp-page="/Games/Index">New Game</a></li>
-                        <li><a class="dropdown-item" asp-area="" asp-page="/Games/Join">Join Game</a></li>
-                        <li><hr class="dropdown-divider" /></li>
-                        <li><a class="dropdown-item" asp-area="" asp-page="/Games/MyGames">My Games</a></li>
-                        <li><a class="dropdown-item" asp-area="" asp-page="/Games/Joined">Joined Games</a></li>
-                    </ul>
-                </li>
-
-                <li class="nav-item dropdown">
-                    <button class="btn btn-nav dropdown-toggle" type="button"
-                            data-bs-toggle="dropdown" aria-expanded="false">Friends</button>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" asp-area="Social" asp-page="/Friends/Index" asp-route-tab="friends">All Friends</a></li>
-                        <li><a class="dropdown-item" href="#">Messages</a></li>
-                        <li><hr class="dropdown-divider" /></li>
-                        <li><a class="dropdown-item" asp-area="Social" asp-page="/Friends/Index" asp-route-tab="add">Add Friend</a></li>
-                        <li><a class="dropdown-item" asp-area="Social" asp-page="/Friends/Index" asp-route-tab="requests">Friend Requests</a></li>
-                        <li><hr class="dropdown-divider" /></li>
-                        <li><a class="dropdown-item" asp-area="Identity" asp-page="/Profile/Index" asp-route-tab="blocked">Blocked Users</a></li>
-                    </ul>
-                </li>
-
-                <li class="nav-item"><a class="btn btn-nav" asp-area="" asp-page="/Rules">Rules</a></li>
-                <li class="nav-item"><a class="btn btn-nav" asp-area="" asp-page="/Leaderboard/Index">Leaderboard</a></li>
-                <li class="nav-item"><a class="btn btn-nav" asp-area="" asp-page="/Boards/Index">My Boards</a></li>
-            </ul>
-
             @if (SignInManager.IsSignedIn(User))
             {
-                var notifications = (await NotificationCache.GetNotificationsAsync())
-                    .Where(n => !n.IsRead)
-                    .ToList();
-                var unreadCount = notifications.Count;
-                var badgeText = unreadCount > 99 ? "99+" : unreadCount.ToString();
+                <ul class="navbar-nav mx-lg-auto mb-2 mb-lg-0 gap-lg-1">
 
-                <div class="d-flex align-items-center gap-2">
-                    <div class="dropdown" id="notification-dropdown">
-                        <button class="btn p-0 border-0 rounded-circle bg-info text-white d-flex align-items-center justify-content-center position-relative" type="button"
-                                data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" aria-label="Notifications"
-                                style="width: 2.5rem; height: 2.5rem;">
-                            <i class="bi bi-bell fs-5"></i>
-                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger @(unreadCount == 0 ? "d-none" : "")"
-                                  data-notification-badge>
-                                @badgeText
-                                <span class="visually-hidden">unread notifications</span>
-                            </span>
+                    @* ───────────── Games ───────────── *@
+                    <li class="nav-item nav-mega" data-mega>
+                        <button class="btn btn-nav nav-mega-toggle" type="button" data-mega-toggle aria-expanded="false">
+                            Games <i class="bi bi-chevron-down nav-mega-caret"></i>
                         </button>
-                        <div class="dropdown-menu dropdown-menu-end p-0 shadow-lg" style="width: 22rem;">
-                            <div class="px-3 py-2 border-bottom d-flex align-items-center justify-content-between">
-                                <strong>Notifications</strong>
-                                <span class="badge text-bg-secondary @(unreadCount == 0 ? "d-none" : "")" data-notification-count>@unreadCount</span>
-                            </div>
-
-                            <div class="overflow-auto" style="max-height: 25rem;" data-notification-list>
-                                @if (unreadCount == 0)
-                                {
-                                    <div class="px-3 py-4 text-center text-body-secondary" data-notification-empty>
-                                        <i class="bi bi-bell-slash fs-2 d-block mb-2"></i>
-                                        You're all caught up!
-                                    </div>
-                                }
-                                else
-                                {
-                                    foreach (var n in notifications)
-                                    {
-                                        var icon = n.Style?.CustomIconClass ?? NotificationUIHelper.GetIconClass(n.Type);
-                                        var colour = n.Style?.CustomColourClass ?? NotificationUIHelper.GetColourClass(n.Type);
-                                        var hasLink = !string.IsNullOrEmpty(n.UrlLink);
-
-                                        <div class="d-flex align-items-start gap-2 px-3 py-2 border-bottom" data-notification-id="@n.Id">
-                                            <i class="bi @icon text-@colour fs-5 flex-shrink-0 mt-1"></i>
-                                            <div class="flex-grow-1 min-w-0">
-                                                @if (hasLink)
-                                                {
-                                                    <a href="@n.UrlLink" class="text-decoration-none text-body d-block">
-                                                        <div class="fw-semibold text-truncate">@n.Title</div>
-                                                        <div class="small text-body-secondary">@n.Body</div>
-                                                        <div class="small text-body-tertiary">@n.CreatedUtc.ToRelativeTime()</div>
-                                                    </a>
-                                                }
-                                                else
-                                                {
-                                                    <div class="fw-semibold text-truncate">@n.Title</div>
-                                                    <div class="small text-body-secondary">@n.Body</div>
-                                                    <div class="small text-body-tertiary">@n.CreatedUtc.ToRelativeTime()</div>
-                                                }
-                                            </div>
-                                            <button type="button" class="btn btn-sm btn-link p-0 text-body-secondary flex-shrink-0"
-                                                    data-notification-dismiss="@n.Id" aria-label="Dismiss notification" title="Dismiss">
-                                                <i class="bi bi-x-lg"></i>
-                                            </button>
-                                        </div>
-                                    }
-                                }
+                        <div class="nav-mega-card">
+                            <button class="nav-mega-close" type="button" data-mega-close aria-label="Close menu"><i class="bi bi-x-lg"></i></button>
+                            <div class="nav-mega-grid mega-3 mega-games">
+                                <a class="nav-mega-item" asp-area="" asp-page="/Games/Index">
+                                    <span class="nav-mega-ico"><i class="bi bi-plus-circle"></i></span>
+                                    <span class="nav-mega-text"><span class="nav-mega-title">New Game</span><span class="nav-mega-desc">Create a game to host</span></span>
+                                </a>
+                                <a class="nav-mega-item" asp-area="" asp-page="/Games/Join">
+                                    <span class="nav-mega-ico"><i class="bi bi-box-arrow-in-right"></i></span>
+                                    <span class="nav-mega-text"><span class="nav-mega-title">Join Game</span><span class="nav-mega-desc">Enter a join code</span></span>
+                                </a>
+                                <a class="nav-mega-item" asp-area="" asp-page="/Guides/Index">
+                                    <span class="nav-mega-ico"><i class="bi bi-mortarboard"></i></span>
+                                    <span class="nav-mega-text"><span class="nav-mega-title">How To Play</span><span class="nav-mega-desc">New here? Start here</span></span>
+                                </a>
+                                <a class="nav-mega-item" asp-area="" asp-page="/Games/MyGames">
+                                    <span class="nav-mega-ico"><i class="bi bi-controller"></i></span>
+                                    <span class="nav-mega-text"><span class="nav-mega-title">My Games</span><span class="nav-mega-desc">Games you're hosting</span></span>
+                                </a>
+                                <a class="nav-mega-item" asp-area="" asp-page="/Games/Joined">
+                                    <span class="nav-mega-ico"><i class="bi bi-people"></i></span>
+                                    <span class="nav-mega-text"><span class="nav-mega-title">Joined Games</span><span class="nav-mega-desc">Games you've joined</span></span>
+                                </a>
+                                <a class="nav-mega-item" asp-area="" asp-page="/Rules">
+                                    <span class="nav-mega-ico"><i class="bi bi-journal-text"></i></span>
+                                    <span class="nav-mega-text"><span class="nav-mega-title">Rules</span><span class="nav-mega-desc">The full rulebook</span></span>
+                                </a>
                             </div>
                         </div>
-                    </div>
+                    </li>
 
-                    @{
-                        var currentUser = await ProfileService.GetCurrentUserProfileViewModelAsync();
-                    }
-                    <div class="dropdown">
-                        <button class="btn p-0 border-0 rounded-circle" type="button"
-                                data-bs-toggle="dropdown" aria-expanded="false" aria-label="My Account">
-                            <profile-circle user="currentUser" size="Md" />
+                    @* ───────────── Social ───────────── *@
+                    <li class="nav-item nav-mega" data-mega>
+                        <button class="btn btn-nav nav-mega-toggle" type="button" data-mega-toggle aria-expanded="false">
+                            Social <i class="bi bi-chevron-down nav-mega-caret"></i>
                         </button>
-                        <ul class="dropdown-menu dropdown-menu-lg-end">
-                            <li><a class="dropdown-item" href="/profile">Profile</a></li>
-                            <li><a class="dropdown-item" href="/account">Settings</a></li>
-                            <li><hr class="dropdown-divider" /></li>
-                            <li>
-                                <form asp-area="Identity" asp-page="/Account/Logout" method="post" class="m-0">
-                                    <button type="submit" class="dropdown-item dropdown-item-danger">Logout</button>
-                                </form>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
+                        <div class="nav-mega-card">
+                            <button class="nav-mega-close" type="button" data-mega-close aria-label="Close menu"><i class="bi bi-x-lg"></i></button>
+                            <div class="nav-mega-grid mega-3 mega-social">
+                                <a class="nav-mega-item" asp-area="Social" asp-page="/Friends/Index" asp-route-tab="friends">
+                                    <span class="nav-mega-ico"><i class="bi bi-people"></i></span>
+                                    <span class="nav-mega-text"><span class="nav-mega-title">My Friends</span><span class="nav-mega-desc">Your friends list</span></span>
+                                </a>
+                                <a class="nav-mega-item" asp-area="Social" asp-page="/Messages/Index">
+                                    <span class="nav-mega-ico"><i class="bi bi-chat-left-text"></i></span>
+                                    <span class="nav-mega-text"><span class="nav-mega-title">My Messages</span><span class="nav-mega-desc">Direct messages</span></span>
+                                </a>
+                                <a class="nav-mega-item" asp-area="Identity" asp-page="/Profile/Index">
+                                    <span class="nav-mega-ico"><i class="bi bi-person"></i></span>
+                                    <span class="nav-mega-text"><span class="nav-mega-title">My Profile</span><span class="nav-mega-desc">Avatar, stats, privacy</span></span>
+                                </a>
+                                <a class="nav-mega-item" asp-area="Social" asp-page="/Friends/Index" asp-route-tab="add">
+                                    <span class="nav-mega-ico"><i class="bi bi-person-plus"></i></span>
+                                    <span class="nav-mega-text"><span class="nav-mega-title">Add Friend</span><span class="nav-mega-desc">Find someone by name</span></span>
+                                </a>
+                                <a class="nav-mega-item" asp-area="Social" asp-page="/Friends/Index" asp-route-tab="requests">
+                                    <span class="nav-mega-ico"><i class="bi bi-person-lines-fill"></i></span>
+                                    <span class="nav-mega-text"><span class="nav-mega-title">Friend Requests</span><span class="nav-mega-desc">Pending invitations</span></span>
+                                </a>
+                                <a class="nav-mega-item" asp-area="Identity" asp-page="/Profile/Index" asp-route-tab="blocked">
+                                    <span class="nav-mega-ico"><i class="bi bi-slash-circle"></i></span>
+                                    <span class="nav-mega-text"><span class="nav-mega-title">Blocked Users</span><span class="nav-mega-desc">Manage who's blocked</span></span>
+                                </a>
+                            </div>
+                        </div>
+                    </li>
 
+                    @* ───────────── Boards ───────────── *@
+                    <li class="nav-item nav-mega" data-mega>
+                        <button class="btn btn-nav nav-mega-toggle" type="button" data-mega-toggle aria-expanded="false">
+                            Boards <i class="bi bi-chevron-down nav-mega-caret"></i>
+                        </button>
+                        <div class="nav-mega-card">
+                            <button class="nav-mega-close" type="button" data-mega-close aria-label="Close menu"><i class="bi bi-x-lg"></i></button>
+                            <div class="nav-mega-grid mega-2">
+                                <a class="nav-mega-item" asp-area="" asp-page="/Boards/Edit">
+                                    <span class="nav-mega-ico"><i class="bi bi-plus-square"></i></span>
+                                    <span class="nav-mega-text"><span class="nav-mega-title">New Board</span><span class="nav-mega-desc">Design a custom board</span></span>
+                                </a>
+                                <a class="nav-mega-item" asp-area="" asp-page="/Boards/Index">
+                                    <span class="nav-mega-ico"><i class="bi bi-grid-3x3"></i></span>
+                                    <span class="nav-mega-text"><span class="nav-mega-title">My Boards</span><span class="nav-mega-desc">Your saved boards</span></span>
+                                </a>
+                            </div>
+                        </div>
+                    </li>
+
+                    @* ───────────── Leaderboard (plain link) ───────────── *@
+                    <li class="nav-item">
+                        <a class="btn btn-nav" asp-area="" asp-page="/Leaderboard/Index">Leaderboard</a>
+                    </li>
+
+                    @* ───────────── Help ───────────── *@
+                    <li class="nav-item nav-mega" data-mega>
+                        <button class="btn btn-nav nav-mega-toggle" type="button" data-mega-toggle aria-expanded="false">
+                            Help <i class="bi bi-chevron-down nav-mega-caret"></i>
+                        </button>
+                        <div class="nav-mega-card">
+                            <button class="nav-mega-close" type="button" data-mega-close aria-label="Close menu"><i class="bi bi-x-lg"></i></button>
+                            <div class="nav-mega-grid mega-2">
+                                <a class="nav-mega-item" asp-area="" asp-page="/Guides/Index">
+                                    <span class="nav-mega-ico"><i class="bi bi-mortarboard"></i></span>
+                                    <span class="nav-mega-text"><span class="nav-mega-title">How To Play</span><span class="nav-mega-desc">A walkthrough for new players</span></span>
+                                </a>
+                                <a class="nav-mega-item" asp-area="" asp-page="/Rules">
+                                    <span class="nav-mega-ico"><i class="bi bi-journal-text"></i></span>
+                                    <span class="nav-mega-text"><span class="nav-mega-title">Rules</span><span class="nav-mega-desc">The full rulebook</span></span>
+                                </a>
+                            </div>
+                        </div>
+                    </li>
+                </ul>
+
+                <div class="d-flex align-items-center gap-2 ms-auto justify-content-end">
+                    <partial name="_NotificationBell" />
+                    <partial name="~/Pages/Shared/_ProfileDropdown.cshtml" />
+                </div>
             }
             else
             {
+                @* Signed out — public How To Play and Rules links, plus the auth actions. *@
+                <ul class="navbar-nav mx-lg-auto mb-2 mb-lg-0 gap-lg-1">
+                    <li class="nav-item"><a class="btn btn-nav" asp-area="" asp-page="/Guides/Index">How To Play</a></li>
+                    <li class="nav-item"><a class="btn btn-nav" asp-area="" asp-page="/Rules">Rules</a></li>
+                </ul>
+
                 <div class="d-flex flex-column flex-lg-row gap-2">
                     <a asp-area="Identity" asp-page="/Account/Login" class="btn btn-nav-info">Login</a>
                     <a asp-area="Identity" asp-page="/Account/Register" class="btn btn-hero-primary">Register</a>

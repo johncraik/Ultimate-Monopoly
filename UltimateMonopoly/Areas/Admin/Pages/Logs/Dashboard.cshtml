@@ -1,0 +1,61 @@
+@page
+@model UltimateMonopoly.Areas.Admin.Pages.Logs.DashboardModel
+@{
+    ViewData["Title"] = "Application Logs Dashboard";
+    var d = Model.Data;
+    const string baseDir = "~/Areas/Admin/Pages/Shared/Dashboard/";
+}
+
+<div class="d-flex align-items-center gap-3 mb-4">
+    <span class="admin-page-ico bg-secondary-subtle text-secondary"><i class="bi bi-journal-text"></i></span>
+    <div>
+        <h1 class="h3 mb-1">Application Logs</h1>
+        <p class="text-body-secondary mb-0">Admin actions, reported issues, and communications.</p>
+    </div>
+    <a asp-area="Admin" asp-page="/Logs/Admin/Index" class="btn btn-sm btn-outline-secondary ms-auto">
+        <i class="bi bi-shield-lock me-1"></i>Admin logs
+    </a>
+</div>
+
+<partial name="@(baseDir)_AlertStrip.cshtml" model="d.Alerts" />
+
+@* KPI strip *@
+<div class="row g-3 mb-4">
+    @foreach (var k in d.Kpis)
+    {
+        <div class="col-6 col-md-4 col-xl"><partial name="@(baseDir)_MetricCard.cshtml" model="k" /></div>
+    }
+</div>
+
+@* Admin actions *@
+<h2 class="h5 mb-3"><i class="bi bi-shield-lock me-2 text-primary"></i>Admin actions</h2>
+<div class="row g-3 mb-4">
+    <div class="col-12 col-xl-6"><partial name="@(baseDir)_Breakdown.cshtml" model="d.AdminByTarget" /></div>
+    <div class="col-12 col-xl-6"><partial name="@(baseDir)_TopList.cshtml" model="d.AdminLeaderboard" /></div>
+</div>
+
+@* Issues *@
+<h2 class="h5 mb-3"><i class="bi bi-bug me-2 text-danger"></i>Issues</h2>
+<div class="row g-3 mb-4">
+    <div class="col-12 col-xl-4"><partial name="@(baseDir)_Breakdown.cshtml" model="d.IssuesStatus" /></div>
+    <div class="col-12 col-xl-4"><partial name="@(baseDir)_Breakdown.cshtml" model="d.IssuesByType" /></div>
+    <div class="col-12 col-xl-4"><partial name="@(baseDir)_TopList.cshtml" model="d.TopReporters" /></div>
+</div>
+
+@* Communications *@
+<h2 class="h5 mb-3"><i class="bi bi-chat-left-dots me-2 text-info"></i>Communications</h2>
+<div class="row g-3 mb-3">
+    <div class="col-12 col-xl-6"><partial name="@(baseDir)_Breakdown.cshtml" model="d.NotificationsByType" /></div>
+    <div class="col-12 col-xl-6"><partial name="@(baseDir)_Gauge.cshtml" model="d.NotificationReadRate" /></div>
+</div>
+<div class="row g-3 mb-4">
+    <div class="col-12 col-xl-6"><partial name="@(baseDir)_MetricCard.cshtml" model="d.EmailStatus" /></div>
+    <div class="col-12 col-xl-6"><partial name="@(baseDir)_MetricCard.cshtml" model="d.MessagingStatus" /></div>
+</div>
+
+@* Trends *@
+<h2 class="h5 mb-3"><i class="bi bi-graph-up me-2 text-primary"></i>Trends</h2>
+<div class="row g-3">
+    <div class="col-12 col-xl-6"><partial name="@(baseDir)_Series.cshtml" model="d.AdminActionsOverTime" /></div>
+    <div class="col-12 col-xl-6"><partial name="@(baseDir)_Series.cshtml" model="d.NotificationsOverTime" /></div>
+</div>

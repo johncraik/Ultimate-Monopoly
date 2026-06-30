@@ -42,4 +42,7 @@ public class FilePathProvider
     
     public async Task<string> ReadFileAsync(string path, string name)
         => await File.ReadAllTextAsync(Path.Combine(path, name));
+    
+    public async Task WriteFileAsync(string path, string name, string content)
+        => await File.WriteAllTextAsync(Path.Combine(path, name), content);
 }

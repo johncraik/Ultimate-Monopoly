@@ -1,0 +1,20 @@
+@using UltimateMonopoly.Areas.Admin.Models.ViewModels.Dashboard
+@model HistogramWidget
+@* Distribution — Syncfusion column chart over fixed buckets. *@
+@{
+    var hex = DashboardPalette.Hex(Model.Tone);
+}
+<div class="card h-100">
+    <div class="card-header">@if (!string.IsNullOrEmpty(Model.Icon)) { <i class="bi @Model.Icon me-2"></i> }@Model.Title</div>
+    <div class="card-body">
+        <ejs-chart id="@Model.Id" background="transparent" height="240px">
+            <e-chart-primaryxaxis valueType="Category"></e-chart-primaryxaxis>
+            <e-chart-primaryyaxis></e-chart-primaryyaxis>
+            <e-series-collection>
+                <e-series dataSource="Model.Buckets" type="Column" xName="Label" yName="Count" fill="@hex" columnWidth="0.6"></e-series>
+            </e-series-collection>
+            <e-chart-tooltipsettings enable="true"></e-chart-tooltipsettings>
+            <e-chart-legendsettings visible="false"></e-chart-legendsettings>
+        </ejs-chart>
+    </div>
+</div>

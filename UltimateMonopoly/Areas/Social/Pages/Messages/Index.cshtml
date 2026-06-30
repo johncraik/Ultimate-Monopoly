@@ -1,0 +1,89 @@
+@page
+@model UltimateMonopoly.Areas.Social.Pages.Messages.IndexModel
+@{
+    ViewData["Title"] = "Messages";
+}
+
+<style>
+    /* Fixed-height shell on md+ so the panels scroll internally instead of growing the page.
+       The height must cascade row → column → card for the card-body's flex-scroll to resolve. */
+    .msg-shell { min-height: 460px; }
+    @@media (min-width: 768px) {
+        .msg-shell { height: calc(100vh - 220px); }
+        .msg-shell > [class*="col-"] { height: 100%; }
+    }
+    .msg-shell .card { height: 100%; }
+    .msg-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+    /* let the name/preview ellipsis-truncate inside the flex row */
+    .msg-list-item { min-width: 0; }
+    .msg-list-item .flex-grow-1 { min-width: 0; }
+    .msg-list-item.active { background: var(--bs-secondary-bg); }
+    .msg-unread-dot { width: .5rem; height: .5rem; border-radius: 50%; background: var(--bs-primary); flex: 0 0 auto; }
+    /* the conversation body flexes to fill the card and scrolls; min-height:0 is what lets it shrink-to-scroll */
+    .msg-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+    .msg-bubble { max-width: 75%; padding: .5rem .75rem; border-radius: 1rem; word-break: break-word; }
+</style>
+
+<div class="d-flex align-items-center gap-2 mb-3">
+    <h1 class="h3 mb-0"><i class="bi bi-chat-dots me-2"></i>Messages</h1>
+</div>
+
+@if (Model.Notice != null)
+{
+    <div class="alert alert-warning">@Model.Notice</div>
+}
+
+<div class="row g-3 msg-shell">
+    @* Left — conversation list *@
+    <div class="col-12 col-md-4 col-lg-3">
+        <div class="card h-100">
+            <div class="card-body p-2 msg-list d-flex flex-column gap-1" id="msgList">
+                @if (Model.Conversations.Count == 0)
+                {
+                    <p class="text-body-secondary small text-center py-4 mb-0">
+                        No conversations yet. Open a friend's profile and tap <strong>Message</strong> to start one.
+                    </p>
+                }
+                else
+                {
+                    @foreach (var c in Model.Conversations)
+                    {
+                        <button type="button"
+                                class="msg-list-item btn w-100 text-start d-flex align-items-center gap-2 p-2 rounded @(Model.Active?.ThreadId == c.ThreadId ? "active" : "")"
+                                data-thread-id="@c.ThreadId">
+                            <profile-circle user="c.Friend" size="Sm" />
+                            <span class="flex-grow-1 min-w-0">
+                                <span class="d-block fw-semibold text-truncate">@c.Friend.DisplayName</span>
+                                <span class="d-block small text-body-secondary text-truncate msg-preview">@(c.Preview ?? "No messages yet")</span>
+                            </span>
+                            <span class="msg-unread-dot @(c.Unread ? "" : "d-none")" aria-label="unread"></span>
+                        </button>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+
+    @* Right — active conversation *@
+    <div class="col-12 col-md-8 col-lg-9">
+        <div class="card h-100" id="msgPanel">
+            @if (Model.Active != null)
+            {
+                <partial name="_Conversation" model="Model.Active" />
+            }
+            else
+            {
+                <div class="card-body d-flex flex-column align-items-center justify-content-center text-body-secondary">
+                    <div class="display-6 mb-2"><i class="bi bi-chat-square-text"></i></div>
+                    <p class="mb-0">Select a conversation to start chatting.</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@Html.AntiForgeryToken()
+
+@section Scripts {
+    <script src="~/scripts/Social/messages.js" asp-append-version="true"></script>
+}

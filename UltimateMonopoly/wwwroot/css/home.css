@@ -1,0 +1,304 @@
+/* ==================================================================
+   Home page (/) — landing + signed-in hub (F1). Loaded by Pages/Index.cshtml.
+   Leans on the theme tokens defined in custom-bootstrap.scss (--bs-primary
+   #0b9fbd teal, --bs-info #8d94f0 periwinkle, the matching -rgb / -dark vars)
+   so it stays in lockstep with the rest of the dark theme.
+   ================================================================== */
+
+/* ============================ HERO ============================ */
+/* The accent glow behind the hero is now the global app background
+   (custom-bootstrap.scss `body::before`), so the hero needs no local backdrop. */
+
+.home-hero-title {
+    /* Fluid so a long brand name never overflows on a narrow phone. */
+    font-size: clamp(2.25rem, 7vw, 4rem);
+    line-height: 1.1;
+    overflow-wrap: break-word;
+    background: linear-gradient(90deg, var(--bs-primary), var(--bs-info));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.home-hero-badge {
+    background: rgba(var(--bs-primary-rgb), .12);
+    border: 1px solid rgba(var(--bs-primary-rgb), .35);
+    color: var(--bs-primary);
+}
+
+/* Decorative "phone" in the hero — mimics the in-game player-profile view
+   (header card · roll button · stat block · bottom icon tab bar), tilted + floating. */
+.home-glimpse { perspective: 1200px; }
+
+.home-phone {
+    width: 100%;
+    max-width: 17rem;
+    padding: 0.55rem;
+    border-radius: 2rem;
+    border: 1px solid var(--bs-border-color);
+    background: linear-gradient(160deg, #3a3a3a, #1b1b1b);   /* phone bezel */
+    box-shadow: 0 1.5rem 3rem rgba(0, 0, 0, .55);
+    transform: rotateY(-12deg) rotateX(5deg);
+    animation: home-float 6s ease-in-out infinite;
+}
+
+.home-phone-screen {
+    position: relative;
+    overflow: hidden;
+    padding: 0.75rem;
+    border-radius: 1.5rem;
+    background: var(--bs-body-bg);
+}
+
+.home-phone-notch {
+    width: 4rem;
+    height: 0.35rem;
+    margin: 0 auto 0.6rem;
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, .14);
+}
+
+/* Fake profile-circle (no real user on the public landing). */
+.home-avatar {
+    flex: 0 0 auto;
+    width: 2.6rem;
+    height: 2.6rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-weight: 600;
+    color: #fff;
+    background: linear-gradient(135deg, var(--bs-primary), var(--bs-info));
+}
+
+/* Compact "current board space" tile — mirrors the profile's .pp-now-space
+   (colour banner over a white body) with the board index boxed beneath. */
+.home-now-space {
+    border-radius: var(--bs-border-radius);
+    overflow: hidden;
+    background: #f5f5f5;
+    color: #222;
+    text-align: center;
+}
+
+.home-now-banner { height: 1.6rem; }
+
+.home-now-name {
+    padding: 0.4rem;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.home-now-index {
+    margin-top: 0.35rem;
+    padding: 0.15rem;
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
+    text-align: center;
+    font-weight: 700;
+    font-size: 0.85rem;
+}
+
+/* Bottom icon tab bar — echoes the profile's glassy .pp-tabbar. */
+.home-phone-tabs {
+    display: flex;
+    gap: 0.25rem;
+    margin: 0.5rem -0.75rem -0.75rem;          /* bleed to the screen edges */
+    padding: 0.35rem 0.4rem;
+    border-top: 1px solid var(--bs-border-color);
+    border-radius: 0 0 1.5rem 1.5rem;
+    background: rgba(var(--bs-body-bg-rgb), .72);
+    backdrop-filter: blur(10px) saturate(180%);
+    -webkit-backdrop-filter: blur(10px) saturate(180%);
+}
+
+.home-phone-tab {
+    flex: 1 1 0;
+    text-align: center;
+    padding: 0.35rem 0;
+    font-size: 1.1rem;
+    line-height: 1;
+    color: var(--bs-secondary-color);
+    border-radius: var(--bs-border-radius);
+}
+
+.home-phone-tab.active {
+    color: var(--bs-primary);
+    background: rgba(var(--bs-primary-rgb), .12);
+}
+
+@keyframes home-float {
+    0%, 100% { transform: rotateY(-12deg) rotateX(5deg) translateY(0); }
+    50%      { transform: rotateY(-9deg)  rotateX(4deg) translateY(-10px); }
+}
+
+/* ===================== FEATURE / VALUE CARDS ===================== */
+.home-feature-card {
+    position: relative;
+    overflow: hidden;
+    height: 100%;
+    padding: 1.5rem;
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius-xl, 1rem);
+    background: #2c2c2c;
+    transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+}
+
+/* Gradient accent bar across the top of each card. */
+.home-feature-card::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--bs-primary), var(--bs-info));
+}
+
+.home-feature-card:hover {
+    transform: translateY(-6px);
+    border-color: rgba(var(--bs-primary-rgb), .5);
+    box-shadow: 0 1rem 2.5rem rgba(0, 0, 0, .45), 0 0 0 1px rgba(var(--bs-primary-rgb), .15);
+}
+
+/* Gradient icon chip (shared by feature cards + steps). */
+.home-ico {
+    width: 3.25rem;
+    height: 3.25rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: .9rem;
+    font-size: 1.5rem;
+    color: #fff;
+    box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .35);
+}
+
+.home-ico.is-primary { background: linear-gradient(135deg, var(--bs-primary), var(--bs-info)); }
+.home-ico.is-info    { background: linear-gradient(135deg, var(--bs-info), var(--bs-info-dark)); }
+.home-ico.is-success { background: linear-gradient(135deg, var(--bs-success), var(--bs-success-light)); }
+.home-ico.is-muted   { background: linear-gradient(135deg, var(--bs-secondary), var(--bs-primary)); }
+
+/* ===================== HOW IT WORKS ===================== */
+.home-step-num {
+    width: 2.5rem;
+    height: 2.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(135deg, var(--bs-primary), var(--bs-info));
+    box-shadow: 0 .5rem 1rem rgba(var(--bs-primary-rgb), .35);
+}
+
+/* ===================== CTA BAND ===================== */
+.home-cta {
+    border: 1px solid rgba(var(--bs-primary-rgb), .3);
+    border-radius: var(--bs-border-radius-xl, 1rem);
+    background:
+        radial-gradient(80% 120% at 50% 0%, rgba(var(--bs-primary-rgb), .18), transparent 70%),
+        #2c2c2c;
+}
+
+/* ===================== HUB — welcome + KPIs ===================== */
+.home-welcome {
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius-xl, 1rem);
+    background:
+        radial-gradient(70% 140% at 0% 0%, rgba(var(--bs-primary-rgb), .12), transparent 60%),
+        #2c2c2c;
+}
+
+/* Small variant of the gradient icon chip (stat cards, headings). */
+.home-ico-sm {
+    width: 2.5rem;
+    height: 2.5rem;
+    font-size: 1.15rem;
+    border-radius: .7rem;
+}
+
+/* Stat card — gradient icon chip + figure + label, top accent, hover lift. */
+.home-stat {
+    position: relative;
+    overflow: hidden;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: 1rem;
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius-xl, 1rem);
+    background: #2c2c2c;
+    color: inherit;
+    text-decoration: none;
+    transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+}
+
+.home-stat::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--bs-primary), var(--bs-info));
+}
+
+.home-stat:hover {
+    transform: translateY(-4px);
+    border-color: rgba(var(--bs-primary-rgb), .5);
+    box-shadow: 0 .75rem 1.75rem rgba(0, 0, 0, .45), 0 0 0 1px rgba(var(--bs-primary-rgb), .12);
+}
+
+.home-stat-num {
+    font-size: clamp(1.4rem, 5vw, 1.9rem);
+    font-weight: 700;
+    line-height: 1.05;
+}
+
+.home-stat-label {
+    font-size: .8rem;
+    color: var(--bs-secondary-color);
+}
+
+/* Pill link chip — the hub's "Explore" row. */
+.home-link {
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .5rem .9rem;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 2rem;
+    background: #2c2c2c;
+    color: var(--bs-body-color);
+    text-decoration: none;
+    font-weight: 500;
+    transition: transform .15s ease, border-color .15s ease, background-color .15s ease;
+}
+
+.home-link:hover {
+    transform: translateY(-2px);
+    border-color: rgba(var(--bs-primary-rgb), .5);
+    background: #333;
+    color: var(--bs-body-color);
+}
+
+.home-link i { color: var(--bs-primary); }
+
+/* ===================== motion + small-screen guards ===================== */
+@media (prefers-reduced-motion: reduce) {
+    .home-phone { animation: none; }
+    .home-feature-card,
+    .home-stat,
+    .home-link { transition: none; }
+    .home-feature-card:hover,
+    .home-stat:hover,
+    .home-link:hover { transform: none; }
+}
+
+@media (max-width: 575.98px) {
+    /* Flatten the tilt so the phone never overflows a narrow viewport. */
+    .home-phone {
+        transform: none;
+        animation: none;
+    }
+}

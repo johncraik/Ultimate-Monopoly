@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using MP.GameEngine.Enums;
 using MP.GameEngine.Enums.Games;
 using MP.GameEngine.Models.Boards;
@@ -43,6 +44,10 @@ public class GameCacheModel(GameDTO gameDto, GameModel game, Board board)
     /// </summary>
     [JsonIgnore]
     public IReadOnlyList<EventReceipt> Events => _events;
+    
+    
+    [JsonIgnore]
+    private readonly List<(string PlayerId, ushort BoardIndex)> _suppressBoardIndexCard = [];
     
     
     /// <summary>
@@ -114,6 +119,9 @@ public class GameCacheModel(GameDTO gameDto, GameModel game, Board board)
 
     internal void AddRuleCode(RuleCode ruleCode)
     {
+        if(_ruleCodes.Contains(ruleCode))
+            return;
+        
         _ruleCodes.Add(ruleCode);
         StampConcurrency();
     }
@@ -149,6 +157,34 @@ public class GameCacheModel(GameDTO gameDto, GameModel game, Board board)
 
     #endregion
 
+
+    #region Prevent Board Index Card
+
+    internal void Prevent(string playerId, ushort boardIndex)
+    {
+        _suppressBoardIndexCard.Add((playerId, boardIndex));
+    }
+    
+    internal void ClearPrevent()
+    {
+        _suppressBoardIndexCard.Clear();
+    }
+    
+    
+    
+    internal bool PreventBoardIndexCard(string playerId, ushort boardIndex)
+    {
+        var prevent = _suppressBoardIndexCard.Contains((playerId, boardIndex));
+        if (!prevent) return prevent;
+        
+        AddRuleCode(RuleCode.Card_Advance);
+        _suppressBoardIndexCard.Remove((playerId, boardIndex));
+        return prevent;
+    }
+
+    #endregion
+    
+    
     #region Prompts
 
     internal void SetPendingPrompt(PendingPrompt pending)

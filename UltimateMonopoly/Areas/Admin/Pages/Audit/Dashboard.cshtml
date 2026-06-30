@@ -1,0 +1,47 @@
+@page
+@model UltimateMonopoly.Areas.Admin.Pages.Audit.DashboardModel
+@{
+    ViewData["Title"] = "Audit Dashboard";
+    var d = Model.Data;
+    const string baseDir = "~/Areas/Admin/Pages/Shared/Dashboard/";
+}
+
+<div class="d-flex align-items-center gap-3 mb-4">
+    <span class="admin-page-ico bg-warning-subtle text-warning"><i class="bi bi-clipboard-data"></i></span>
+    <div>
+        <h1 class="h3 mb-1">Audit</h1>
+        <p class="text-body-secondary mb-0">Who changed what — entries, actions, tables, and actors.</p>
+    </div>
+    <a asp-area="Admin" asp-page="/Audit/Data/Index" class="btn btn-sm btn-outline-secondary ms-auto">
+        <i class="bi bi-table me-1"></i>Data trail
+    </a>
+</div>
+
+@* KPI strip *@
+<div class="row g-3 mb-4">
+    @foreach (var k in d.Kpis)
+    {
+        <div class="col-6 col-md-4 col-xl"><partial name="@(baseDir)_MetricCard.cshtml" model="k" /></div>
+    }
+</div>
+
+@* Activity *@
+<h2 class="h5 mb-3"><i class="bi bi-activity me-2 text-warning"></i>Activity</h2>
+<div class="row g-3 mb-4">
+    <div class="col-12 col-xl-4"><partial name="@(baseDir)_Breakdown.cshtml" model="d.ByAction" /></div>
+    <div class="col-12 col-xl-4"><partial name="@(baseDir)_Breakdown.cshtml" model="d.ActorSplit" /></div>
+    <div class="col-12 col-xl-4"><partial name="@(baseDir)_Histogram.cshtml" model="d.DeleteActivity" /></div>
+</div>
+
+@* Hotspots *@
+<h2 class="h5 mb-3"><i class="bi bi-fire me-2 text-danger"></i>Hotspots</h2>
+<div class="row g-3 mb-4">
+    <div class="col-12 col-xl-6"><partial name="@(baseDir)_TopList.cshtml" model="d.BusiestTables" /></div>
+    <div class="col-12 col-xl-6"><partial name="@(baseDir)_TopList.cshtml" model="d.MostActiveActors" /></div>
+</div>
+
+@* Trends *@
+<h2 class="h5 mb-3"><i class="bi bi-graph-up me-2 text-primary"></i>Trends</h2>
+<div class="row g-3">
+    <div class="col-12"><partial name="@(baseDir)_Series.cshtml" model="d.EntriesOverTime" /></div>
+</div>

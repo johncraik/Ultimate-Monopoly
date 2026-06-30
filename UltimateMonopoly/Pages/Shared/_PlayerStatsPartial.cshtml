@@ -10,8 +10,9 @@
 @using Microsoft.AspNetCore.Html
 @using UltimateMonopoly.Models.Statistics
 @using UltimateMonopoly.Services.Cache
-@model (PlayerStatRecord Stats, PlayerStatRecord? Comparison)
+@model (PlayerStatRecord Stats, PlayerStatRecord? Comparison, Board Board)
 @inject BoardCacheService BoardCache
+@inject MP.GameEngine.Abstractions.ITurnTaxService TurnTaxService
 @{
     // Glorified statistics panel. Model = (Stats, Comparison): Stats is the aggregate the
     // page chose (avg / min / max / total view); Comparison is the "before" aggregate
@@ -26,10 +27,7 @@
     var s = Model.Stats;
     var cmp = Model.Comparison;
     var hasCmp = cmp is not null;
-
-    // Default board — the projection values every game against it (StatisticsJob), so
-    // board-index stats resolve their space names here too.
-    var board = await BoardCache.GetDefaultBoard();
+    var board = Model.Board;
 
     // ── formatting ──
     string Money(long v) => v < 0 ? $"-£{Math.Abs(v):N0}" : $"£{v:N0}";
@@ -181,7 +179,7 @@
     {
         var cols = half ? "row-cols-1 row-cols-sm-2" : $"row-cols-1 row-cols-sm-2 row-cols-lg-{sec.LgCols}";
         var tiles = string.Concat(sec.Stats
-            .Where(stat => stat.Visible is null || stat.Visible(s))
+            .Where(stat => (stat.Visible is null || stat.Visible(s)) && (!stat.RequiresTurnTax || TurnTaxService.Enabled))
             .Select(stat => $"<div class=\"col\">{RenderDescriptor(stat)}</div>"));
         return new HtmlString(
             $"<div class=\"card shadow-sm border-0 {(half ? "h-100" : "mb-4")}\"><div class=\"card-body\">" +

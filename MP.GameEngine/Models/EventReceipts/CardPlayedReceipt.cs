@@ -20,7 +20,11 @@ public class CardPlayedReceipt : EventReceipt
     public ushort NumberOfActions { get; init; }
     
     public bool IsImmunity { get; init; }
-    
+
+    /// <summary>True when the chosen group frees the holder from jail (a Get-Out-of-Jail-Free
+    /// <see cref="JailKind.Release"/> action) — lets jail stats count card-driven jail exits (M-06).</summary>
+    public bool IsJailRelease { get; init; }
+
     //NOPE cards coming in feature UPDATE
     //public bool IsNope { get; init; }
 
@@ -56,6 +60,7 @@ public class CardPlayedReceipt : EventReceipt
             NumberOfActions = (ushort)group.Actions.Count;
             
             IsImmunity = group.Actions.Any(a => a is ImmunityAction);
+            IsJailRelease = group.Actions.OfType<JailAction>().Any(j => j.Kind == JailKind.Release);
         }
     }
 }

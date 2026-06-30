@@ -28,8 +28,20 @@ public sealed class TargetPropertyPrompt : Prompt<TargetPropertyResponse>
     /// </summary>
     public IReadOnlyList<ushort> EligibleBoardIndexes { get; init; } = [];
 
-    /// <summary>How many properties must be selected. Fixed by the caller — not a range.</summary>
-    public ushort Count { get; init; }
+    private readonly ushort _count;
+
+    /// <summary>
+    /// How many properties must be selected. Fixed by the caller — not a range — but
+    /// <b>clamped to the size of <see cref="EligibleBoardIndexes"/></b>: a caller can never
+    /// require more selections than there are options, which would make the prompt
+    /// unsatisfiable and lock the game. The clamped value is what both the client submit
+    /// gate and <c>PromptValidator</c> enforce, so they stay in lockstep.
+    /// </summary>
+    public ushort Count
+    {
+        get => (ushort)Math.Min(_count, EligibleBoardIndexes.Count);
+        init => _count = value;
+    }
 
     public override PromptTarget Target => PromptTarget.SinglePlayer(PlayerId);
 }

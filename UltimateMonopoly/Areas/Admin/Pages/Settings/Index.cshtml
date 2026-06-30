@@ -1,0 +1,144 @@
+@page
+@model UltimateMonopoly.Areas.Admin.Pages.Settings.IndexModel
+@{
+    ViewData["Title"] = "Game Settings";
+    var s = Model.Settings;
+}
+
+<div class="d-flex align-items-center gap-3 mb-4">
+    <span class="admin-page-ico bg-success-subtle text-success"><i class="bi bi-gear"></i></span>
+    <div>
+        <h1 class="h3 mb-1">Game Settings</h1>
+        <p class="text-body-secondary mb-0">Configure the background jobs that clean up and retain game data.</p>
+    </div>
+</div>
+
+<alert type="Success" message="@(TempData["Success"] as string)" />
+
+<div class="alert alert-info d-flex gap-2 small">
+    <i class="bi bi-info-circle mt-1"></i>
+    <div>
+        These settings drive the recurring maintenance jobs. A retention period is <strong>ignored</strong>
+        while its toggle is off. Enable a toggle to set its retention.
+    </div>
+</div>
+
+@* Each toggle greys out its retention field via settings.js; the server also nulls a disabled toggle's
+   retention, so a save while disabled never persists a stale value. *@
+<form method="post" asp-page-handler="Save" class="card mb-4">
+    <div class="card-body">
+        <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+
+        @* 1 — Cleanup (permanently delete soft-deleted game records) *@
+        <div class="setting-block">
+            <div class="form-check form-switch mb-2">
+                <input class="form-check-input" type="checkbox" role="switch" asp-for="Settings.EnableCleanup"
+                       id="enable-cleanup" data-setting-toggle data-target="#cleanup-months" />
+                <label class="form-check-label fw-semibold" for="enable-cleanup">Enable game cleanup</label>
+            </div>
+            <p class="small text-body-secondary mb-2">Permanently deletes soft-deleted game records once they pass the retention period.</p>
+            <label class="form-label" asp-for="Settings.CleanupRetentionMonths">Retention (months)</label>
+            <input type="number" min="1" class="form-control w-auto" id="cleanup-months" asp-for="Settings.CleanupRetentionMonths" />
+            <span class="text-danger small" asp-validation-for="Settings.CleanupRetentionMonths"></span>
+        </div>
+
+        @* 2 — Abandoned-game management *@
+        <div class="setting-block border-top pt-3 mt-3">
+            <div class="form-check form-switch mb-2">
+                <input class="form-check-input" type="checkbox" role="switch" asp-for="Settings.EnableAbandonedGamesManagement"
+                       id="enable-abandoned" data-setting-toggle data-target="#abandoned-weeks, #abandoned-action" />
+                <label class="form-check-label fw-semibold" for="enable-abandoned">Manage abandoned games</label>
+            </div>
+            <p class="small text-body-secondary mb-2">Acts on games with no new turn for the retention period (no fresh activity).</p>
+            <div class="row g-3">
+                <div class="col-12 col-sm-auto">
+                    <label class="form-label" asp-for="Settings.AbandonedRetentionWeeks">Retention (weeks)</label>
+                    <input type="number" min="1" class="form-control w-auto" id="abandoned-weeks" asp-for="Settings.AbandonedRetentionWeeks" />
+                    <span class="text-danger small" asp-validation-for="Settings.AbandonedRetentionWeeks"></span>
+                </div>
+                <div class="col-12 col-sm-auto">
+                    <label class="form-label" asp-for="Settings.AbandonedGameAction">Action</label>
+                    <select class="form-select w-auto" id="abandoned-action" asp-for="Settings.AbandonedGameAction"
+                            asp-items="Html.GetEnumSelectList<UltimateMonopoly.Areas.Admin.Models.AbandonedGameAction>()"></select>
+                </div>
+            </div>
+        </div>
+
+        @* 3 — Auto-delete cancelled games (soft delete) *@
+        <div class="setting-block border-top pt-3 mt-3">
+            <div class="form-check form-switch mb-2">
+                <input class="form-check-input" type="checkbox" role="switch" asp-for="Settings.EnableAutoDeleteCancelled"
+                       id="enable-cancelled" data-setting-toggle data-target="#cancelled-months" />
+                <label class="form-check-label fw-semibold" for="enable-cancelled">Auto-delete cancelled games</label>
+            </div>
+            <p class="small text-body-secondary mb-2">Soft-deletes cancelled games once they pass the retention period.</p>
+            <label class="form-label" asp-for="Settings.AutoDeleteCancelledRetentionMonths">Retention (months)</label>
+            <input type="number" min="1" class="form-control w-auto" id="cancelled-months" asp-for="Settings.AutoDeleteCancelledRetentionMonths" />
+            <span class="text-danger small" asp-validation-for="Settings.AutoDeleteCancelledRetentionMonths"></span>
+        </div>
+
+        @* 4 — Auto-delete snapshots & events (soft delete) for finished / cancelled games *@
+        <div class="setting-block border-top pt-3 mt-3">
+            <div class="form-check form-switch mb-2">
+                <input class="form-check-input" type="checkbox" role="switch" asp-for="Settings.EnableAutoDeleteSnapshots"
+                       id="enable-snapshots" data-setting-toggle data-target="#snapshots-months" />
+                <label class="form-check-label fw-semibold" for="enable-snapshots">Auto-delete finished &amp; cancelled game snapshots</label>
+            </div>
+            <p class="small text-body-secondary mb-2">
+                Soft-deletes the snapshots and events of finished / cancelled games once they pass the retention period.
+                <strong>Note:</strong> a game whose snapshots/events are deleted can no longer have its statistics recomputed.
+            </p>
+            <label class="form-label" asp-for="Settings.AutoDeleteSnapshotsRetentionMonths">Retention (months)</label>
+            <input type="number" min="1" class="form-control w-auto" id="snapshots-months" asp-for="Settings.AutoDeleteSnapshotsRetentionMonths" />
+            <span class="text-danger small" asp-validation-for="Settings.AutoDeleteSnapshotsRetentionMonths"></span>
+        </div>
+
+        <div class="d-flex gap-2 border-top pt-3 mt-3">
+            <button type="submit" class="btn btn-primary">Save</button>
+            <button type="submit" class="btn btn-outline-secondary" asp-page-handler="Revert" formnovalidate>Revert to defaults</button>
+        </div>
+    </div>
+</form>
+
+@* ---------- Recompute Statistics ---------- *@
+<div class="card">
+    <div class="card-header"><i class="bi bi-bar-chart-line me-2"></i>Recompute Statistics</div>
+    <div class="card-body d-flex justify-content-between align-items-start gap-3 flex-wrap">
+        <div class="min-w-0">
+            <div class="fw-semibold">Recompute player statistics</div>
+            <p class="small text-body-secondary mb-0">
+                Clears and rebuilds every player stat record for games whose history is fully intact — the game
+                still exists and is finished, and none of its snapshots or events have been deleted. Stats for
+                games that can no longer be recomputed are left untouched. The rebuild runs as a background job.
+            </p>
+        </div>
+        <button type="button" class="btn btn-outline-warning text-nowrap" data-bs-toggle="modal" data-bs-target="#recomputeModal">
+            <i class="bi bi-arrow-repeat me-1"></i>Recompute
+        </button>
+    </div>
+</div>
+
+<div class="modal fade" id="recomputeModal" tabindex="-1" aria-labelledby="recomputeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h1 class="modal-title fs-5" id="recomputeModalLabel">Recompute statistics?</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2">This <strong>deletes and rebuilds</strong> player stat records for every game with a fully intact history.</p>
+                <p class="small text-body-secondary mb-0">Stats for games that have been removed, or whose snapshots/events have been deleted, are preserved. The rebuild is queued as a background job.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="post" asp-page-handler="Recompute" class="m-0">
+                    <button type="submit" class="btn btn-warning">Recompute now</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/scripts/admin/settings.js" asp-append-version="true"></script>
+}

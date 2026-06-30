@@ -73,6 +73,16 @@ public class MoneyActionService : ICardActionService<MoneyAction>
         // Self (default): the holder is the subject, with the counterparty driving where it flows.
         if (action.Target == PlayerTarget.Self)
         {
+            // Issue #16: a jailed holder cannot roll dice for a card. Every dice-multiplier card is a
+            // landing-on-a-space reward (GO / Chance / Community Chest / Tax) paired with a movement the
+            // jail guard already blocks (e.g. "advance to GO, then roll 2 dice × £100" — the advance
+            // no-ops in jail), so the dice-roll part must no-op too rather than paying the holder a
+            // phantom bonus. Non-dice Self money still resolves in jail (a flat grant/charge is fine).
+            // Holder-only: a multi-target "all players roll" only ever fires from a non-jailed holder
+            // who landed on the space, so the per-other-player paths are deliberately left alone.
+            if (player.IsInJail && action.DiceMultiplier != DiceMultiplier.None)
+                return true;
+
             // A dice multiplier is a fresh roll by the holder, folded into the realised amount.
             var diceMultiplier = await RollDiceMultiplier(engine, player, action.DiceMultiplier, ct);
             var amount = RealiseAmount(engine, player, action, diceMultiplier, context);

@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using MP.GameEngine.Enums;
 using MP.GameEngine.Models.Boards;
+using UltimateMonopoly.Data;
 using UltimateMonopoly.Models.DataModels.Boards;
 using UltimateMonopoly.Models.ViewModels;
 using UltimateMonopoly.Models.ViewModels.BoardSkins;
@@ -132,7 +133,7 @@ public class BoardSkinService
         await _repos.GetRepository<BoardSkin>()
             .AddAsync(boardSkin);
         
-        _boardCacheService.Invalidate(_userInfo.UserId);
+        _boardCacheService.Invalidate();
         return true;
     }
 
@@ -144,7 +145,7 @@ public class BoardSkinService
         await _repos.GetRepository<BoardSkin>()
             .UpdateAsync(boardSkin);
         
-        _boardCacheService.Invalidate(_userInfo.UserId);
+        _boardCacheService.Invalidate();
         return true;
     }
 
@@ -153,6 +154,9 @@ public class BoardSkinService
     {
         if (string.IsNullOrWhiteSpace(skinId))
         {
+            if(_userInfo.IsInRole(AppRoles.Restricted))
+                return new SaveSkinResult(false, null);
+            
             var skin = new BoardSkin { Name = name ?? string.Empty, Description = description };
             var created = await TryCreateBoardSkin(skin, modelState);
             return new SaveSkinResult(created, created ? skin.Id : null);
@@ -211,7 +215,7 @@ public class BoardSkinService
             await _repos.SaveChangesAsync();
             await _repos.CommitTransactionAsync();
             
-            _boardCacheService.Invalidate(_userInfo.UserId);
+            _boardCacheService.Invalidate();
             return true;
         }
         catch (Exception ex)
@@ -251,7 +255,7 @@ public class BoardSkinService
         await _repos.GetRepository<BoardSkinSpace>()
             .AddAsync(boardSkinSpace);
         
-        _boardCacheService.Invalidate(_userInfo.UserId);
+        _boardCacheService.Invalidate();
         return true;
     }
 
@@ -263,7 +267,7 @@ public class BoardSkinService
         await _repos.GetRepository<BoardSkinSpace>()
             .UpdateAsync(boardSkinSpace);
         
-        _boardCacheService.Invalidate(_userInfo.UserId);
+        _boardCacheService.Invalidate();
         return true;
     }
 
@@ -279,7 +283,7 @@ public class BoardSkinService
         await _repos.GetRepository<BoardSkinSpace>()
             .SoftDeleteAsync(space);
         
-        _boardCacheService.Invalidate(_userInfo.UserId);
+        _boardCacheService.Invalidate();
         return true;
     }
 

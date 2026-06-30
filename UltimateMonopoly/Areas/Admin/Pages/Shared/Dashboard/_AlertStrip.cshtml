@@ -1,0 +1,27 @@
+@model IReadOnlyList<UltimateMonopoly.Areas.Admin.Models.ViewModels.Dashboard.AlertWidget>
+@* Triage strip — a badge per alert, shown only when its count > 0. Drives the hub strip and spoke headers. *@
+@{
+    var shown = Model.Where(a => a.Show).ToList();
+}
+@if (shown.Count > 0)
+{
+    <div class="d-flex flex-wrap gap-2 mb-4">
+        @foreach (var a in shown)
+        {
+            @if (!string.IsNullOrEmpty(a.Href))
+            {
+                <a href="@a.Href" class="alert alert-@a.Tone d-inline-flex align-items-center gap-2 mb-0 py-2 px-3 text-decoration-none">
+                    @if (!string.IsNullOrEmpty(a.Icon)) { <i class="bi @a.Icon"></i> }
+                    <strong>@a.Count.ToString("N0")</strong> @a.Label
+                </a>
+            }
+            else
+            {
+                <span class="alert alert-@a.Tone d-inline-flex align-items-center gap-2 mb-0 py-2 px-3">
+                    @if (!string.IsNullOrEmpty(a.Icon)) { <i class="bi @a.Icon"></i> }
+                    <strong>@a.Count.ToString("N0")</strong> @a.Label
+                </span>
+            }
+        }
+    </div>
+}

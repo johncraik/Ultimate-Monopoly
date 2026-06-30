@@ -15,4 +15,6 @@ public interface IGameCompletionService
     /// <param name="engine">The game engine instance containing the game's state, rules, and other related information.</param>
     /// <return>A task representing the asynchronous operation to process and finalize the game's draw state.</return>
     Task DrawGame(Services.Framework.GameEngine engine);
+    
+    Task<bool> TryDrawGameByAdmin(Services.Framework.GameEngine engine);
 }

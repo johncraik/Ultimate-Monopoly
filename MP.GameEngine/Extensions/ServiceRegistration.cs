@@ -39,7 +39,7 @@ public static class ServiceRegistration
         //Main Services and Orchestrators
         services.TryAddScoped<GameEngineSetupService>();
         services.TryAddScoped<PlayerTurnOrchestrator>();
-        services.TryAddScoped<TransactionService>();
+        services.TryAddSingleton<TransactionService>();
         services.TryAddScoped<PropertyTransferService>();
         services.TryAddScoped<IShortfallService, ShortfallService>();
         services.TryAddScoped<StatisticsOrchestrator>();

@@ -1,21 +1,35 @@
-﻿@page
+@page
 @model RegisterConfirmationModel
 @{
     ViewData["Title"] = "Registration Confirmation";
 }
 
-<div class="container text-center" style="max-width: 640px;">
-    <div class="card">
-        <div class="card-body">
-            <h2 class="mb-3">Confirm Your Email</h2>
-            @if (Model.DisplayConfirmAccountLink)
-            {
-                <p>Please <a id="confirm-link" href="@Model.EmailConfirmationUrl">click here to confirm your account</a>.</p>
-            }
-            else
-            {
-                <p>Please check your email to confirm your account.</p>
-            }
+<div class="mx-auto" style="max-width: 560px;">
+    <div class="card text-center">
+        <div class="card-body p-4 p-md-5">
+            <div class="display-4 text-primary mb-3"><i class="bi bi-envelope-check"></i></div>
+            <h1 class="h3 mb-2">Check your email</h1>
+            <p class="text-body-secondary mb-2">
+                We've sent a confirmation link to
+                @if (!string.IsNullOrEmpty(Model.Email))
+                {
+                    <strong class="text-body">@Model.Email</strong>
+                }
+                else
+                {
+                    <text>your email address</text>
+                }.
+            </p>
+            <p class="text-body-secondary mb-4">
+                Open it to verify your account, then log in. If it hasn't arrived within a minute or two,
+                check your spam / junk folder.
+            </p>
+            <a asp-page="./Login" class="btn btn-hero-primary btn-lg w-100">
+                <i class="bi bi-box-arrow-in-right me-1"></i> Go to login
+            </a>
+            <a asp-page="./ResendEmailConfirmation" class="btn btn-nav-info btn-lg w-100 mt-2">
+                <i class="bi bi-envelope-arrow-up me-1"></i> Resend confirmation email
+            </a>
         </div>
     </div>
 </div>

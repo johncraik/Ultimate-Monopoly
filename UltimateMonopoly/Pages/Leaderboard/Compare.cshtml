@@ -19,7 +19,7 @@
 
 <link rel="stylesheet" href="~/css/player-stats.css" asp-append-version="true" />
 
-<div class="container-lg py-4">
+<div class="py-4">
 
     <div class="mb-3">
         <a asp-page="/Leaderboard/Index" class="btn btn-sm btn-outline-secondary">
@@ -54,7 +54,7 @@
             var vd = Vd("cmp-" + t.Id);
             <div class="tab-pane fade @(i == 0 ? "show active" : "")" id="tab-@t.Id" role="tabpanel"
                  aria-labelledby="tab-@t.Id-btn">
-                <partial name="_CompareGame" model="t.Players" view-data="vd" />
+                <partial name="_CompareGame" model="(t.Players, Model.Board)" view-data="vd" />
             </div>
         }
     </div>

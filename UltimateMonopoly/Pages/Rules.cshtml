@@ -8,9 +8,10 @@
 
     // Sidebar sections come from the helper (single source of section order/numbering); only show
     // sections that actually have rules in the catalogue.
-    var sections = PageRulesHelper.GetSections();
+    var sections = PageRulesHelper.GetSections(Model.Rules);
     var bySection = Model.Rules
         .GroupBy(r => r.Section)
+        .Where(r => !r.All(rule => rule.IsHidden))
         .ToDictionary(g => g.Key, g => g.ToList());
     var shownSections = sections.Where(s => bySection.ContainsKey(s.SectionNumber)).ToList();
 
@@ -29,7 +30,7 @@
     .rule-coord { min-width: 3.25rem; }
 </style>
 
-<div class="container-lg py-4">
+<div class="py-4">
 
     @* ── Page header ─────────────────────────────────────────────────────── *@
     <div class="mb-4">
@@ -97,7 +98,7 @@
                     {
                         <a class="list-group-item list-group-item-action d-flex align-items-center gap-2"
                            href="#section-@s.SectionNumber">
-                            <span class="badge text-bg-primary rounded-pill">@s.SectionNumber</span>
+                            <span class="badge text-bg-primary rounded-pill">@s.DisplayNumber</span>
                             <span>@s.Section</span>
                         </a>
                     }
@@ -113,11 +114,11 @@
                     {
                         <section id="section-@s.SectionNumber" class="rules-section mb-4">
                             <h2 class="h4 d-flex align-items-center gap-2 pb-2 mb-3 border-bottom">
-                                <span class="badge text-bg-primary rounded-pill">@s.SectionNumber</span>
+                                <span class="badge text-bg-primary rounded-pill">@s.DisplayNumber</span>
                                 @s.Section
                             </h2>
 
-                            @foreach (var rule in bySection[s.SectionNumber])
+                            @foreach (var rule in bySection[s.SectionNumber].Where(r => !r.IsHidden))
                             {
                                 var cited = rule.RuleCode is not null;
                                 <div id="@RuleId(rule)" class="d-flex gap-3 py-2 rule-item">

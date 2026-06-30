@@ -33,7 +33,7 @@
             <div class="d-flex flex-wrap gap-2">
                 <span class="badge @outcomeClass"><i class="bi @outcomeIcon me-1"></i>@outcomeText</span>
                 <span class="badge text-bg-secondary"><i class="bi bi-calculator me-1"></i>@Model.RoundingRule</span>
-                <span class="badge text-bg-secondary"><i class="bi bi-grid-3x3-gap-fill me-1"></i>@Model.BoardName</span>
+                <span class="badge text-bg-secondary"><i class="bi bi-grid-3x3-gap-fill me-1"></i>@Model.Board.Name</span>
             </div>
         </div>
     </div>
@@ -43,7 +43,7 @@
 @if (Model.Stat is not null)
 {
     <partial name="~/Pages/Shared/_PlayerStatsPartial.cshtml"
-             model="((PlayerStatRecord)Model.Stat, (PlayerStatRecord?)null)" />
+             model="((PlayerStatRecord)Model.Stat, (PlayerStatRecord?)null, Model.Board)" />
 }
 else
 {

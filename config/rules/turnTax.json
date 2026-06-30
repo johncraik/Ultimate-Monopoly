@@ -1,0 +1,8 @@
+{
+  "LowerTaxBracket": 10000,
+  "LowerTaxRate": 0.1,
+  "MiddleTaxBracket": 15000,
+  "MiddleTaxRate": 0.3,
+  "UpperTaxBracket": 25000,
+  "UpperTaxRate": 0.5
+}

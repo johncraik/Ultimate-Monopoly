@@ -1,0 +1,117 @@
+@page
+@model UltimateMonopoly.Areas.Admin.Pages.TurnTax.IndexModel
+@{
+    ViewData["Title"] = "Turn Tax";
+}
+
+<div class="d-flex align-items-center gap-3 mb-4">
+    <span class="admin-page-ico bg-success-subtle text-success"><i class="bi bi-cash-coin"></i></span>
+    <div>
+        <h1 class="h3 mb-1">Turn Tax</h1>
+        <p class="text-body-secondary mb-0">A stacking wealth tax charged on each player's cash at the start of their turn.</p>
+    </div>
+
+    @if (Model.Enabled)
+    {
+        <span class="badge fs-6 text-bg-success ms-auto align-self-center"><i class="bi bi-check-circle-fill me-1"></i>Enabled</span>
+    }
+    else
+    {
+        <span class="badge fs-6 text-bg-secondary ms-auto align-self-center"><i class="bi bi-dash-circle me-1"></i>Disabled</span>
+    }
+</div>
+
+<alert type="Success" message="@(TempData["Success"] as string)" />
+
+<div class="alert alert-info d-flex gap-2 small">
+    <i class="bi bi-info-circle mt-1"></i>
+    <div>
+        Each bracket charges its rate on the balance <strong>above</strong> its threshold, and the brackets
+        <strong>stack</strong> (e.g. 10% over £5,000 + 30% over £10,000 + 50% over £20,000 → a £25,000 balance pays £9,000).
+        Set <strong>both</strong> a threshold and a rate for a bracket, or leave <strong>both</strong> at 0 to switch it off.
+    </div>
+</div>
+
+<form method="post" class="card">
+    <div class="card-body">
+        <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+
+        @* Lower *@
+        <div class="row g-3 align-items-end mb-3" data-bracket>
+            <div class="col-12 col-sm">
+                <label class="form-label" asp-for="LowerThreshold">Lower bracket — threshold</label>
+                <div class="input-group">
+                    <span class="input-group-text">£</span>
+                    <input type="number" min="0" step="500" class="form-control" asp-for="LowerThreshold" />
+                </div>
+            </div>
+            <div class="col-8 col-sm-4">
+                <label class="form-label" asp-for="LowerRate">Rate</label>
+                <div class="input-group">
+                    <input type="number" min="0" max="100" step="0.5" class="form-control" asp-for="LowerRate" />
+                    <span class="input-group-text">%</span>
+                </div>
+            </div>
+            <div class="col-4 col-sm-auto">
+                <button type="button" class="btn btn-outline-secondary w-100" data-clear-bracket>Clear</button>
+            </div>
+            <div class="col-12"><span class="text-danger small" asp-validation-for="LowerRate"></span></div>
+        </div>
+
+        @* Middle *@
+        <div class="row g-3 align-items-end mb-3 border-top pt-3" data-bracket>
+            <div class="col-12 col-sm">
+                <label class="form-label" asp-for="MiddleThreshold">Middle bracket — threshold</label>
+                <div class="input-group">
+                    <span class="input-group-text">£</span>
+                    <input type="number" min="0" step="500" class="form-control" asp-for="MiddleThreshold" />
+                </div>
+            </div>
+            <div class="col-8 col-sm-4">
+                <label class="form-label" asp-for="MiddleRate">Rate</label>
+                <div class="input-group">
+                    <input type="number" min="0" max="100" step="0.5" class="form-control" asp-for="MiddleRate" />
+                    <span class="input-group-text">%</span>
+                </div>
+            </div>
+            <div class="col-4 col-sm-auto">
+                <button type="button" class="btn btn-outline-secondary w-100" data-clear-bracket>Clear</button>
+            </div>
+            <div class="col-12"><span class="text-danger small" asp-validation-for="MiddleRate"></span></div>
+        </div>
+
+        @* Upper *@
+        <div class="row g-3 align-items-end mb-3 border-top pt-3" data-bracket>
+            <div class="col-12 col-sm">
+                <label class="form-label" asp-for="UpperThreshold">Upper bracket — threshold</label>
+                <div class="input-group">
+                    <span class="input-group-text">£</span>
+                    <input type="number" min="0" step="500" class="form-control" asp-for="UpperThreshold" />
+                </div>
+            </div>
+            <div class="col-8 col-sm-4">
+                <label class="form-label" asp-for="UpperRate">Rate</label>
+                <div class="input-group">
+                    <input type="number" min="0" max="100" step="0.5" class="form-control" asp-for="UpperRate" />
+                    <span class="input-group-text">%</span>
+                </div>
+            </div>
+            <div class="col-4 col-sm-auto">
+                <button type="button" class="btn btn-outline-secondary w-100" data-clear-bracket>Clear</button>
+            </div>
+            <div class="col-12"><span class="text-danger small" asp-validation-for="UpperRate"></span></div>
+        </div>
+
+        <div class="d-flex gap-2 border-top pt-3">
+            <button type="submit" class="btn btn-primary">Save</button>
+            @if (Model.Enabled)
+            {
+                <button type="submit" class="btn btn-outline-danger" asp-page-handler="Disable" formnovalidate>Disable</button>
+            }
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <script src="~/scripts/admin/turntax.js" asp-append-version="true"></script>
+}

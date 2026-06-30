@@ -1,0 +1,361 @@
+/* ============================================================================
+   Admin Centre — shell layout (design-docs/c1-admin-area.md §3; layout per John).
+   A flat-card top bar, a full-height flat sidebar with two vertical borders, and a
+   scrollable content pane, centred within container-xxl. Bootstrap does the rest;
+   only the shell chrome and the sidebar accordion live here.
+   ============================================================================ */
+
+/* Full-viewport app shell: top bar fixed, body fills the rest, internal scrolling. */
+.admin-shell {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Top bar — flat card: border all round, rounded only at the top; its bottom border
+   is the line the sidebar's verticals hang from. */
+.admin-topbar {
+    position: relative;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: .6rem .9rem;
+    background: var(--bs-tertiary-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius-lg) var(--bs-border-radius-lg) 0 0;
+}
+
+/* Centred title, independent of the left (back) / right (notif, profile) items. Made to pop —
+   uppercase, gradient text, a glowing shield icon. Hidden on very small screens to avoid overlap. */
+.admin-topbar-title {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    display: inline-flex;
+    align-items: center;
+    gap: .55rem;
+    font-size: 1.3rem;
+    font-weight: 800;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    pointer-events: none;
+}
+.admin-topbar-title i {
+    font-size: 1.25rem;
+    color: var(--bs-primary);
+    filter: drop-shadow(0 0 10px rgba(var(--bs-primary-rgb), .45));
+}
+.admin-topbar-title .admin-title-text {
+    background: linear-gradient(90deg, var(--bs-primary), var(--bs-info));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+@media (max-width: 576px) {
+    .admin-topbar-title { display: none; }
+}
+
+/* Body row — fills the remaining height; min-height:0 lets the children scroll. */
+.admin-main {
+    flex: 1 1 auto;
+    display: flex;
+    min-height: 0;
+}
+
+/* Sidebar — flat: left + right borders running from the top bar down to the screen
+   bottom; no top/bottom border, no radius. Scrolls independently. */
+.admin-sidebar {
+    flex: 0 0 16.5rem;
+    overflow-y: auto;
+    padding: .75rem;
+    background: var(--bs-tertiary-bg);
+    border-left: 1px solid var(--bs-border-color);
+    border-right: 1px solid var(--bs-border-color);
+}
+
+/* Content pane — scrolls independently of the sidebar. */
+.admin-content {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-y: auto;
+    padding: 1.5rem;
+}
+
+/* ---- Sidebar nav: list-group accordion blocks ---- */
+.admin-nav-block + .admin-nav-block {
+    margin-top: .35rem;
+}
+
+.admin-nav-header {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: .7rem .85rem;
+    font-weight: 600;
+    text-align: left;
+    border: 0;
+    border-radius: var(--bs-border-radius);
+}
+
+.admin-nav-chevron {
+    margin-left: auto;
+    font-size: .8rem;
+    transition: transform .15s ease;
+}
+.admin-nav-header[aria-expanded="true"] .admin-nav-chevron {
+    transform: rotate(180deg);
+}
+
+/* The collapsible panel under a header is ONE uniform darker surface — not per-item shading. */
+.admin-sidebar .list-group {
+    background: var(--bs-body-bg);
+    border-radius: var(--bs-border-radius);
+    margin-top: .2rem;
+    padding: .25rem;
+    overflow: hidden;
+}
+
+.admin-nav-item {
+    background-color: transparent; /* let the panel's colour show through uniformly */
+    border: 0;
+    border-radius: var(--bs-border-radius);
+    padding-left: 2.15rem; /* indent sub-items under the block's icon */
+    font-size: .92rem;
+}
+
+/* A '|' separator between groups of items inside one block. */
+.admin-nav-divider {
+    height: 0;
+    margin: .35rem .9rem;
+    border-top: 1px solid var(--bs-border-color);
+}
+
+/* ---- Page chrome (dashboard header / section cards) ---- */
+.admin-page-ico {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3rem;
+    height: 3rem;
+    border-radius: var(--bs-border-radius-lg);
+    font-size: 1.4rem;
+    flex-shrink: 0;
+}
+
+/* ---- Responsive: stack the sidebar above the content on small screens ---- */
+@media (max-width: 768px) {
+    .admin-shell {
+        height: auto;
+        min-height: 100vh;
+        overflow: visible;
+    }
+    .admin-main {
+        flex-direction: column;
+    }
+    .admin-sidebar {
+        flex-basis: auto;
+        border-right: 0;
+        border-bottom: 1px solid var(--bs-border-color);
+    }
+    .admin-content {
+        overflow: visible;
+    }
+}
+
+/* ---- User Management table ---- */
+/* Dim + lock the table while an AJAX re-fetch is in flight. */
+.admin-table-loading {
+    opacity: .5;
+    pointer-events: none;
+    transition: opacity .1s ease;
+}
+
+/* Single-line rows; the table-responsive wrapper scrolls horizontally if needed. */
+.admin-users-table th,
+.admin-users-table td {
+    white-space: nowrap;
+}
+
+/* Comfortable, uniform row height across every admin list table. table-sm's .25rem vertical padding
+   leaves single-line rows (audit / data trail) looking cramped next to the two-line rows (users); this
+   evens them out. Horizontal padding stays compact (inherited from table-sm). The audit detail panel
+   keeps its flush p-0 (utility !important wins), and empty-state cells keep their py-4. */
+.admin-users-table > thead > tr > th,
+.admin-users-table > tbody > tr > td,
+.admin-audit-table > thead > tr > th,
+.admin-audit-table > tbody > tr > td {
+    padding-top: .6rem;
+    padding-bottom: .6rem;
+}
+
+/* Whole-row click navigates to the row's details (clickable-rows.js); inner links/buttons still win. */
+.admin-users-table tbody tr[data-href] {
+    cursor: pointer;
+}
+
+/* Id columns (truncated copy codes) — fixed, equal width; let the longer headers wrap to fit. */
+.admin-users-table .admin-id-col {
+    width: 8rem;
+    white-space: normal;
+}
+
+/* Placeholder card for a feature still to be built (e.g. the report user-activity mini-dashboard). */
+.admin-wip {
+    border-style: dashed;
+}
+
+/* Turns table — fixed-width id / number / size / download columns; the player name absorbs the rest. */
+.admin-turns-table .turn-col-num { width: 5rem; }
+.admin-turns-table .turn-col-size { width: 6rem; white-space: nowrap; }
+.admin-turns-table .turn-col-dl { width: 6rem; }
+
+/* Audit table — fixed-width id + flag columns; rows expand a detail row on click. */
+.admin-audit-table .admin-id-col { width: 8rem; white-space: normal; }
+.admin-audit-table .audit-col-flag { width: 4.5rem; }
+.admin-audit-table .audit-row { cursor: pointer; }
+/* The expanded row's detail panel has its own background, so don't double-paint the table-hover. */
+.admin-audit-table .audit-detail:hover > td { background: transparent; }
+/* Pretty-printed ActionData JSON in the expanded row. Wrap long lines (a GameSnapshot's StateJson is one
+   giant value) and cap the height, so a huge blob scrolls within its box instead of blowing out the table. */
+.admin-audit-json {
+    max-height: 22rem;
+    max-width: 100%;
+    overflow: auto;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    padding: .75rem;
+    background: var(--bs-body-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
+    font-size: .8125rem;
+}
+
+/* Expanded-row detail text (log details, thread-activity details, reported-issue descriptions). Preserve the
+   line breaks in the stored text and wrap long unbroken tokens (e.g. a folded metadata block) instead of
+   overflowing the row. */
+.admin-log-detail {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+/* Reported-issue rendered HTML body — the sanitised user description plus the metadata <details> tables. */
+.admin-issue-body { overflow-wrap: anywhere; }
+.admin-issue-body table { width: auto; margin: .35rem 0 .25rem; border-collapse: collapse; }
+.admin-issue-body td { border: 1px solid var(--bs-border-color); padding: .2rem .5rem; vertical-align: top; }
+.admin-issue-body details { margin-top: .5rem; }
+.admin-issue-body summary { cursor: pointer; }
+
+/* Game-details read-only state — the turn / player selector card pins to the top of the scrolling
+   content while the three state cards (profile / game-info / board) scroll past it. */
+.admin-state-controls {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+}
+/* Player-profile card — fixed near-full height; the profile scrolls inside it. The game-info and board
+   cards below have natural height and scroll with the page. */
+.admin-state-profile {
+    height: 90vh;
+}
+.admin-state-profile .card-body {
+    overflow-y: scroll;
+    overflow-x: hidden;
+}
+/* The reused profile pins its tab bar with position:fixed for the live drawer. Here make it sticky so it
+   stays at the bottom of the profile card while the profile scrolls (sticky is constrained to that card). */
+.admin-state-profile .pp-view {
+    padding-bottom: 0;
+}
+.admin-state-profile .pp-tabbar {
+    position: sticky;
+    bottom: 0;
+}
+
+/* Rules table — fixed narrow columns so Title/Description absorb the remaining width. */
+.admin-rules-table .rule-col-section { width: 6rem; }
+.admin-rules-table .rule-col-rule { width: 4.5rem; }
+.admin-rules-table .rule-col-point { width: 4.5rem; }
+.admin-rules-table .rule-col-code { width: 12rem; white-space: normal; }
+.admin-rules-table .rule-col-hidden { width: 5rem; }
+
+/* ---- User Details — grouped property panels ---- */
+/* Related properties sit in subtle panels with clear boundaries; no headings, generous padding. */
+.admin-detail-group {
+    background: var(--bs-tertiary-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius-lg);
+    padding: 0 1rem;
+    margin-bottom: 1rem;
+}
+.admin-detail-group:last-child {
+    margin-bottom: 0;
+}
+
+.admin-detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: .9rem 0;
+    border-bottom: 1px solid var(--bs-border-color);
+}
+.admin-detail-row:last-child {
+    border-bottom: 0;
+}
+
+.admin-detail-label {
+    display: inline-flex;
+    align-items: center;
+    gap: .6rem;
+    flex-shrink: 0;
+    color: var(--bs-secondary-color);
+    font-size: .9rem;
+}
+.admin-detail-label i {
+    width: 1.1rem;
+    text-align: center;
+    font-size: 1rem;
+    opacity: .85;
+}
+
+.admin-detail-value {
+    min-width: 0;
+    text-align: right;
+    font-weight: 500;
+    word-break: break-word;
+}
+
+/* Click-to-copy user id, with a "Copied!" flash. */
+.user-id-copy {
+    position: relative;
+    cursor: pointer;
+}
+.user-id-copy:hover {
+    text-decoration: underline;
+}
+.user-id-copy.copied::after {
+    content: 'Copied!';
+    position: absolute;
+    bottom: 130%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bs-success);
+    color: #fff;
+    font-size: .7rem;
+    font-weight: 600;
+    padding: .1rem .45rem;
+    border-radius: var(--bs-border-radius-sm);
+    white-space: nowrap;
+    z-index: 5;
+}
+
+/* Notification logs — the read/unread log table inside a notification's accordion: cap height + scroll. */
+.admin-notif-logs {
+    max-height: 16rem;
+    overflow-y: auto;
+}

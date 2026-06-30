@@ -1,7 +1,10 @@
+@using JC.Identity.Authentication
+@using Microsoft.AspNetCore.Identity
 @using MP.GameEngine.Helpers.RuleSet
+@using UltimateMonopoly.Data
 @using UltimateMonopoly.Services
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
-@inject ProfileService ProfileService
+@inject SignInManager<AppUser> SignInManager
 <!DOCTYPE html>
 <html lang="en" data-bs-theme="dark">
 <head>
@@ -18,20 +21,21 @@
     <meta name="csrf-token" content="@afTokens.RequestToken" />
 </head>
 <body>
-    @{
-        var currentUser = await ProfileService.GetCurrentUserProfileViewModelAsync();
-    }
     <nav class="navbar navbar-glass mb-4" data-game-nav>
-        <div class="container-xl d-flex align-items-center justify-content-between">
+        <div class="app-page d-flex align-items-center justify-content-between">
             <partial name="_Branding" />
 
-            <a href="/profile" class="d-inline-flex" aria-label="My profile">
-                <profile-circle user="currentUser" size="Md" />
-            </a>
+            @if (SignInManager.IsSignedIn(User))
+            {
+                <div class="d-flex align-items-center gap-2 ms-auto justify-content-end">
+                    <partial name="~/Pages/Shared/_ProfileDropdown.cshtml" />
+                </div>
+
+            }
         </div>
     </nav>
 
-    <main class="container-xl pb-5">
+    <main class="app-page pb-5">
         @RenderBody()
     </main>
 
@@ -58,6 +62,9 @@
         <script src="~/scripts/SignalR/presence.js" asp-append-version="true"></script>
         <script src="~/scripts/notifications.js" asp-append-version="true"></script>
     }
+    <partial name="~/Pages/Shared/_BugReporter.cshtml" />
+    <partial name="~/Pages/Shared/_FeedbackModal.cshtml" />
+
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

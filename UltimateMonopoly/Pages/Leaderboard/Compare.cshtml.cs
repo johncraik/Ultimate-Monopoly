@@ -1,6 +1,7 @@
 using JC.Core.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using MP.GameEngine.Models.Boards;
 using MP.GameEngine.Models.Statistics;
 using UltimateMonopoly.Models.DataModels.Games;
 using UltimateMonopoly.Pages.Games;
@@ -14,18 +15,21 @@ public class Compare : PageModel
 {
     private readonly GameStatsService _statsService;
     private readonly PlayerCacheService _playerCacheService;
+    private readonly BoardCacheService _boardCache;
     private readonly FriendService _friendService;
     private readonly BlockAndReportService _blockAndReportService;
     private readonly IUserInfo _userInfo;
 
     public Compare(GameStatsService statsService,
         PlayerCacheService playerCacheService,
+        BoardCacheService boardCache,
         FriendService friendService,
         BlockAndReportService blockAndReportService,
         IUserInfo userInfo)
     {
         _statsService = statsService;
         _playerCacheService = playerCacheService;
+        _boardCache = boardCache;
         _friendService = friendService;
         _blockAndReportService = blockAndReportService;
         _userInfo = userInfo;
@@ -37,6 +41,7 @@ public class Compare : PageModel
     public List<CompareModel.ComparePlayer> TotalComparePlayers { get; private set; } = [];
     public List<CompareModel.ComparePlayer> MaxComparePlayers { get; private set; } = [];
     public List<CompareModel.ComparePlayer> MinComparePlayers { get; private set; } = [];
+    public Board Board { get; private set; }
 
     public async Task<IActionResult> OnGetAsync(string userId)
     {
@@ -46,6 +51,8 @@ public class Compare : PageModel
         var blocked = await _blockAndReportService.CheckIfBlocksExist(_userInfo.UserId, [userId]);
         if(blocked) return NotFound();
 
+        Board = await _boardCache.GetDefaultBoard();
+        
         var userProfile = await _playerCacheService.GetPlayerProfile(_userInfo.UserId);
         var compareProfile = await _playerCacheService.GetPlayerProfile(userId);
         PlayerName = compareProfile.DisplayName;

@@ -1,0 +1,54 @@
+@using JC.Web.ClientProfiling
+@using Microsoft.Extensions.Hosting
+@using UltimateMonopoly.Data
+@inject Microsoft.AspNetCore.Hosting.IWebHostEnvironment Env
+@inject JC.Core.Models.IUserInfo UserInfo
+
+@if (User.Identity?.IsAuthenticated ?? false)
+{
+    var metadataLog = ViewContext.HttpContext.GetRequestMetadata()?.ToLogEntry(maskPath: false, maskQuery: false) ?? "";
+
+    var isHidden = UserInfo.IsInRole(AppRoles.HiddenUser);
+    var displayName = UserInfo.DisplayName;
+
+    <div class="modal fade" id="feedbackModal" tabindex="-1" aria-labelledby="feedbackModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="feedbackModalLabel"><i class="bi bi-chat-square-text me-2"></i>Give Feedback</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" data-feedback data-endpoint="/BugReport" data-metadata="@metadataLog">
+                    <div class="alert alert-info small mb-3">
+                        <p class="mb-1">
+                            <i class="bi bi-info-circle me-1"></i>Your feedback is recorded <strong>publicly</strong>.
+                        </p>
+                        <p class="mb-0">An administrator will review your feedback or request and respond within <strong>5 business days</strong> to your registered email.</p>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="feedback-type" class="form-label">Type</label>
+                        <select id="feedback-type" class="form-select">
+                            <option value="suggestion" selected>Suggestion</option>
+                            <option value="bug">Bug</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-2">
+                        <label for="feedback-desc" class="form-label">Description</label>
+                        <textarea id="feedback-desc" class="form-control" rows="6" maxlength="4000"
+                                  placeholder="Tell us your suggestion, or describe the issue and how to reproduce it…"></textarea>
+                    </div>
+
+                    <div data-feedback-alert class="d-none"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" data-feedback-submit><i class="bi bi-send me-1"></i>Submit</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="~/scripts/feedback.js" asp-append-version="true"></script>
+}

@@ -1,9 +1,11 @@
+using JC.Core.Models;
 using JC.Web.UI.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using MP.GameEngine.Enums.Games;
+using UltimateMonopoly.Data;
 using UltimateMonopoly.Services.BoardSkins;
 using UltimateMonopoly.Services.Games;
 
@@ -14,11 +16,15 @@ public class IndexModel : PageModel
 {
     private readonly GameSetupService _gameSetup;
     private readonly BoardSkinService _boardSkins;
+    private readonly IUserInfo _userInfo;
 
-    public IndexModel(GameSetupService gameSetup, BoardSkinService boardSkins)
+    public IndexModel(GameSetupService gameSetup, 
+        BoardSkinService boardSkins,
+        IUserInfo userInfo)
     {
         _gameSetup = gameSetup;
         _boardSkins = boardSkins;
+        _userInfo = userInfo;
     }
 
     [BindProperty] public string? Name { get; set; }
@@ -27,7 +33,14 @@ public class IndexModel : PageModel
 
     public List<SelectListItem> Boards { get; private set; } = [];
 
-    public async Task OnGetAsync() => await LoadBoardsAsync();
+    public async Task<IActionResult> OnGetAsync() 
+    {
+        if(_userInfo.IsInRole(AppRoles.Restricted))
+           return Unauthorized();
+        
+        await LoadBoardsAsync();
+        return Page();
+    }
 
     public async Task<IActionResult> OnPostAsync()
     {

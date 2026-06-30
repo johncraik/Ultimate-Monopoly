@@ -23,4 +23,5 @@ public sealed class AcknowledgePrompt : Prompt<AcknowledgeResponse>
     /// (rule notifications, can't-afford, etc.), which render in the default secondary styling.
     /// </summary>
     public CardType? CardType { get; init; }
+    public bool PlayingCard { get; init; }
 }

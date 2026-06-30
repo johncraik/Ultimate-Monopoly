@@ -6,6 +6,9 @@ using Microsoft.EntityFrameworkCore;
 using MP.GameEngine.Abstractions;
 using MP.GameEngine.Enums.Games;
 using MP.GameEngine.Models;
+using MP.GameEngine.Models.Snapshot;
+using MP.GameEngine.Services.Statistics;
+using MP.GameEngine.Services.SubSystems;
 using UltimateMonopoly.Data;
 using UltimateMonopoly.Enums;
 using UltimateMonopoly.Models.DataModels.Games;
@@ -42,12 +45,12 @@ public class GameCompletionService : IGameCompletionService
     }
 
     public Task DeclareWinner(MP.GameEngine.Services.Framework.GameEngine engine)
-        => ConcludeGame(engine.Cache);
+        => ConcludeGameWithCheck(engine.Cache);
 
     public Task DrawGame(MP.GameEngine.Services.Framework.GameEngine engine)
-        => ConcludeGame(engine.Cache);
-
-    private async Task ConcludeGame(GameCacheModel gameCache)
+        => ConcludeGameWithCheck(engine.Cache);
+    
+    private async Task ConcludeGameWithCheck(GameCacheModel gameCache)
     {
         // Only Players is needed here (outcomes + EndGame). Do NOT eager-include
         // Turns/Snapshots/TurnEvents: four collection includes on one query is a
@@ -61,14 +64,43 @@ public class GameCompletionService : IGameCompletionService
         if(game is null)
             throw new InvalidOperationException("Game not found");
         
+        await ConcludeGame(gameCache, game);
+    }
+
+
+    public async Task<bool> TryDrawGameByAdmin(MP.GameEngine.Services.Framework.GameEngine engine)
+    {
+        var gameCache = engine.Cache;
+        var game = await _repos.GetRepository<Game>()
+            .AsQueryable().FilterDeleted(DeletedQueryType.OnlyActive)
+            .Include(g => g.Players)
+            .FirstOrDefaultAsync(g => g.Id == gameCache.GameId);
+        if(game is null)
+            return false;
+
+        try
+        {
+            await ConcludeGame(gameCache, game);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to draw game {GameId}", game.Id);
+            return false;
+        }
+    }
+    
+    
+    private async Task ConcludeGame(GameCacheModel gameCache, Game game, bool isAdmin = false)
+    {
         //Stats projection (snapshot + turn events → PlayerGameStat per player) runs in its own
         //transaction, decoupled from finishing the game: it is enqueued as a fire-and-forget
         //Hangfire job AFTER this conclude transaction commits (see below), so a failure to
         //persist stats can't prevent game completion, and the job reads the game as Finished.
-
-
-        //Tear down the live runtime (cache + pump) now the game is over:
-        ClearGameRuntime(gameCache.GameId);
+        //
+        //The live runtime (cache + pump) is torn down AFTER the conclude transaction commits (see below),
+        //never before — otherwise a failed/rolled-back commit would destroy the in-memory game while the
+        //DB still said in-play, leaving a zombie that could rehydrate from the old snapshot and replay (H-01).
 
 
         //Get the players in the game:
@@ -135,11 +167,12 @@ public class GameCompletionService : IGameCompletionService
         await _repos.BeginTransactionAsync();
         try
         {
+            var userId = isAdmin ? null : IUserInfo.SYSTEM_USER_ID;
             await _repos.GetRepository<Game>()
-                .UpdateAsync(game, IUserInfo.SYSTEM_USER_ID, saveNow: false);
+                .UpdateAsync(game, userId, saveNow: false);
 
             await _repos.GetRepository<GamePlayer>()
-                .UpdateRangeAsync(game.Players, IUserInfo.SYSTEM_USER_ID, saveNow: false);
+                .UpdateRangeAsync(game.Players, userId, saveNow: false);
             
             //Updates stats on AppUser model
             if(!beenProcessed)
@@ -156,6 +189,12 @@ public class GameCompletionService : IGameCompletionService
             _logger.LogError(ex, "Failed to conclude game {GameId}", game.Id);
             throw;
         }
+
+        // The game is now durably committed as Finished — ONLY now tear down the live runtime (cache +
+        // pump). Doing this before the commit (the prior ordering) risked destroying the in-memory game
+        // while the DB still said in-play if the commit rolled back, leaving a zombie that could rehydrate
+        // and replay (H-01). The pump stop stays fire-and-forget — we run on that pump's own work item.
+        ClearGameRuntime(gameCache.GameId);
 
         // The game is now committed as finished — enqueue the stats projection (fire-and-forget;
         // the job reads committed data and writes PlayerGameStat in its own transaction).

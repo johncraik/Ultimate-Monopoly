@@ -145,6 +145,29 @@
             }
             else
             {
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+                    <div class="small text-body-secondary">
+                        @if (Model.IsHidden)
+                        {
+                            <span><i class="bi bi-eye-slash me-1"></i>Your profile is <strong>private</strong> — players who aren't your friends can't see your name on the leaderboard.</span>
+                        }
+                        else
+                        {
+                            <span><i class="bi bi-eye me-1"></i>Your profile is <strong>public</strong> — everyone can see your name on the leaderboard.</span>
+                        }
+                    </div>
+                    <button type="submit" formaction="?handler=ToggleVisibility" class="btn btn-sm btn-outline-secondary text-nowrap">
+                        @if (Model.IsHidden)
+                        {
+                            <span><i class="bi bi-eye me-1"></i>Make Profile Public</span>
+                        }
+                        else
+                        {
+                            <span><i class="bi bi-eye-slash me-1"></i>Make Profile Private</span>
+                        }
+                    </button>
+                </div>
+
                 <div class="mb-3">
                     <partial name="_GameStatsCards" model="Model.CurrentUser" />
                 </div>

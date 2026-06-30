@@ -1,0 +1,92 @@
+@page
+@using Microsoft.AspNetCore.Http.Features
+@model SecurityModel
+@{
+    ViewData["Title"] = "Security";
+    ViewData["ActivePage"] = ManageNavPages.Security;
+    var consentFeature = HttpContext.Features.Get<ITrackingConsentFeature>();
+}
+
+<partial name="_StatusMessage" for="StatusMessage" />
+
+<div class="card mb-4">
+    <div class="card-body">
+        <h5 class="card-title mb-3">Password</h5>
+        <form id="change-password-form" method="post" asp-page-handler="ChangePassword">
+            <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
+            <div class="form-floating mb-3">
+                <input asp-for="Input.OldPassword" class="form-control" autocomplete="current-password" placeholder="Current password" />
+                <label asp-for="Input.OldPassword">Current password</label>
+                <span asp-validation-for="Input.OldPassword" class="text-danger"></span>
+            </div>
+            <div class="form-floating mb-3">
+                <input asp-for="Input.NewPassword" class="form-control" autocomplete="new-password" placeholder="New password" />
+                <label asp-for="Input.NewPassword">New password</label>
+                <span asp-validation-for="Input.NewPassword" class="text-danger"></span>
+            </div>
+            <div class="form-floating mb-3">
+                <input asp-for="Input.ConfirmPassword" class="form-control" autocomplete="new-password" placeholder="Confirm password" />
+                <label asp-for="Input.ConfirmPassword">Confirm password</label>
+                <span asp-validation-for="Input.ConfirmPassword" class="text-danger"></span>
+            </div>
+            <button type="submit" class="btn btn-primary">Update password</button>
+        </form>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <h5 class="card-title mb-3">Two-factor authentication</h5>
+        @if (consentFeature?.CanTrack ?? true)
+        {
+            @if (Model.Is2faEnabled)
+            {
+                @if (Model.RecoveryCodesLeft == 0)
+                {
+                    <div class="alert alert-danger">
+                        <strong>No recovery codes remaining.</strong> <a asp-page="./GenerateRecoveryCodes">Generate new codes</a> to avoid being locked out.
+                    </div>
+                }
+                else if (Model.RecoveryCodesLeft <= 3)
+                {
+                    <div class="alert alert-warning">
+                        <strong>@Model.RecoveryCodesLeft recovery code(s) remaining.</strong> Consider <a asp-page="./GenerateRecoveryCodes">generating new codes</a>.
+                    </div>
+                }
+
+                <p class="mb-2"><span class="badge text-bg-success">Enabled</span></p>
+                <div class="d-flex flex-wrap gap-2">
+                    @if (Model.IsMachineRemembered)
+                    {
+                        <form method="post" asp-page-handler="ForgetBrowser" class="d-inline">
+                            <button type="submit" class="btn btn-outline-secondary">Forget this browser</button>
+                        </form>
+                    }
+                    <a asp-page="./Disable2fa" class="btn btn-outline-danger">Disable 2FA</a>
+                    <a asp-page="./GenerateRecoveryCodes" class="btn btn-outline-warning">Reset recovery codes</a>
+                </div>
+            }
+
+            <div class="@(Model.Is2faEnabled ? "mt-3" : "")">
+                <h6>Authenticator app</h6>
+                <div class="d-flex flex-wrap gap-2">
+                    @if (!Model.HasAuthenticator)
+                    {
+                        <a asp-page="./EnableAuthenticator" class="btn btn-primary">Add authenticator app</a>
+                    }
+                    else
+                    {
+                        <a asp-page="./EnableAuthenticator" class="btn btn-primary">Configure authenticator</a>
+                        <a asp-page="./ResetAuthenticator" class="btn btn-outline-danger">Reset authenticator</a>
+                    }
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-danger">
+                You must accept the privacy and cookie policy before enabling two-factor authentication.
+            </div>
+        }
+    </div>
+</div>

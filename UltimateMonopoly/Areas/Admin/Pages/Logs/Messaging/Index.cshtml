@@ -1,0 +1,48 @@
+@page
+@model UltimateMonopoly.Areas.Admin.Pages.Logs.Messaging.IndexModel
+@using JC.Web.UI.Helpers
+@using JC.Communication.Logging.Models.Messaging
+@{
+    ViewData["Title"] = "Messaging Logs";
+
+    // Built in a code block — Razor can't parse the generic FromEnum<T> inline in an attribute.
+    var activityItems = DropdownHelper.FromEnum<ThreadActivityType>(Model.ActivityType).WithPlaceholder("All activity");
+}
+
+<div class="d-flex align-items-center gap-3 mb-4">
+    <span class="admin-page-ico bg-secondary-subtle text-secondary"><i class="bi bi-chat-dots"></i></span>
+    <div>
+        <h1 class="h3 mb-1">Messaging Logs</h1>
+        <p class="text-body-secondary mb-0">Thread activity — messages sent and participants added or removed.</p>
+    </div>
+</div>
+
+@* Search + activity-type filter. A plain GET form is the no-JS fallback; messaging-logs.js intercepts and
+   re-fetches just the table partial (?handler=Table). *@
+<form id="log-filters" method="get" class="card mb-3">
+    <div class="card-body">
+        <div class="row g-3 align-items-end">
+            <div class="col-12 col-xl-8">
+                <label class="form-label small text-body-secondary mb-1" for="log-search">Search</label>
+                <div class="input-group">
+                    <input type="search" class="form-control" id="log-search" name="Search" value="@Model.Search"
+                           placeholder="Thread id, user id, details…" autocomplete="off" />
+                    <button class="btn btn-primary" type="submit" aria-label="Search"><i class="bi bi-search"></i></button>
+                </div>
+            </div>
+            <div class="col-12 col-xl-4">
+                <label class="form-label small text-body-secondary mb-1" for="log-activity">Activity</label>
+                <select class="form-select" id="log-activity" name="ActivityType" asp-items="activityItems"></select>
+            </div>
+        </div>
+    </div>
+</form>
+
+<div id="logs-table">
+    <partial name="_ThreadActivityLogsTable" model="Model.TableModel" />
+</div>
+
+@section Scripts {
+    <script src="~/scripts/admin/copy.js" asp-append-version="true"></script>
+    <script src="~/scripts/admin/messaging-logs.js" asp-append-version="true"></script>
+}

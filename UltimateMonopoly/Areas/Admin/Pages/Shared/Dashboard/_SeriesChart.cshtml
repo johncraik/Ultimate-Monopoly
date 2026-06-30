@@ -1,0 +1,22 @@
+@using UltimateMonopoly.Areas.Admin.Models.ViewModels.Dashboard
+@model SeriesWidget
+@* Just the time-series chart (no card wrapper) — reused inside _Series (card) and the hub spoke tiles. *@
+@{
+    var hex = DashboardPalette.Hex(Model.Tone);
+}
+@if (Model.Points.Count == 0)
+{
+    <div class="text-body-secondary small">@Model.EmptyText</div>
+}
+else
+{
+    <ejs-chart id="@Model.Id" background="transparent" height="@Model.Height">
+        <e-chart-primaryxaxis valueType="Category"></e-chart-primaryxaxis>
+        <e-chart-primaryyaxis></e-chart-primaryyaxis>
+        <e-series-collection>
+            <e-series dataSource="Model.Points" type="@(Enum.Parse<Syncfusion.EJ2.Charts.ChartSeriesType>(Model.SeriesType))" xName="Label" yName="Value" fill="@hex" width="2" opacity="0.5"></e-series>
+        </e-series-collection>
+        <e-chart-tooltipsettings enable="true"></e-chart-tooltipsettings>
+        <e-chart-legendsettings visible="false"></e-chart-legendsettings>
+    </ejs-chart>
+}

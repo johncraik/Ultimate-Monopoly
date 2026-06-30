@@ -839,6 +839,10 @@ namespace UltimateMonopoly.Data.Migrations
                     b.Property<DateTime>("AuditDate")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<string>("EntityKey")
+                        .HasMaxLength(512)
+                        .HasColumnType("varchar(512)");
+
                     b.Property<string>("TableName")
                         .HasMaxLength(256)
                         .HasColumnType("varchar(256)");
@@ -858,6 +862,8 @@ namespace UltimateMonopoly.Data.Migrations
                     b.HasIndex("TableName");
 
                     b.HasIndex("UserId");
+
+                    b.HasIndex("TableName", "EntityKey");
 
                     b.ToTable("AuditEntries");
                 });
@@ -906,6 +912,9 @@ namespace UltimateMonopoly.Data.Migrations
                     b.Property<string>("Id")
                         .HasMaxLength(36)
                         .HasColumnType("varchar(36)");
+
+                    b.Property<string>("ClientMetadata")
+                        .HasColumnType("longtext");
 
                     b.Property<bool>("Closed")
                         .HasColumnType("tinyint(1)");
@@ -1115,6 +1124,37 @@ namespace UltimateMonopoly.Data.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("UltimateMonopoly.Areas.Admin.Models.AdminActionLog", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(38)
+                        .HasColumnType("varchar(38)");
+
+                    b.Property<int>("Action")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CreatedById")
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime>("CreatedUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Detail")
+                        .HasMaxLength(2048)
+                        .HasColumnType("varchar(2048)");
+
+                    b.Property<string>("TargetId")
+                        .HasMaxLength(38)
+                        .HasColumnType("varchar(38)");
+
+                    b.Property<int>("TargetType")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("AdminActionLogs");
+                });
+
             modelBuilder.Entity("UltimateMonopoly.Data.AppRole", b =>
                 {
                     b.Property<string>("Id")
@@ -1174,6 +1214,9 @@ namespace UltimateMonopoly.Data.Migrations
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<bool>("HasDismissedWelcome")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<bool>("IsEnabled")
                         .HasColumnType("tinyint(1)");
 
@@ -1215,6 +1258,9 @@ namespace UltimateMonopoly.Data.Migrations
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<DateTime?>("RegisteredUtc")
+                        .HasColumnType("datetime(6)");
+
                     b.Property<bool>("RequirePasswordChange")
                         .HasColumnType("tinyint(1)");
 
@@ -1242,6 +1288,47 @@ namespace UltimateMonopoly.Data.Migrations
                         .HasDatabaseName("UserNameIndex");
 
                     b.ToTable("AspNetUsers", (string)null);
+                });
+
+            modelBuilder.Entity("UltimateMonopoly.Models.DataModels.BlockedWord", b =>
+                {
+                    b.Property<string>("NormalisedWord")
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<string>("CreatedById")
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime>("CreatedUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("DeletedById")
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime?>("DeletedUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("LastModifiedById")
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime?>("LastModifiedUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("RestoredById")
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime?>("RestoredUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Word")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.HasKey("NormalisedWord");
+
+                    b.ToTable("BlockedWords");
                 });
 
             modelBuilder.Entity("UltimateMonopoly.Models.DataModels.Boards.BoardSkin", b =>
@@ -1399,6 +1486,34 @@ namespace UltimateMonopoly.Data.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("SharedBoardSkins");
+                });
+
+            modelBuilder.Entity("UltimateMonopoly.Models.DataModels.DailyActivityStat", b =>
+                {
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("Dau")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Logins")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Mau")
+                        .HasColumnType("int");
+
+                    b.Property<int>("NewUsers")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TotalUsers")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Wau")
+                        .HasColumnType("int");
+
+                    b.HasKey("Date");
+
+                    b.ToTable("DailyActivityStats");
                 });
 
             modelBuilder.Entity("UltimateMonopoly.Models.DataModels.Games.Game", b =>
@@ -1823,6 +1938,9 @@ namespace UltimateMonopoly.Data.Migrations
                     b.Property<ushort>("MostLandedOnBoardIndex")
                         .HasColumnType("smallint unsigned");
 
+                    b.Property<uint>("MostLandedOnBoardIndexCount")
+                        .HasColumnType("int unsigned");
+
                     b.Property<int?>("MostPlayedEngagement")
                         .HasColumnType("int");
 
@@ -1890,6 +2008,9 @@ namespace UltimateMonopoly.Data.Migrations
                         .HasColumnType("int unsigned");
 
                     b.Property<uint>("SpentOnRepayingLoans")
+                        .HasColumnType("int unsigned");
+
+                    b.Property<uint>("SpentOnTurnTax")
                         .HasColumnType("int unsigned");
 
                     b.Property<uint>("SpentUnmortgaging")
@@ -2232,6 +2353,9 @@ namespace UltimateMonopoly.Data.Migrations
                         .HasColumnType("varchar(10240)");
 
                     b.Property<int>("Reason")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Resolution")
                         .HasColumnType("int");
 
                     b.Property<string>("RestoredById")

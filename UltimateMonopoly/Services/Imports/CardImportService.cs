@@ -99,22 +99,65 @@ public class CardImportService
             .FirstOrDefaultAsync(p => p.CardText.ToLower() == card.UniqueText.ToLower());
         if (persistedIds == null)
         {
-            var groupIdInput = card.Groups
-                .Select(g => new CardGroupIdInput((ushort)g.Actions.Count));
-            var conditionsCount = card.Conditions.Count;
-            persistedIds = new PersistedCardIds(card.UniqueText, groupIdInput, (ushort)conditionsCount);
+            //Create new one if not found
+            persistedIds = Create(card);
             add = true;
         }
 
+        //Deserialise the group ids and condition ids:
+        var (persistedGroups, persistedConditions) = GetGroupAndConditionIds(persistedIds);
+        var returnPersistedIds = persistedIds;
+        
+        //Try populate card model with persisted IDs:
+        var valid = TryPopulate(persistedIds.CardId, card, persistedGroups, persistedConditions);
+        if (valid) return add ? returnPersistedIds : null;
+        
+        //Remove persisted card ids if population failed, and re-add:
+        await _repos.GetRepository<PersistedCardIds>()
+            .DeleteAsync(persistedIds);
+        returnPersistedIds = Create(card);
+        add = true;
+            
+        //Deserialise the group ids and condition ids again with new persisted IDs model,
+        //Then try to populate card model with persisted IDs (throw on fail):
+        (persistedGroups, persistedConditions) = GetGroupAndConditionIds(returnPersistedIds);
+        valid = TryPopulate(returnPersistedIds.CardId, card, persistedGroups, persistedConditions);
+        return !valid 
+            ? throw new Exception("Could not test persisted card IDs") 
+            //Always return persisted IDs (if valid population):
+            : returnPersistedIds;
+    }
+
+
+    private PersistedCardIds Create(CardModel card)
+    {
+        var groupIdInput = card.Groups
+            .Select(g => new CardGroupIdInput((ushort)g.Actions.Count));
+        var conditionsCount = card.Conditions.Count;
+        return new PersistedCardIds(card.UniqueText, groupIdInput, (ushort)conditionsCount);
+    }
+
+    private (List<CardGroupIdJson> Groups, List<string> Conditions) GetGroupAndConditionIds(
+        PersistedCardIds persistedIds)
+    {
         //Deserialise the group IDs and their action IDs:
         var persistedGroups = JsonSerializer.Deserialize<List<CardGroupIdJson>>(persistedIds.GroupIdJson)
-            ?? throw new Exception("Could not deserialize persisted groups");
+                              ?? throw new Exception("Could not deserialize persisted groups");
         
+        //Deserialise the condition IDs:
+        var persistedConditions = JsonSerializer.Deserialize<List<string>>(persistedIds.ConditionIdJson)
+                                  ?? throw new Exception("Could not deserialize persisted conditions");
+        
+        return (persistedGroups, persistedConditions);
+    }
+    
+    private bool TryPopulate(string cardId, CardModel card, List<CardGroupIdJson> persistedGroups, List<string> persistedConditions)
+    {
         //Set card ID
-        card.CardId = persistedIds.CardId;
+        card.CardId = cardId;
         var index = 0;
-        if(card.Groups.Count != persistedGroups.Count)
-            throw new Exception("Group count mismatch");
+        if (card.Groups.Count != persistedGroups.Count)
+            return false;
         
         foreach (var g in card.Groups)
         {
@@ -128,8 +171,8 @@ public class CardImportService
             g.GroupKey = $"{CardDisplayHelper.GroupIdentifier}{index}"; 
             
             var actionIndex = 0;
-            if(g.Actions.Count != idObj.ActionIds.Length)
-                throw new Exception("Action count mismatch");
+            if (g.Actions.Count != idObj.ActionIds.Length)
+                return false;
             
             //Set action IDs
             foreach (var a in g.Actions)
@@ -140,14 +183,10 @@ public class CardImportService
             
             index++;
         }
-        
-        //Deserialise the condition IDs:
-        var persistedConditions = JsonSerializer.Deserialize<List<string>>(persistedIds.ConditionIdJson)
-            ?? throw new Exception("Could not deserialize persisted conditions");
 
         index = 0;
-        if(card.Conditions.Count != persistedConditions.Count)
-            throw new Exception("Condition count mismatch");
+        if (card.Conditions.Count != persistedConditions.Count)
+            return false;
         
         foreach (var c in card.Conditions)
         {
@@ -156,7 +195,7 @@ public class CardImportService
             c.ConditionId = pc;
             index++;
         }
-        
-        return add ? persistedIds : null;
+
+        return true;
     }
 }

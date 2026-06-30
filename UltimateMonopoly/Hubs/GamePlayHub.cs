@@ -270,6 +270,27 @@ public class GamePlayHub : GameBaseHub
     }
 
     /// <summary>
+    /// Ends the game now by declaring the highest-net-worth player the winner and bankrupting the
+    /// rest (host only). Enqueues on the single-writer executor →
+    /// <c>BankruptcyService.DeclareWinnerViaNetWorth</c>, whose final bankruptcy concludes the game
+    /// and the <c>GameCompleted</c> broadcast moves every client to the results page. Returns false
+    /// when not the host or the engine is unavailable.
+    /// </summary>
+    public async Task<bool> DeclareWinner()
+    {
+        var gameId = GetGameId();
+        if (string.IsNullOrEmpty(gameId) || string.IsNullOrEmpty(Context.UserIdentifier))
+            return false;
+
+        var engine = await _engineFactory.GetAsync(gameId);
+        if (engine.Cache.HostPlayerId != Context.UserIdentifier)
+            return false;
+
+        _gameService.EnqueueDeclareWinner(gameId, Context.UserIdentifier);
+        return true;
+    }
+
+    /// <summary>
     /// Forces every connected client to hard-reload and re-fetch the current live state
     /// (host only). Delegates to <see cref="GameService.ForceRefresh"/>, which broadcasts
     /// directly (off the pump) so it fires even while the engine is parked on a prompt.

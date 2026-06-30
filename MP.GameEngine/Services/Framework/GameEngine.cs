@@ -25,7 +25,7 @@ public sealed class GameEngine(GameCacheModel cache,
     /// Adds the provided rule code to the game engine's cache.
     /// </summary>
     /// <param name="code">The rule code to be added to the game cache.</param>
-    internal void CiteRule(RuleCode code)
+    public void CiteRule(RuleCode code)
     {
         //No-op if the code has already been cited.
         if(Cache.RuleCodes.Contains(code))

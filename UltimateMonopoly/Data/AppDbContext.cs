@@ -13,6 +13,7 @@ using JC.Github.Extensions;
 using JC.Github.Models;
 using JC.Identity.Data;
 using Microsoft.EntityFrameworkCore;
+using UltimateMonopoly.Areas.Admin.Models;
 using UltimateMonopoly.Models;
 using UltimateMonopoly.Models.DataModels;
 using UltimateMonopoly.Models.DataModels.Boards;
@@ -26,7 +27,11 @@ public class AppDbContext : IdentityDataDbContext<AppUser, AppRole>,
 {
     public AppDbContext(DbContextOptions<AppDbContext> options, IUserInfo userInfo)
         : base(options, userInfo) { }
+    
+    //Blocked Words
+    public DbSet<BlockedWord> BlockedWords { get; set; }
 
+    //Board Skins
     public DbSet<BoardSkin> BoardSkins { get; set; }
     public DbSet<BoardSkinSpace> BoardSkinSpaces { get; set; }
     public DbSet<SharedBoardSkin> SharedBoardSkins { get; set; }
@@ -41,13 +46,19 @@ public class AppDbContext : IdentityDataDbContext<AppUser, AppRole>,
     
     //Card IDs persistence
     public DbSet<PersistedCardIds> PersistedCardIds { get; set; }
+
+    //Dashboard — daily user-activity snapshots (trend history)
+    public DbSet<DailyActivityStat> DailyActivityStats { get; set; }
     
     // Social
     public DbSet<Friend> Friends { get; set; }
     public DbSet<FriendRequest> FriendRequests { get; set; }
     public DbSet<BlockedUser> BlockedUsers { get; set; }
     public DbSet<ReportedUser> ReportedUsers { get; set; }
-    
+
+    // Admin (the entity lives in the Admin area; the DbSet must sit on the one shared context)
+    public DbSet<AdminActionLog> AdminActionLogs { get; set; }
+
     // Github
     public DbSet<ReportedIssue> ReportedIssues { get; set; }
     public DbSet<IssueComment> IssueComments { get; set; }

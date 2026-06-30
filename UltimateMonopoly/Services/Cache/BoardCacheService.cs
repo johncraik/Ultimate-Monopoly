@@ -50,9 +50,9 @@ public class BoardCacheService
             : customBoards;
     }
 
-    public void Invalidate(string? userId = null)
+    public void Invalidate(string? userId = null, bool bypassAdminCheck = false)
     {
-        if (!string.IsNullOrEmpty(userId) && !_userInfo.IsInRole(SystemRoles.SystemAdmin))
+        if (!bypassAdminCheck && !string.IsNullOrEmpty(userId) && !_userInfo.IsInRole(SystemRoles.SystemAdmin))
             return;
         
         _memoryCache.Remove(GetKey(false, userId));

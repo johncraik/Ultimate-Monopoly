@@ -63,6 +63,7 @@ public interface IPromptProvider
         string body,
         TimeSpan? timeout = null,
         CardType? cardType = null,
+        bool playingCard = false,
         CancellationToken ct = default);
 
     /// <summary>

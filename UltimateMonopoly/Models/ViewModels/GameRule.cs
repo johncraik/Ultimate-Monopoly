@@ -13,6 +13,8 @@ public class GameRule
     public string Title { get; set; }
     public string RuleDescription { get; set; }
     public string RawRuleCode { get; set; }
+    
+    public bool IsHidden { get; set; }
 
     public string? RuleIdLink => RuleCode == null 
         ? null 

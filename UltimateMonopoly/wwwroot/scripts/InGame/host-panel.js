@@ -5,8 +5,7 @@
 // Each action confirms via its own Bootstrap modal; the modal's confirm button invokes the
 // matching GamePlayHub method (host-gated server-side). Draw Game enqueues the draw — the
 // engine concludes the game and the GameCompleted broadcast (game-play-hub.js) redirects
-// every client to the results page. Force Refresh / Cancel Game are scaffolded; their hub
-// methods are still TODO.
+// every client to the results page.
 (function () {
     'use strict';
 
@@ -85,6 +84,8 @@
 
     wire('drawGameConfirmModal', 'draw', 'DrawGame');
     wire('forceRefreshConfirmModal', 'force-refresh', 'ForceRefresh');
+    // Declare Winner — highest net worth wins, the rest are bankrupted (DeclareWinnerViaNetWorth).
+    wire('declareWinnerConfirmModal', 'declare-winner', 'DeclareWinner');
     // Cancel Game isn't wired here — its confirm button is a plain POST form to the Play page
     // (Cancel handler), which cancels server-side and broadcasts the redirect home.
 })();

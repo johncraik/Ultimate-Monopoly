@@ -148,8 +148,12 @@ public static class PromptValidator
         if (submittingUserId != prompt.PlayerId && submittingUserId != cache.HostPlayerId)
             return false;
 
-        //Play card choice can return NO selected option
-        return prompt.PlayCardChoice || prompt.Options.Any(o => o.Key == r.SelectedKey);
+        //A play-card choice may decline (empty key) OR pick one of the offered cards — but NOT an
+        //arbitrary key (M-01: the old `PlayCardChoice || …` accepted ANY key, letting a bogus response
+        //drive a card play). A mandatory choice (group pick / card steal) must name a real option.
+        return prompt.PlayCardChoice
+            ? string.IsNullOrEmpty(r.SelectedKey) || prompt.Options.Any(o => o.Key == r.SelectedKey)
+            : prompt.Options.Any(o => o.Key == r.SelectedKey);
     }
 
     /// <summary>
@@ -169,7 +173,12 @@ public static class PromptValidator
         if (submittingUserId != prompt.PlayerId && submittingUserId != cache.HostPlayerId)
             return false;
 
-        if (r.SelectedPlayerIds.Count != prompt.Count) return false;
+        // Required count is clamped to the eligible set so a caller asking for more targets
+        // than exist cannot make the prompt unsatisfiable (R-01). Uses Math.Min rather than
+        // "== Count || == eligible.Count" — the latter would also accept selecting *all*
+        // options when the caller only wanted a subset.
+        var required = Math.Min((int)prompt.Count, prompt.EligiblePlayerIds.Count);
+        if (r.SelectedPlayerIds.Count != required) return false;
         if (r.SelectedPlayerIds.Distinct().Count() != r.SelectedPlayerIds.Count) return false;
 
         var eligible = prompt.EligiblePlayerIds.ToHashSet();
@@ -194,7 +203,12 @@ public static class PromptValidator
         if (submittingUserId != prompt.PlayerId && submittingUserId != cache.HostPlayerId)
             return false;
 
-        if (r.SelectedBoardIndexes.Count != prompt.Count) return false;
+        // Required count is clamped to the eligible set so a caller asking for more properties
+        // than exist cannot make the prompt unsatisfiable (R-01). Uses Math.Min rather than
+        // "== Count || == eligible.Count" — the latter would also accept selecting *all*
+        // options when the caller only wanted a subset.
+        var required = Math.Min((int)prompt.Count, prompt.EligibleBoardIndexes.Count);
+        if (r.SelectedBoardIndexes.Count != required) return false;
         if (r.SelectedBoardIndexes.Distinct().Count() != r.SelectedBoardIndexes.Count) return false;
 
         var eligible = prompt.EligibleBoardIndexes.ToHashSet();

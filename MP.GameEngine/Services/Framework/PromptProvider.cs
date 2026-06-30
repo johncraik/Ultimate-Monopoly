@@ -62,7 +62,7 @@ public sealed class PromptProvider : IPromptProvider
     }
 
     public async Task<AcknowledgeResponse> Acknowledge(string playerId, string title, string body, TimeSpan? timeout = null,
-        CardType? cardType = null, CancellationToken ct = default)
+        CardType? cardType = null, bool playingCard = false, CancellationToken ct = default)
     {
         var promptId = Guid.NewGuid().ToString();
         timeout ??= TimeSpan.FromSeconds(30);
@@ -74,6 +74,7 @@ public sealed class PromptProvider : IPromptProvider
             Body = body,
             Timeout = timeout,
             CardType = cardType,
+            PlayingCard = playingCard,
             DefaultResponse = new AcknowledgeResponse { PromptId = promptId }
         }, ct);
     }

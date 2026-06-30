@@ -1,10 +1,12 @@
 using JC.Core.Models.Pagination;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using MP.GameEngine.Models.Boards;
 using MP.GameEngine.Models.Statistics;
 using UltimateMonopoly.Data;
 using UltimateMonopoly.Models.ViewModels.Social;
 using UltimateMonopoly.Services;
+using UltimateMonopoly.Services.Cache;
 using UltimateMonopoly.Services.Friends;
 using UltimateMonopoly.Services.Statistics;
 
@@ -17,15 +19,18 @@ public class IndexModel : PageModel
     private readonly ProfileService _profile;
     private readonly BlockAndReportService _blockAndReport;
     private readonly GameStatsService _gameStats;
+    private readonly BoardCacheService _boardCache;
 
     public IndexModel(
         ProfileService profile,
         BlockAndReportService blockAndReport,
-        GameStatsService gameStats)
+        GameStatsService gameStats,
+        BoardCacheService boardCache)
     {
         _profile = profile;
         _blockAndReport = blockAndReport;
         _gameStats = gameStats;
+        _boardCache = boardCache;
     }
 
     [BindProperty]
@@ -42,11 +47,14 @@ public class IndexModel : PageModel
     public PagedList<UserProfileViewModel>? BlockedUsers { get; private set; }
 
     public UserProfileViewModel? CurrentUser { get; private set; }
-    
-    public (PlayerStatRecord Stats, PlayerStatRecord? Comparission)? AvgStats { get; private set; }
-    public (PlayerStatRecord Stats, PlayerStatRecord? Comparission)? MinStats { get; private set; }
-    public (PlayerStatRecord Stats, PlayerStatRecord? Comparission)? MaxStats { get; private set; }
-    public (PlayerStatRecord Stats, PlayerStatRecord? Comparission)? TotalStats { get; private set; }
+
+    /// <summary>Whether the current user is hidden from non-friends (E2). Drives the profile privacy toggle.</summary>
+    public bool IsHidden { get; private set; }
+
+    public (PlayerStatRecord Stats, PlayerStatRecord? Comparission, Board board)? AvgStats { get; private set; }
+    public (PlayerStatRecord Stats, PlayerStatRecord? Comparission, Board board)? MinStats { get; private set; }
+    public (PlayerStatRecord Stats, PlayerStatRecord? Comparission, Board board)? MaxStats { get; private set; }
+    public (PlayerStatRecord Stats, PlayerStatRecord? Comparission, Board board)? TotalStats { get; private set; }
     
 
     [TempData] public string? StatusMessage { get; set; }
@@ -61,16 +69,30 @@ public class IndexModel : PageModel
         AvailableImageNames = _profile.GetAvailableAvatarImageNames();
         CurrentUser = await _profile.GetCurrentUserProfileViewModelAsync();
         
+        var board = await _boardCache.GetDefaultBoard();
         if(CurrentUser is not null)
         {
-            AvgStats = await _gameStats.GetPlayerAvgStatistics(CurrentUser.UserId);
-            MinStats = await _gameStats.GetPlayerMinStatistics(CurrentUser.UserId);
-            MaxStats = await _gameStats.GetPlayerMaxStatistics(CurrentUser.UserId);
-            TotalStats = await _gameStats.GetPlayerTotalStatistics(CurrentUser.UserId);
+            var avg = await _gameStats.GetPlayerAvgStatistics(CurrentUser.UserId);
+            if(avg.HasValue)
+                AvgStats = (avg.Value.AllGames, avg.Value.Comparision, board);
+            
+            var min = await _gameStats.GetPlayerMinStatistics(CurrentUser.UserId);
+            if(min.HasValue)
+                MinStats = (min.Value.AllGames, min.Value.Comparision, board);
+            
+            var max = await _gameStats.GetPlayerMaxStatistics(CurrentUser.UserId);
+            if(max.HasValue)
+                MaxStats = (max.Value.AllGames, max.Value.Comparision, board);
+            
+            var total = await _gameStats.GetPlayerTotalStatistics(CurrentUser.UserId);
+            if(total.HasValue)
+                TotalStats = (total.Value.AllGames, total.Value.Comparision, board);
         }
 
         if (PageNumber < 1) PageNumber = 1;
         BlockedUsers = await _blockAndReport.GetBlockedUsers(PageNumber, BlockedPageSize);
+
+        IsHidden = await _profile.IsHidden();
     }
 
     public async Task<IActionResult> OnPostAsync()
@@ -118,6 +140,21 @@ public class IndexModel : PageModel
         StatusMessage = ok ? "User unblocked." : "Could not unblock user.";
         StatusKind = ok ? "success" : "danger";
         return RedirectToPage(new { tab = "blocked" });
+    }
+
+    public async Task<IActionResult> OnPostToggleVisibilityAsync()
+    {
+        var hidden = await _profile.IsHidden();
+        var ok = hidden ? await _profile.TryUnhideUser() : await _profile.TryHideUser();
+
+        StatusMessage = ok
+            ? (hidden
+                ? "Your profile is now public — everyone can see your name on the leaderboard."
+                : "Your profile is now private — only you and your friends can see your name on the leaderboard.")
+            : "Could not update your profile visibility.";
+        StatusKind = ok ? "success" : "danger";
+
+        return RedirectToPage(new { tab = "stats" });
     }
 
     public IActionResult OnGetAvatarImage(string name)

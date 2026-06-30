@@ -1,0 +1,65 @@
+@model UltimateMonopoly.Areas.Admin.Models.ViewModels.RuleTableModel
+@using JC.Core.Extensions
+@using UltimateMonopoly.Helpers
+@{
+    var groups = Model.Rules.GroupBy(r => r.Section).ToList();
+}
+
+<div class="d-flex align-items-center justify-content-between mb-2">
+    <span class="small text-body-secondary">@Model.Rules.Count.ToString("N0") rule(s)</span>
+</div>
+
+@if (groups.Count == 0)
+{
+    <div class="text-center text-body-secondary py-4">No rules match your search.</div>
+}
+else
+{
+    foreach (var group in groups)
+    {
+        var section = PageRulesHelper.GetSection(group.Key);
+        <div class="mb-4">
+            <h2 class="h6 text-body-secondary text-uppercase mb-2">
+                <span class="badge text-bg-secondary me-2">@group.Key</span>@(section?.Section ?? $"Section {group.Key}")
+            </h2>
+            <div class="table-responsive">
+                <table class="table table-hover table-sm align-middle admin-users-table admin-rules-table mb-0">
+                    <thead>
+                        <tr class="text-body-secondary small text-uppercase">
+                            <th class="rule-col-section">Section</th>
+                            <th class="rule-col-rule">Rule</th>
+                            <th class="rule-col-point">Point</th>
+                            <th>Title</th>
+                            <th>Description</th>
+                            <th class="rule-col-code">Rule Code</th>
+                            <th class="rule-col-hidden text-center">Hidden</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var r in group)
+                        {
+                            <tr data-href="/Admin/Rules/Details/@r.Section/@r.Rule@(r.Point is null ? "" : $"/{r.Point}")">
+                                <td class="rule-col-section">@r.Section</td>
+                                <td class="rule-col-rule">@r.Rule</td>
+                                <td class="rule-col-point">@(r.Point?.ToString() ?? "—")</td>
+                                <td class="fw-semibold">@r.Title</td>
+                                <td><span title="@r.RuleDescription">@r.RuleDescription.Truncate(50, "...")</span></td>
+                                <td class="rule-col-code">@(r.RuleCode?.ToDisplayName() ?? "None")</td>
+                                <td class="rule-col-hidden text-center">
+                                    @if (r.IsHidden)
+                                    {
+                                        <i class="bi bi-eye-slash-fill text-warning" title="Hidden"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-eye text-body-secondary" title="Visible"></i>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+}

@@ -1,0 +1,98 @@
+@using JC.Core.Extensions
+@using UltimateMonopoly.Areas.Admin.Models.ViewModels.Logs
+@model UltimateMonopoly.Areas.Admin.Models.ViewModels.Logs.NotificationTableModel
+@{
+    var hrefFormat = $"?Search={Uri.EscapeDataString(Model.Search ?? "")}" +
+                     $"&Type={Model.Type}&Read={Model.Read}&Status={Model.Status}&pageNumber={{0}}";
+}
+
+<div class="d-flex align-items-center justify-content-between mb-2">
+    <span class="small text-body-secondary">Showing @Model.Notifications.Count.ToString("N0") of @Model.Notifications.TotalCount.ToString("N0") notification(s)</span>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-hover table-sm align-middle admin-audit-table mb-0">
+        <thead>
+            <tr class="text-body-secondary small text-uppercase">
+                <th class="admin-id-col">Notification ID</th>
+                <th>Type</th>
+                <th>Title</th>
+                <th class="text-center">State</th>
+                <th>Created</th>
+                <th>When</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.Notifications.Count == 0)
+            {
+                <tr><td colspan="6" class="text-center text-body-secondary py-4">No notifications match.</td></tr>
+            }
+            else
+            {
+                foreach (var n in Model.Notifications)
+                {
+                    var detailId = $"notif-{n.NotificationId}";
+                    @* Click the row to toggle its detail row (independent collapse). No data-href, so
+                       clickable-rows.js leaves it alone. *@
+                    <tr class="audit-row" role="button" data-bs-toggle="collapse" data-bs-target="#@detailId" aria-expanded="false" aria-controls="@detailId">
+                        <td class="admin-id-col">
+                            <code class="user-id-copy" role="button" title="@n.NotificationId" data-copy="@n.NotificationId">@n.NotificationId.Truncate(8, "…")</code>
+                        </td>
+                        <td class="text-nowrap"><i class="bi @n.IconClass text-@n.ColourClass me-1"></i>@n.TypeDisplay</td>
+                        <td><span title="@n.Title">@n.Title.Truncate(40, "…")</span></td>
+                        <td class="text-center text-nowrap">
+                            @if (n.IsRead)
+                            {
+                                <span class="badge rounded-pill text-bg-success">Read</span>
+                            }
+                            else
+                            {
+                                <span class="badge rounded-pill text-bg-secondary">Unread</span>
+                            }
+                            @if (n.IsDismissed)
+                            {
+                                <span class="badge rounded-pill text-bg-warning">Dismissed</span>
+                            }
+                            @if (n.IsExpired)
+                            {
+                                <span class="badge rounded-pill text-bg-danger">Expired</span>
+                            }
+                        </td>
+                        <td>@n.CreatedDate</td>
+                        <td class="text-body-secondary">@n.RelativeDate</td>
+                    </tr>
+                    @* Detail row — the notification body, key metadata, and its read/unread log history
+                       (the scoped _NotificationLogsTable, scrollable). *@
+                    <tr class="audit-detail">
+                        <td colspan="6" class="p-0 border-0">
+                            <div id="@detailId" class="collapse">
+                                <div class="bg-body-tertiary p-3">
+                                    <div class="small text-body-secondary text-uppercase mb-1">Body</div>
+                                    <div class="mb-2">@n.Body</div>
+
+                                    <div class="d-flex flex-wrap gap-3 small text-body-secondary mb-3">
+                                        @if (n.ReadAt != null) { <span><i class="bi bi-envelope-open me-1"></i>Read @n.ReadAt</span> }
+                                        @if (n.ExpiresAt != null) { <span><i class="bi bi-hourglass-split me-1"></i>Expires @n.ExpiresAt</span> }
+                                        @if (!string.IsNullOrEmpty(n.UrlLink)) { <span><i class="bi bi-link-45deg me-1"></i><code>@n.UrlLink</code></span> }
+                                    </div>
+
+                                    <div class="small text-body-secondary text-uppercase mb-2">Read / unread log</div>
+                                    <div class="admin-notif-logs">
+                                        <partial name="~/Areas/Admin/Pages/Logs/Notifications/_NotificationLogsTable.cshtml" model="new NotificationLogTableModel(n.Logs)" />
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+@if (!Model.Preview)
+{
+    <div class="mt-3 d-flex justify-content-center">
+        <pagination model="Model.Notifications" href-format="@hrefFormat" />
+    </div>
+}

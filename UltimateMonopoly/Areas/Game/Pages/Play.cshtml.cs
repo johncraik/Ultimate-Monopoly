@@ -3,17 +3,11 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using MP.GameEngine.Abstractions;
 using MP.GameEngine.Enums.Games;
-using MP.GameEngine.Models;
 using MP.GameEngine.Services.Framework;
 using UltimateMonopoly.Services.Games;
 
 namespace UltimateMonopoly.Areas.Game.Pages;
 
-/// <summary>
-/// Host / tablet in-game view (<c>/Game/Play/{gameId}</c>). First load pulls the
-/// whole game state straight from the engine cache; live updates will arrive over
-/// SignalR (the game-play hub) once that layer is wired — see the page's TODO.
-/// </summary>
 public class PlayModel : PageModel
 {
     private readonly IGameEngineFactory _engineFactory;

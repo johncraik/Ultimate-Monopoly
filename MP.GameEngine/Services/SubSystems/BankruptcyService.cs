@@ -1,7 +1,9 @@
 using MP.GameEngine.Abstractions;
+using MP.GameEngine.Abstractions.Cards;
 using MP.GameEngine.Enums;
 using MP.GameEngine.Models.EventReceipts;
 using MP.GameEngine.Models.Snapshot;
+using MP.GameEngine.Services.Statistics;
 
 namespace MP.GameEngine.Services.SubSystems;
 
@@ -11,16 +13,19 @@ public class BankruptcyService
     private readonly TransactionService _transactionService;
     private readonly PropertyTransferService _propertyTransferService;
     private readonly PropertyService _propertyService;
+    private readonly ICardCacheService _cacheService;
 
     public BankruptcyService(IGameCompletionService completionService,
         TransactionService transactionService,
         PropertyTransferService propertyTransferService,
-        PropertyService propertyService)
+        PropertyService propertyService,
+        ICardCacheService cacheService)
     {
         _completionService = completionService;
         _transactionService = transactionService;
         _propertyTransferService = propertyTransferService;
         _propertyService = propertyService;
+        _cacheService = cacheService;
     }
 
     public async Task DeclareBankruptcyFromShortfall(Framework.GameEngine engine, PlayerModel player, uint bankruptAmount, 
@@ -57,7 +62,7 @@ public class BankruptcyService
     }
 
 
-    public async Task DeclareBankruptcy(Framework.GameEngine engine, string playerId, CancellationToken ct)
+    public async Task DeclareBankruptcy(Framework.GameEngine engine, string playerId, CancellationToken ct, bool force = false)
     {
         var player = engine.Cache.Game.GetPlayer(playerId);
         if (player == null) return; //Already bankrupt
@@ -69,13 +74,48 @@ public class BankruptcyService
             PlayerBalance = player.Money
         });
         
-        await ProcessBankruptcy(engine, player, ct);
+        await ProcessBankruptcy(engine, player, ct, force);
     }
     
-    private async Task ProcessBankruptcy(Framework.GameEngine engine, PlayerModel player, CancellationToken ct)
+    public async Task<bool> DeclareWinnerViaNetWorth(Framework.GameEngine engine, CancellationToken ct)
     {
-        _ = await engine.PromptProvider.Acknowledge(player.PlayerId, "Bankruptcy", 
-            "You have declared bankruptcy.", timeout: TimeSpan.FromSeconds(30), ct: ct);
+        var netWorthDictionary = new Dictionary<string, long>();
+        foreach (var player in engine.Cache.Game.GetPlayers(excludePovPlayer: false))
+        {
+            //Loops only NON-BANKRUPTED players (already bankrupted cannot win)
+            var netWorth = StatisticsOrchestrator.CalculateNetWorth(player, engine.Cache.Game, engine.Cache.Board, engine.Cache.RoundingRule);
+            netWorthDictionary.Add(player.PlayerId, netWorth);
+        }
+        
+        if(netWorthDictionary.Count <= 1)
+            return false;
+        
+        var winnerId = netWorthDictionary.MaxBy(n => n.Value).Key;
+        var bankrupted = netWorthDictionary
+            .Where(n => n.Key != winnerId)
+            .OrderBy(n => n.Value)
+            .Select(n => n.Key)
+            .ToList();
+        
+        if(bankrupted.Count == 0)
+            return false;
+        
+        foreach (var playerId in bankrupted)
+        {
+            //Declare bankruptcy for each player
+            //Last player to be bankrupted will declare winner
+            await DeclareBankruptcy(engine, playerId, ct, true);
+        }
+        
+        return true;
+    }
+    
+    
+    private async Task ProcessBankruptcy(Framework.GameEngine engine, PlayerModel player, CancellationToken ct, bool force = false)
+    {
+        if(!force)
+            _ = await engine.PromptProvider.Acknowledge(player.PlayerId, "Bankruptcy", 
+                "You have declared bankruptcy.", timeout: TimeSpan.FromSeconds(30), ct: ct);
         
         var currentPlayer = engine.Cache.Game.CurrentPlayer();
         player.IsBankrupt = true;
@@ -84,18 +124,12 @@ public class BankruptcyService
         _propertyService.NormaliseProperties(engine);
         
         //Hand back all cards:
-        foreach (var card in player.Cards)
+        foreach (var card in await player.GetCards(_cacheService))
         {
-            //Reset card groups:
-            foreach (var g in card.Groups)
-            {
-                g.TurnsRemaining = g.TurnsActive;
-                g.IsChosenGroup = false;
-            }
             engine.Cache.Game.CardDecks.HandBack(card.CardType, card);
         }
         //Empty list:
-        player.Cards.Clear();
+        player.CardInstances.Clear();
         
         engine.CiteRule(RuleCode.Bankruptcy_Declared);
         engine.CiteRule(RuleCode.Bankruptcy_AssetsToBank);
@@ -115,8 +149,9 @@ public class BankruptcyService
         }
         
         engine.CiteRule(RuleCode.Bankruptcy_LastPlayerWins);
-        _ = await engine.PromptProvider.Acknowledge(otherPlayers[0].PlayerId, "Winner!",
-            "You are the last player remaining in the game!", timeout: TimeSpan.FromSeconds(30), ct: ct);
+        if(!force)
+            _ = await engine.PromptProvider.Acknowledge(otherPlayers[0].PlayerId, "Winner!",
+                "You are the last player remaining in the game!", timeout: TimeSpan.FromSeconds(30), ct: ct);
         
         //Only one non-bankrupted player remains, game complete:
         await engine.TurnStateProvider.TransitionToFinalTurn();

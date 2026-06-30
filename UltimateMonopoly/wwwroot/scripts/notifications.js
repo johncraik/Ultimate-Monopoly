@@ -59,20 +59,30 @@
             return;
         }
 
-        // Link click inside a notification — mark as read via TryMarkAsReadAsync.
-        // Fire as keepalive so the request survives navigation. Don't preventDefault.
+        // Link click inside a notification — mark as read FIRST, then navigate, so the destination
+        // page's server-rendered bell reflects the read. Previously the read POST was fired as
+        // keepalive alongside the browser's own navigation, so the two raced: the new page usually
+        // rendered (re-reading NotificationCache) before the read committed, leaving the notification
+        // unread until an F5. Awaiting the read before navigating removes that race.
         const link = e.target.closest('[data-notification-id] a[href]');
         if (link) {
+            e.preventDefault();
+
             const id = link.closest('[data-notification-id]')?.dataset.notificationId;
-            if (id) {
-                try {
-                    fetch(`/api/notifications/${encodeURIComponent(id)}/read`, {
-                        method: 'POST',
-                        headers: buildHeaders(),
-                        keepalive: true
-                    }).catch(() => { });
-                } catch { /* swallow — navigation continues */ }
-            }
+            const href = link.getAttribute('href');
+            if (!href) return;
+
+            // No id (shouldn't happen) — just navigate.
+            if (!id) { window.location.assign(href); return; }
+
+            try {
+                await fetch(`/api/notifications/${encodeURIComponent(id)}/read`, {
+                    method: 'POST',
+                    headers: buildHeaders()
+                });
+            } catch { /* fall through — navigate regardless so the user is never trapped */ }
+
+            window.location.assign(href);
         }
     });
 })();

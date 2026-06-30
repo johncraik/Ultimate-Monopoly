@@ -56,8 +56,10 @@ public class PurgingService
     {
         //The OWNER's built-on properties are the eligible set; the CHOOSER (the holder, or the owner for a
         //self-purge) is the one prompted to pick — never the opponent whose property is being purged.
+        //A property MAY be purged again: once a previously-purged property is rebuilt it has buildings to
+        //strip, so it re-enters the eligible set. BuiltOnProperties already requires current buildings
+        //(RentLevel ONE_HOUSE..DOUBLE_HOTEL), which is the only eligibility gate.
         var eligibleProps = engine.Cache.Game.BuiltOnProperties(owner.PlayerId);
-        eligibleProps = eligibleProps.Where(p => !p.HasBeenPurged).ToList();
         if (eligibleProps.Count == 0)
         {
             _ = await engine.PromptProvider.Acknowledge(chooser.PlayerId, "No Properties to Purge",
@@ -67,13 +69,19 @@ public class PurgingService
             return;
         }
 
+        //Clamp the request to what's actually purgeable: a "purge 2" card against a single
+        //eligible property must ask for 1, not 2 — otherwise the prompt is unsatisfiable and
+        //the game locks (R-01). The prompt clamps Count itself, but the title/body are built
+        //here, so they must reflect the clamped count too.
+        var pick = (ushort)Math.Min((int)propCount, eligibleProps.Count);
+
         var response = await engine.PromptProvider.RequestAsync(new TargetPropertyPrompt
         {
             PlayerId = chooser.PlayerId,
-            Title = propCount == 1 ? "Purge a Property" : "Purge Properties",
-            Body = propCount == 1 ? "Which property would you like to purge?" : $"Which {propCount} properties would you like to purge?",
+            Title = pick == 1 ? "Purge a Property" : "Purge Properties",
+            Body = pick == 1 ? "Which property would you like to purge?" : $"Which {pick} properties would you like to purge?",
             EligibleBoardIndexes = eligibleProps.Select(p => p.BoardIndex).ToList(),
-            Count = propCount
+            Count = pick
         }, ct: ct);
 
         if(response.SelectedBoardIndexes.Count == 0)
@@ -86,8 +94,8 @@ public class PurgingService
         PurgeProperties(engine, owner, response.SelectedBoardIndexes.ToList());
 
         _ = await engine.PromptProvider.Acknowledge(chooser.PlayerId,
-             propCount == 1 ? "Property Purged" : "Properties Purged",
-             propCount == 1 ? "Property has been purged" : "Properties have been purged", ct: ct);
+             pick == 1 ? "Property Purged" : "Properties Purged",
+             pick == 1 ? "Property has been purged" : "Properties have been purged", ct: ct);
     }
 
     
@@ -98,11 +106,18 @@ public class PurgingService
             var property = engine.Cache.Game.GetPropertySpace(index);
             if(property is null)
                 throw new InvalidOperationException("Property not found");
-            
+
+            //Nothing to purge on a property with no buildings — purging strips buildings, so a
+            //property already at SINGLE/SET is at its floor. Marking it IsPurged would wrongly block
+            //the whole set from being built on (the even-building rule) and emit a spurious purge
+            //receipt (R-05: a swapped 0-house set was "purged" with nothing to strip). The card-purge
+            //path only ever passes built-on properties; SwapSet passes the whole set, so guard here.
+            if(!property.BuiltOn())
+                continue;
+
             property.IsPurged = true;
-            property.HasBeenPurged = true;
             property.RentLevel = RentLevel.SET;
-            
+
             engine.EventEmitter.Emit(new PropertyPurgedReceipt
             {
                 PlayerId = player.PlayerId,

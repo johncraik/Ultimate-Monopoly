@@ -23,8 +23,20 @@ public sealed class TargetPlayerPrompt : Prompt<TargetPlayerResponse>
     /// <summary>The candidate set the chooser must pick from. The engine populates this per context.</summary>
     public IReadOnlyList<string> EligiblePlayerIds { get; init; } = [];
 
-    /// <summary>How many players must be selected. Fixed by the caller — not a range.</summary>
-    public ushort Count { get; init; }
+    private readonly ushort _count;
+
+    /// <summary>
+    /// How many players must be selected. Fixed by the caller — not a range — but
+    /// <b>clamped to the size of <see cref="EligiblePlayerIds"/></b>: a caller can never
+    /// require more selections than there are options, which would make the prompt
+    /// unsatisfiable and lock the game. The clamped value is what both the client submit
+    /// gate and <c>PromptValidator</c> enforce, so they stay in lockstep.
+    /// </summary>
+    public ushort Count
+    {
+        get => (ushort)Math.Min(_count, EligiblePlayerIds.Count);
+        init => _count = value;
+    }
 
     public override PromptTarget Target => PromptTarget.SinglePlayer(PlayerId);
 }

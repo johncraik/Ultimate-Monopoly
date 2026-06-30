@@ -1,7 +1,6 @@
 bin/
 obj/
 /packages/
-/pckg-docs/
 riderModule.iml
 /_ReSharper.Caches/
 node_modules/

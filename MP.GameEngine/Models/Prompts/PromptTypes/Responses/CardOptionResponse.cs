@@ -7,7 +7,5 @@ namespace MP.GameEngine.Models.Prompts.PromptTypes.Responses;
 /// </summary>
 public sealed class CardOptionResponse : PromptResponse
 {
-    //TODO: This may change when card framework is implemented
-    
     public string SelectedKey { get; init; } = "";
 }

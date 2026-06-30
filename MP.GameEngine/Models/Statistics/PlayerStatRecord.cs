@@ -67,6 +67,9 @@ public class PlayerStatRecord : AuditModel
     /// <summary>Sum of the amount of money spent unmortgaging properties</summary>
     public uint SpentUnmortgaging { get; set; }
     
+    /// <summary>Sum of the amount of money spent on turn tax</summary>
+    public uint SpentOnTurnTax { get; set; }
+    
     /// <summary>Sum of the amount of money spent paying fines</summary>
     public uint SpentOnFines { get; set; }
     
@@ -219,7 +222,12 @@ public class PlayerStatRecord : AuditModel
     
     /// <summary>The board index of the space the player landed on the most times</summary>
     public ushort MostLandedOnBoardIndex { get; set; }
-    
+
+    /// <summary>How many times the player landed on their most-landed-on space (<see cref="MostLandedOnBoardIndex"/>).
+    /// In the cross-game aggregate this is a plain numeric (avg/min/max of each game's most-landed count),
+    /// deliberately decoupled from the aggregated index — consistent with the other numeric movement stats.</summary>
+    public uint MostLandedOnBoardIndexCount { get; set; }
+
     /// <summary>The total number of times the player landed on GO</summary>
     public uint TimesLandedOnGo { get; set; }
     
@@ -503,6 +511,14 @@ public class PlayerStatRecord : AuditModel
             StatisticView.Min => (records.MinBy(x => x.SpentUnmortgaging)?.SpentUnmortgaging ?? 0),
             StatisticView.Max => (records.MaxBy(x => x.SpentUnmortgaging)?.SpentUnmortgaging ?? 0),
             StatisticView.Total => (uint)records.Sum(x => x.SpentUnmortgaging),
+            _ => throw new ArgumentOutOfRangeException(nameof(statisticView), statisticView, null)
+        };
+        SpentOnTurnTax = statisticView switch
+        {
+            StatisticView.Average => (uint)Math.Round(records.Average(x => x.SpentOnTurnTax), MidpointRounding.AwayFromZero),
+            StatisticView.Min => (records.MinBy(x => x.SpentOnTurnTax)?.SpentOnTurnTax ?? 0),
+            StatisticView.Max => (records.MaxBy(x => x.SpentOnTurnTax)?.SpentOnTurnTax ?? 0),
+            StatisticView.Total => (uint)records.Sum(x => x.SpentOnTurnTax),
             _ => throw new ArgumentOutOfRangeException(nameof(statisticView), statisticView, null)
         };
         SpentOnFines = statisticView switch
@@ -846,6 +862,14 @@ public class PlayerStatRecord : AuditModel
             //Board index — a "most landed on" categorical: most common space across games (least common for Min).
             StatisticView.Average or StatisticView.Max or StatisticView.Total => MathHelper.Mode(records.Select(x => x.MostLandedOnBoardIndex)),
             StatisticView.Min => MathHelper.LeastCommon(records.Select(x => x.MostLandedOnBoardIndex)),
+            _ => throw new ArgumentOutOfRangeException(nameof(statisticView), statisticView, null)
+        };
+        //Plain numeric (mirrors TimesLandedOnGo): the count aggregates independently of the mode index above.
+        MostLandedOnBoardIndexCount = statisticView switch
+        {
+            StatisticView.Average or StatisticView.Total => (uint)Math.Round(records.Average(x => x.MostLandedOnBoardIndexCount), MidpointRounding.AwayFromZero),
+            StatisticView.Min => (records.MinBy(x => x.MostLandedOnBoardIndexCount)?.MostLandedOnBoardIndexCount ?? 0),
+            StatisticView.Max => (records.MaxBy(x => x.MostLandedOnBoardIndexCount)?.MostLandedOnBoardIndexCount ?? 0),
             _ => throw new ArgumentOutOfRangeException(nameof(statisticView), statisticView, null)
         };
         TimesLandedOnGo = statisticView switch

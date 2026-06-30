@@ -70,7 +70,9 @@ public class CompareModel : PageModel
         GameName = game.Name;
         RoundingRule = game.RoundingRule.GetDescription();
         BoardName = string.IsNullOrEmpty(game.BoardId) ? "Default Board" : game.BoardSkin?.Name ?? "Default Board";
-        Board = await _boardCache.GetDefaultBoard();
+        var board = await _boardCache.GetAllBoards();
+        Board = board.FirstOrDefault(b => b.BoardId == game.BoardId) 
+                ?? board.First(b => b.BoardId == null); //Default always included
 
         var me = _userInfo.UserId;
         foreach (var gp in game.Players.OrderBy(p => p.OrderId))

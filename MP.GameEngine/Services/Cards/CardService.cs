@@ -6,6 +6,7 @@ using MP.GameEngine.Models.EventReceipts;
 using MP.GameEngine.Models.Prompts.PromptTypes;
 using MP.GameEngine.Models.Snapshot;
 using MP.GameEngine.Models.Snapshot.Cards;
+using MP.GameEngine.Services.SubSystems;
 
 namespace MP.GameEngine.Services.Cards;
 
@@ -18,6 +19,7 @@ namespace MP.GameEngine.Services.Cards;
 /// </summary>
 public class CardService
 {
+    private readonly ICardCacheService _cacheService;
     private readonly ICardActionService<MoneyAction> _moneyActionService;
     private readonly ICardActionService<MovementAction> _movementActionService;
     private readonly ICardActionService<JailAction> _jailActionService;
@@ -31,12 +33,16 @@ public class CardService
     private readonly ICardActionService<DiceAction> _diceActionService;
     private readonly ICardActionService<NoOpAction> _noOpActionService;
     private readonly ICardActionService<CardTransferAction> _cardTransferActionService;
+    private readonly PropertyService _propertyService;
 
     /// <summary>
     /// Creates the card interpreter over the per-action handlers it dispatches to
     /// (one <see cref="ICardActionService{T}"/> per concrete <see cref="CardAction"/> type).
+    /// <paramref name="propertyService"/> is used to re-normalise rent levels once a card has
+    /// resolved (cards move title without each action re-normalising — see <see cref="ResolveCard"/>).
     /// </summary>
-    public CardService(ICardActionService<MoneyAction> moneyActionService,
+    public CardService(ICardCacheService cacheService,
+        ICardActionService<MoneyAction> moneyActionService,
         ICardActionService<MovementAction> movementActionService,
         ICardActionService<JailAction> jailActionService,
         ICardActionService<TurnsAction> turnsActionService,
@@ -48,8 +54,10 @@ public class CardService
         ICardActionService<DeckDrawAction> deckDrawActionService,
         ICardActionService<DiceAction> diceActionService,
         ICardActionService<NoOpAction> noOpActionService,
-        ICardActionService<CardTransferAction> cardTransferActionService)
+        ICardActionService<CardTransferAction> cardTransferActionService,
+        PropertyService propertyService)
     {
+        _cacheService = cacheService;
         _moneyActionService = moneyActionService;
         _movementActionService = movementActionService;
         _jailActionService = jailActionService;
@@ -63,6 +71,7 @@ public class CardService
         _diceActionService = diceActionService;
         _noOpActionService = noOpActionService;
         _cardTransferActionService = cardTransferActionService;
+        _propertyService = propertyService;
     }
 
 
@@ -77,7 +86,7 @@ public class CardService
     /// </summary>
     public async Task<SuppressDefault> DrawCard(Framework.GameEngine engine, PlayerModel player, CardType type, CancellationToken ct, CardActionContext? context = null)
     {
-        var card = engine.Cache.Game.CardDecks.Take(type);
+        var card = await engine.Cache.Game.CardDecks.Take(_cacheService, type);
         if (card is null)
             //Empty deck — nothing to draw.
             return new SuppressDefault(SuppressDefaultType.None);
@@ -103,7 +112,7 @@ public class CardService
         //Stamp the turn the card entered the hand so an OnNextMove card can't fire on the move that drew it
         //("after your NEXT move") — MatchingCardForTrigger gates OnNextMove on a later turn number.
         card.DrawnOnTurn = engine.Cache.Game.Metadata.TurnNumber;
-        player.Cards.Add(card);
+        player.CardInstances.Add(new PlayerCardInstance(card));
         engine.EventEmitter.Emit(new CardTakenReceipt(card, engine.Cache, player.PlayerId));
         return new SuppressDefault(SuppressDefaultType.None);
     }
@@ -124,7 +133,9 @@ public class CardService
         //trigger while those actions run. Without this an "advance N" card loops forever: its move
         //re-resolves the landed space (ResolveLandedSpace), which re-fires OnSpaceLand, which finds the
         //still-held card and plays it again. Re-added below if the play is rejected or it's multi-use.
-        player.Cards.Remove(card);
+        var instance = player.CardInstances.FirstOrDefault(i => i.CardId == card.CardId);
+        if(instance == null) throw new InvalidOperationException("Played a card that isn't in the player's hand.");
+        player.CardInstances.Remove(instance);
 
         var applied = await ResolveCard(engine, player, card, ct, context);
         var chosenGroup = card.Groups.FirstOrDefault(g => g.IsChosenGroup);
@@ -134,9 +145,12 @@ public class CardService
             //The play didn't take effect (e.g. a jail release blocked by a card lock) — return the card
             //to the player's hand, untouched, so they can try again. Undo the chosen-group mark.
             if (chosenGroup is not null)
+            {
                 chosenGroup.IsChosenGroup = false;
+                instance.UpdateInstance(card, chosenGroup);
+            }
             //Re-add at index 0: cards are drawn from the front, so a returned card goes back to the front.
-            player.Cards.Insert(0, card);
+            player.CardInstances.Insert(0, instance);
             return new SuppressDefault(SuppressDefaultType.None);
         }
 
@@ -149,15 +163,10 @@ public class CardService
             //stays the first match on the next trigger (keeps firing until spent, rather than flip-flopping with
             //a sibling multi-use card that was appended after it).
             chosenGroup.TurnsRemaining--;
-            player.Cards.Insert(0, card);
+            instance.UpdateInstance(card, chosenGroup);
+            
+            player.CardInstances.Insert(0, instance);
             return card.SuppressDefault;
-        }
-
-        //Reset chosen group and turns remaining
-        foreach (var g in card.Groups)
-        {
-            g.IsChosenGroup = false;
-            g.TurnsRemaining = g.TurnsActive;
         }
 
         //Spent — already removed from the hand above; return it to the back of its deck.
@@ -209,6 +218,14 @@ public class CardService
         var applied = true;
         foreach (var action in group.Actions)
             applied &= await ApplyAction(engine, player, action, ct, context);
+
+        //Re-normalise rent levels once the card's actions have all run. Property card actions move
+        //title (return / take / hand-in / receive-all / clear-FP) without each one re-normalising, so a
+        //set completed or broken by a card would otherwise leave properties at the wrong RentLevel
+        //(e.g. SINGLE instead of SET), which then trips "build on set" (R-04). One recompute at the
+        //resolution boundary covers every property-affecting action and multi-action card uniformly —
+        //including the multiple cards resolved in a trigger chain (each funnels through here).
+        _propertyService.NormaliseProperties(engine);
 
         //A play that didn't take effect isn't "played" — no receipt, and PlayCard keeps the card.
         if (applied)

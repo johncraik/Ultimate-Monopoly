@@ -1,0 +1,349 @@
+@page "{gameId}"
+@model UltimateMonopoly.Areas.Admin.Pages.Games.DetailsModel
+@using JC.Core.Extensions
+@using MP.GameEngine.Enums.Games
+@using UltimateMonopoly.Helpers
+@{
+    ViewData["Title"] = "Game Details";
+    var d = Model.Detail;
+    var g = d.Game;
+    var state = g.State;
+
+    string StateBadge(GameState s) => s switch
+    {
+        GameState.Setup => "text-bg-secondary",
+        GameState.InPlay => "text-bg-success",
+        GameState.Finished => "text-bg-info",
+        GameState.Cancelled => "text-bg-danger",
+        _ => "text-bg-secondary"
+    };
+    string OutcomeBadge(GameOutcome o) => o switch
+    {
+        GameOutcome.Winner => "text-bg-success",
+        GameOutcome.Drawn => "text-bg-warning",
+        _ => "text-bg-secondary"
+    };
+
+    // Action availability (design §8.2). Handlers are stubbed until admin GameService paths land.
+    var canCancel = state is GameState.Setup or GameState.InPlay;
+    var canDraw = state is GameState.InPlay;
+    var canDelete = state is GameState.Finished or GameState.Cancelled;
+    var canForceRefresh = state is GameState.InPlay;
+    // Revert resumes at the start of a turn and re-plays it — only meaningful for a live, in-play game.
+    var canRevert = state is GameState.InPlay;
+
+    var orderedPlayers = g.Players.OrderByDescending(p => p.Profile.UserId == g.HostUserId).ToList();
+}
+
+<div class="d-flex align-items-center gap-3 mb-4">
+    <a asp-area="Admin" asp-page="Index" class="btn btn-sm btn-outline-secondary" title="Back to games">
+        <i class="bi bi-arrow-left"></i>
+    </a>
+    <span class="admin-page-ico bg-success-subtle text-success"><i class="bi bi-controller"></i></span>
+    <div class="min-w-0">
+        <h1 class="h3 mb-1 text-truncate">@g.Name</h1>
+        <p class="text-body-secondary mb-0">Turn @g.TurnNumber &middot; @g.Players.Count player(s)</p>
+    </div>
+    <span class="badge fs-6 @StateBadge(state) ms-auto align-self-center">@g.StateDisplay</span>
+    <span class="badge fs-6 @OutcomeBadge(g.Outcome) align-self-center">@g.OutcomeDisplay</span>
+</div>
+
+<alert type="Success" message="@(TempData["Success"] as string)" />
+<alert type="Error" message="@(TempData["Error"] as string)" />
+
+<div class="row g-4">
+    @* ---------- LEFT: game info, players, actions ---------- *@
+    <div class="col-12 col-xl-7">
+        @* Game info *@
+        <div class="card mb-4">
+            <div class="card-header"><i class="bi bi-info-circle me-2"></i>Game</div>
+            <div class="card-body">
+                <div class="admin-detail-group">
+                    <div class="admin-detail-row">
+                        <span class="admin-detail-label"><i class="bi bi-fingerprint"></i>Game ID</span>
+                        <code class="admin-detail-value user-id-copy" role="button" data-copy="@g.GameId" title="Click to copy">@g.GameId</code>
+                    </div>
+                    <div class="admin-detail-row">
+                        <span class="admin-detail-label"><i class="bi bi-controller"></i>Name</span>
+                        <span class="admin-detail-value">@g.Name</span>
+                    </div>
+                    <div class="admin-detail-row">
+                        <span class="admin-detail-label"><i class="bi bi-key"></i>Join Code</span>
+                        <span class="admin-detail-value">@g.JoinCode</span>
+                    </div>
+                    <div class="admin-detail-row">
+                        <span class="admin-detail-label"><i class="bi bi-grid-3x3"></i>Board</span>
+                        <span class="admin-detail-value">@g.BoardName</span>
+                    </div>
+                    <div class="admin-detail-row">
+                        <span class="admin-detail-label"><i class="bi bi-calculator"></i>Rounding</span>
+                        <span class="admin-detail-value">@g.RoundingRuleDisplay</span>
+                    </div>
+                    <div class="admin-detail-row">
+                        <span class="admin-detail-label"><i class="bi bi-hourglass-split"></i>Turns</span>
+                        <span class="admin-detail-value">@d.Turns.Count</span>
+                    </div>
+                    <div class="admin-detail-row">
+                        <span class="admin-detail-label"><i class="bi bi-camera"></i>Game Snapshot Size</span>
+                        <span class="admin-detail-value">@FileSizeFormatter.Format(d.GameSnapshotBytes)</span>
+                    </div>
+                    <div class="admin-detail-row">
+                        <span class="admin-detail-label"><i class="bi bi-list-ul"></i>Game Events Size</span>
+                        <span class="admin-detail-value">@FileSizeFormatter.Format(d.GameEventsBytes)</span>
+                    </div>
+                    <div class="admin-detail-row">
+                        <span class="admin-detail-label"><i class="bi bi-hdd"></i>Total Game Size</span>
+                        <span class="admin-detail-value fw-semibold">@FileSizeFormatter.Format(d.GameTotalBytes)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @* Players (host highlighted, first) *@
+        <div class="card mb-4">
+            <div class="card-header"><i class="bi bi-people me-2"></i>Players</div>
+            <div class="card-body d-flex flex-column gap-2">
+                @foreach (var p in orderedPlayers)
+                {
+                    var isHost = p.Profile.UserId == g.HostUserId;
+                    var hasId = !string.IsNullOrWhiteSpace(p.Profile.UserId);
+                    <div class="d-flex align-items-center gap-2 p-2 rounded @(isHost ? "border border-primary bg-primary-subtle" : "")">
+                        <profile-circle user="p.Profile" size="Md" />
+                        <div class="min-w-0 flex-grow-1">
+                            <div class="fw-semibold text-truncate">
+                                @(string.IsNullOrWhiteSpace(p.Profile.Username) ? "(unknown)" : p.Profile.Username)
+                                @if (isHost) { <span class="badge text-bg-primary ms-1">Host</span> }
+                            </div>
+                            <div class="small text-body-secondary text-truncate">@p.Profile.DisplayName</div>
+                        </div>
+                        @if (hasId)
+                        {
+                            <a href="/Admin/Users/Details/@p.Profile.UserId" class="btn btn-sm btn-outline-secondary" title="View user" aria-label="View user">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+
+        @* Actions (state-gated) — one row per action: what it does, then the button. Destructive ones confirm. *@
+        @{
+            (bool Show, string Handler, string Label, string Desc, string BtnClass, string Icon, string? Confirm)[] actions =
+            {
+                (canDraw, "Draw", "Declare draw", "Conclude this in-play game as a draw — every remaining solvent player is recorded as drawn and stats are projected.", "btn-outline-info", "bi-flag", "Declare this game a draw? This concludes the game."),
+                (canForceRefresh, "ForceRefresh", "Force refresh", "Push a page reload to everyone connected to the live game. Use if the game appears wedged or out of sync.", "btn-outline-secondary", "bi-arrow-clockwise", null),
+                (canCancel, "Cancel", "Cancel", "End this game immediately as cancelled and tear down its live runtime. No winner and no stats are recorded.", "btn-outline-danger", "bi-x-octagon", "Cancel this game? This cannot be undone."),
+                (canCancel, "CancelDelete", "Cancel and delete", "Cancel the game and then remove it from the games list (soft-deleted — the underlying data is retained).", "btn-outline-danger", "bi-trash", "Cancel and delete this game?"),
+                (canDelete, "Delete", "Delete", "Remove this concluded game from the games list (soft-deleted — the underlying data is retained).", "btn-danger", "bi-trash", "Delete this game?")
+            };
+            var shown = actions.Where(a => a.Show).ToList();
+        }
+        <div class="card">
+            <div class="card-header"><i class="bi bi-shield-exclamation me-2"></i>Actions</div>
+            @if (shown.Count == 0)
+            {
+                <div class="card-body text-body-secondary small">No actions are available for a @g.StateDisplay game.</div>
+            }
+            else
+            {
+                <div class="list-group list-group-flush">
+                    @foreach (var a in shown)
+                    {
+                        <div class="list-group-item d-flex align-items-center gap-3">
+                            <div class="min-w-0 flex-grow-1">
+                                <div class="fw-semibold">@a.Label</div>
+                                <div class="small text-body-secondary">@a.Desc</div>
+                            </div>
+                            <form method="post" asp-route-gameId="@Model.GameId" class="flex-shrink-0"
+                                  onsubmit="@(a.Confirm is null ? null : $"return confirm('{a.Confirm}')")">
+                                <button type="submit" asp-page-handler="@a.Handler" class="btn @a.BtnClass text-nowrap">
+                                    <i class="bi @a.Icon me-1"></i>@a.Label
+                                </button>
+                            </form>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        @* Turns + downloads *@
+        <div class="card mt-4">
+            <div class="card-header d-flex align-items-center justify-content-between">
+                <span><i class="bi bi-list-ol me-2"></i>Turns (@d.Turns.Count)</span>
+                <a asp-page-handler="DownloadGame" asp-route-gameId="@Model.GameId" class="btn btn-sm btn-primary">
+                    <i class="bi bi-download me-1"></i>Download game
+                </a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover table-sm align-middle admin-users-table admin-turns-table mb-0">
+                    <thead>
+                        <tr class="text-body-secondary small text-uppercase">
+                            <th class="admin-id-col">Turn ID</th>
+                            <th class="turn-col-num text-center">Turn</th>
+                            <th class="admin-id-col">Player ID</th>
+                            <th>Player</th>
+                            <th class="turn-col-size text-end">Snapshot</th>
+                            <th class="turn-col-size text-end">Events</th>
+                            <th class="turn-col-size text-end">Total</th>
+                            <th class="turn-col-dl text-center">Download</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (d.Turns.Count == 0)
+                        {
+                            <tr><td colspan="8" class="text-center text-body-secondary py-4">This game has no turns yet.</td></tr>
+                        }
+                        else
+                        {
+                            @foreach (var t in d.Turns)
+                            {
+                                <tr>
+                                    <td class="admin-id-col">
+                                        <code class="user-id-copy" role="button" title="@t.TurnId"
+                                              data-copy="@t.TurnId">@t.TurnId.Truncate(8, "…")</code>
+                                    </td>
+                                    <td class="turn-col-num text-center">@t.TurnNumber</td>
+                                    <td class="admin-id-col">
+                                        <code class="user-id-copy" role="button" title="@t.CurrentPlayerId"
+                                              data-copy="@t.CurrentPlayerId">@t.CurrentPlayerId.Truncate(8, "…")</code>
+                                    </td>
+                                    <td class="fw-semibold text-truncate">@t.CurrentPlayerName</td>
+                                    <td class="turn-col-size text-end">@FileSizeFormatter.Format(t.SnapshotBytes)</td>
+                                    <td class="turn-col-size text-end">@FileSizeFormatter.Format(t.EventsBytes)</td>
+                                    <td class="turn-col-size text-end fw-semibold">@FileSizeFormatter.Format(t.TotalBytes)</td>
+                                    <td class="turn-col-dl text-center">
+                                        <a asp-page-handler="DownloadTurn" asp-route-gameId="@Model.GameId" asp-route-turnNumber="@t.TurnNumber"
+                                           class="btn btn-sm btn-outline-secondary" title="Download turn" aria-label="Download turn">
+                                            <i class="bi bi-download"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    @* ---------- RIGHT: read-only state — sticky turn/player selector + three stacked cards ---------- *@
+    <div class="col-12 col-xl-5">
+        @if (d.Turns.Count == 0)
+        {
+            <div class="card">
+                <div class="card-body d-flex flex-column justify-content-center text-center text-body-secondary py-5">
+                    <i class="bi bi-easel2 fs-3 mb-2"></i>
+                    <div class="fw-semibold">No game state</div>
+                    <div class="small">This game hasn't started — there are no turn snapshots to show.</div>
+                </div>
+            </div>
+        }
+        else
+        {
+            @* Turn / player selector — sticky while the cards below scroll; drives them via game-details.js. *@
+            <div class="card admin-state-controls mb-3">
+                <div class="card-body d-flex flex-wrap align-items-center gap-2 py-2">
+                    <i class="bi bi-controller"></i>
+                    <span class="me-auto fw-semibold">Game State</span>
+                    <select class="form-select form-select-sm w-auto" id="state-turn-select" aria-label="Turn">
+                        @foreach (var t in d.Turns)
+                        {
+                            <option value="@t.TurnNumber">Turn @t.TurnNumber</option>
+                        }
+                    </select>
+                    <select class="form-select form-select-sm w-auto" id="state-player-select" aria-label="Player">
+                        @foreach (var p in orderedPlayers)
+                        {
+                            if (!string.IsNullOrWhiteSpace(p.Profile.UserId))
+                            {
+                                <option value="@p.Profile.UserId">@(string.IsNullOrWhiteSpace(p.Profile.Username) ? "(unknown)" : p.Profile.Username)</option>
+                            }
+                        }
+                    </select>
+                </div>
+            </div>
+
+            @* The three state cards (profile / game-info / board) — loaded and reloaded on turn/player
+               change by game-details.js. No game-play hub is registered, so the controls can't post. *@
+            <div id="game-state-body" data-game-id="@Model.GameId">
+                <div class="text-center text-body-secondary py-5">
+                    <span class="spinner-border spinner-border-sm me-2"></span>Loading…
+                </div>
+            </div>
+
+            @* ---------- DANGER ZONE — irreversible revert to the selected turn (in-play games only) ---------- *@
+            @if (canRevert)
+            {
+            <div class="card border-danger border-2 mt-3">
+                <div class="card-header bg-danger text-white d-flex align-items-center gap-2 fw-semibold">
+                    <i class="bi bi-exclamation-octagon-fill"></i> Danger Zone
+                </div>
+                <div class="card-body">
+                    <h2 class="h6 d-flex align-items-center gap-2 mb-2">
+                        <i class="bi bi-rewind-circle-fill text-danger"></i> Revert to selected turn
+                    </h2>
+                    <p class="small text-body-secondary mb-3">
+                        Rewinds the game to <strong>Turn <span data-revert-turn>…</span></strong> (the turn picked
+                        in the selector above) and <strong class="text-danger-emphasis">permanently deletes every later
+                        turn</strong> — all snapshots and event history for those turns are removed for good.
+                        <strong class="text-danger">This action cannot be undone.</strong>
+                    </p>
+                    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#revertModal">
+                        <i class="bi bi-rewind-fill me-1"></i> Revert to Turn <span data-revert-turn>…</span>
+                    </button>
+                </div>
+            </div>
+            }
+        }
+    </div>
+</div>
+
+@if (d.Turns.Count > 0 && canRevert)
+{
+    @* Confirm modal for the irreversible revert. The hidden turnNumber + the labels are kept in sync with
+       the state turn selector by game-details.js. *@
+    <div class="modal fade" id="revertModal" tabindex="-1" aria-labelledby="revertModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-danger">
+                <div class="modal-header bg-danger text-white">
+                    <h1 class="modal-title fs-5 d-flex align-items-center gap-2" id="revertModalLabel">
+                        <i class="bi bi-exclamation-octagon-fill"></i> Irreversible action
+                    </h1>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>You are about to revert <strong>@g.Name</strong> to <strong>Turn <span data-revert-turn>…</span></strong>.</p>
+                    <div class="alert alert-danger d-flex gap-2 mb-0">
+                        <i class="bi bi-trash3-fill mt-1"></i>
+                        <div>
+                            Every turn <strong>after Turn <span data-revert-turn>…</span></strong> — all of their snapshots
+                            and event history — will be <strong>permanently deleted</strong>. This <u>cannot be undone</u>.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <form method="post" asp-page-handler="RevertToTurn" asp-route-gameId="@Model.GameId" class="m-0">
+                        <input type="hidden" name="turnNumber" id="revert-turn-input" value="" />
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-rewind-fill me-1"></i> Yes, revert — delete later turns
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@section Styles {
+    @* The reused live-game partials' styles (admin → game asset reuse): player profile, plus the play
+       view styles for the game-info panel and board. *@
+    <link rel="stylesheet" href="~/css/player-profile.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/play.css" asp-append-version="true" />
+}
+
+@section Scripts {
+    <script src="~/scripts/admin/copy.js" asp-append-version="true"></script>
+    <script src="~/scripts/admin/game-details.js" asp-append-version="true"></script>
+}

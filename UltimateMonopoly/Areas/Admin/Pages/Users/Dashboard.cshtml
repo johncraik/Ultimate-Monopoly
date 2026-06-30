@@ -1,0 +1,83 @@
+@page
+@model UltimateMonopoly.Areas.Admin.Pages.Users.DashboardModel
+@{
+    ViewData["Title"] = "Users Dashboard";
+    var d = Model.Data;
+    const string baseDir = "~/Areas/Admin/Pages/Shared/Dashboard/";
+}
+
+<div class="d-flex align-items-center gap-3 mb-4">
+    <span class="admin-page-ico bg-primary-subtle text-primary"><i class="bi bi-people"></i></span>
+    <div>
+        <h1 class="h3 mb-1">Users</h1>
+        <p class="text-body-secondary mb-0">Identity health, activity, and account safety.</p>
+    </div>
+    <a asp-area="Admin" asp-page="/Users/Index" class="btn btn-sm btn-outline-secondary ms-auto">
+        <i class="bi bi-list-ul me-1"></i>User list
+    </a>
+</div>
+
+<partial name="@(baseDir)_AlertStrip.cshtml" model="d.Alerts" />
+
+@* KPI strip *@
+<div class="row g-3 mb-4">
+    @foreach (var k in d.Kpis)
+    {
+        <div class="col-6 col-md-4 col-xl">
+            <partial name="@(baseDir)_MetricCard.cshtml" model="k" />
+        </div>
+    }
+</div>
+
+@* Account health *@
+<h2 class="h5 mb-3"><i class="bi bi-heart-pulse me-2 text-success"></i>Account health</h2>
+<div class="row g-3 mb-4">
+    <div class="col-6 col-xl-3"><partial name="@(baseDir)_Gauge.cshtml" model="d.EmailConfirmed" /></div>
+    <div class="col-6 col-xl-3"><partial name="@(baseDir)_Gauge.cshtml" model="d.TwoFactor" /></div>
+    <div class="col-12 col-md-6 col-xl-3"><partial name="@(baseDir)_Breakdown.cshtml" model="d.EnabledVsDisabled" /></div>
+    <div class="col-12 col-md-6 col-xl-3"><partial name="@(baseDir)_Breakdown.cshtml" model="d.Roles" /></div>
+</div>
+
+@* Activity *@
+<h2 class="h5 mb-3"><i class="bi bi-activity me-2 text-info"></i>Activity</h2>
+<div class="row g-3 mb-4">
+    <div class="col-12 col-xl-8"><partial name="@(baseDir)_Histogram.cshtml" model="d.LoginRecency" /></div>
+    <div class="col-12 col-xl-4">
+        <div class="row g-3 h-100">
+            @foreach (var m in d.Dormancy)
+            {
+                <div class="col-4 col-xl-12"><partial name="@(baseDir)_MetricCard.cshtml" model="m" /></div>
+            }
+        </div>
+    </div>
+</div>
+
+@* Gameplay population (not a leaderboard — population health) *@
+<h2 class="h5 mb-3"><i class="bi bi-controller me-2 text-warning"></i>Gameplay population</h2>
+<div class="row g-3 mb-4">
+    <div class="col-12 col-xl-4">
+        <div class="row g-3 h-100">
+            @foreach (var m in d.WinLossDraw)
+            {
+                <div class="col-4 col-xl-12"><partial name="@(baseDir)_MetricCard.cshtml" model="m" /></div>
+            }
+        </div>
+    </div>
+    <div class="col-12 col-xl-8"><partial name="@(baseDir)_Histogram.cshtml" model="d.WinRateDistribution" /></div>
+</div>
+
+@* Customisation *@
+<h2 class="h5 mb-3"><i class="bi bi-palette me-2 text-primary"></i>Customisation</h2>
+<div class="row g-3 mb-4">
+    <div class="col-6 col-xl-3"><partial name="@(baseDir)_Gauge.cshtml" model="d.AvatarColour" /></div>
+    <div class="col-6 col-xl-3"><partial name="@(baseDir)_Gauge.cshtml" model="d.AvatarImage" /></div>
+    <div class="col-12 col-xl-6"><partial name="@(baseDir)_TopList.cshtml" model="d.TopAvatars" /></div>
+</div>
+
+@* Trends (phase 2) — registrations are historical; logins accrue nightly; cohort retention is point-in-time. *@
+<h2 class="h5 mb-3"><i class="bi bi-graph-up me-2 text-primary"></i>Trends</h2>
+<div class="row g-3">
+    <div class="col-12 col-xl-6"><partial name="@(baseDir)_Series.cshtml" model="d.Registrations" /></div>
+    <div class="col-12 col-xl-6"><partial name="@(baseDir)_Series.cshtml" model="d.Logins" /></div>
+    <div class="col-12"><partial name="@(baseDir)_Histogram.cshtml" model="d.CohortRetention" /></div>
+</div>

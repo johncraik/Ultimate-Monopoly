@@ -1,0 +1,31 @@
+@model UltimateMonopoly.Areas.Admin.Models.ViewModels.Users.UserShortCardModel
+@{
+    var u = Model.User;
+}
+<div class="card mb-4">
+    <div class="card-header"><i class="bi bi-person me-2"></i>@Model.Title</div>
+    <div class="card-body">
+        @if (u != null)
+        {
+            <div class="d-flex align-items-center gap-3">
+                <profile-circle user="u.Profile" size="Md" />
+                <div class="min-w-0 flex-grow-1">
+                    <div class="fw-semibold text-truncate">@u.Profile.Username</div>
+                    <div class="small text-body-secondary text-truncate">@(string.IsNullOrWhiteSpace(u.Profile.DisplayName) ? "No display name" : u.Profile.DisplayName)</div>
+                    <div class="small text-truncate"><i class="bi bi-envelope me-1"></i>@u.Email</div>
+                    <div class="mt-1">
+                        <span class="badge @(u.IsEnabled ? "text-bg-success" : "text-bg-danger")">@(u.IsEnabled ? "Enabled" : "Disabled")</span>
+                        <span class="badge @((u.IsRestricted ?? false) ? "text-bg-warning" : "text-bg-secondary")">@((u.IsRestricted ?? false) ? "Restricted" : "Not restricted")</span>
+                    </div>
+                </div>
+                <a href="/Admin/Users/Details/@Model.UserId" class="btn btn-sm btn-outline-secondary text-nowrap align-self-start" title="View details">
+                    <i class="bi bi-eye me-1"></i>Details
+                </a>
+            </div>
+        }
+        else
+        {
+            <span class="text-body-secondary fst-italic">Deleted user@(Model.UserId != "-" ? $" ({Model.UserId})" : "")</span>
+        }
+    </div>
+</div>

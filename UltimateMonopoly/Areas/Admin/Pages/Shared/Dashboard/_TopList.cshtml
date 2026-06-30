@@ -1,0 +1,33 @@
+@model UltimateMonopoly.Areas.Admin.Models.ViewModels.Dashboard.TopListWidget
+@* Reusable top-N list (compact table). *@
+<div class="card h-100">
+    <div class="card-header">@if (!string.IsNullOrEmpty(Model.Icon)) { <i class="bi @Model.Icon me-2"></i> }@Model.Title</div>
+    <div class="card-body p-0">
+        @if (Model.Rows.Count == 0)
+        {
+            <div class="text-body-secondary small p-3">@Model.EmptyText</div>
+        }
+        else
+        {
+            <ul class="list-group list-group-flush">
+                @foreach (var r in Model.Rows)
+                {
+                    <li class="list-group-item d-flex justify-content-between align-items-center gap-2">
+                        <div class="min-w-0">
+                            @if (!string.IsNullOrEmpty(r.Href))
+                            {
+                                <a href="@r.Href" class="text-truncate d-block">@r.Label</a>
+                            }
+                            else
+                            {
+                                <div class="text-truncate">@r.Label</div>
+                            }
+                            @if (!string.IsNullOrEmpty(r.Secondary)) { <div class="small text-body-secondary">@r.Secondary</div> }
+                        </div>
+                        <span class="badge text-bg-secondary rounded-pill">@r.Value</span>
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+</div>

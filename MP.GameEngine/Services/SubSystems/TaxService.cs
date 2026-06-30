@@ -46,13 +46,17 @@ public class TaxService
         }
         
         var triggerSuppress = await _triggerService.OnTaxLanded(engine, player, tax, ct);
-        var suppressDefault = await engine.CardService.DrawCard(engine, player, CardType.Tax, ct,
-            new CardActionContext { TriggerAmount = tax, TriggerReason = FinancialReason.Tax });
-        
-        var sd = new SuppressDefault(triggerSuppress.Type());
-        sd.Aggregate(suppressDefault);
-        if(sd.SuppressTaxPayment) return;
+        //Dont take tax card if triggered card suppressed tax:
+        if(triggerSuppress.SuppressTaxPayment) return;
 
+        //Check if this player should be prevented from drawing a Tax card:
+        if (!engine.Cache.PreventBoardIndexCard(player.PlayerId, index))
+        {
+            var suppressDefault = await engine.CardService.DrawCard(engine, player, CardType.Tax, ct,
+                new CardActionContext { TriggerAmount = tax, TriggerReason = FinancialReason.Tax });
+            if(suppressDefault.SuppressTaxPayment) return;
+        }
+        
         //Default outcome — pay the assessed tax.
         await _transactionService.PayTax(engine, player, tax, ct);
     }

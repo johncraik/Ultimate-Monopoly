@@ -1,0 +1,10 @@
+@using UltimateMonopoly.Areas.Admin.Models.ViewModels.Dashboard
+@model SeriesWidget
+@* Time-series card (header + the bare chart). The chart itself lives in _SeriesChart so the hub tiles can
+   render it without the card wrapper. *@
+<div class="card h-100">
+    <div class="card-header">@if (!string.IsNullOrEmpty(Model.Icon)) { <i class="bi @Model.Icon me-2"></i> }@Model.Title</div>
+    <div class="card-body">
+        <partial name="~/Areas/Admin/Pages/Shared/Dashboard/_SeriesChart.cshtml" model="Model" />
+    </div>
+</div>

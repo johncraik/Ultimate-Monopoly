@@ -27,13 +27,15 @@ public sealed class ShortfallPrompt : Prompt<ShortfallResponse>
 
     /// <summary>
     /// How much the player still needs to find — <see cref="Cost"/> minus
-    /// <see cref="PlayerBalance"/>. Computed from the wire fields so the
+    /// <see cref="PlayerBalance"/>, clamped to 0. Computed from the wire fields so the
     /// engine and the frontend always agree on a single derivation. The
     /// getter is serialised on the way out (the frontend gets the value
     /// pre-computed) and skipped on the way in (no setter — tampered
     /// values can't poison the prompt; the server re-derives it).
+    /// Clamped by comparing before subtracting — uint − uint would otherwise wrap
+    /// to a huge value if the prompt were ever built with a balance above the cost (L-05).
     /// </summary>
-    public uint AmountOwed => Cost - PlayerBalance;
+    public uint AmountOwed => Cost > PlayerBalance ? Cost - PlayerBalance : 0;
 
     /// <summary>
     /// The creditor, if the debt is owed to another player (rent, fine paid

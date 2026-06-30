@@ -3,10 +3,11 @@
 @using UltimateMonopoly.Models.Statistics
 @using UltimateMonopoly.Services.Cache
 @inject BoardCacheService BoardCache
-@model List<UltimateMonopoly.Pages.Games.CompareModel.ComparePlayer>
+@inject MP.GameEngine.Abstractions.ITurnTaxService TurnTaxService
+@model (List<UltimateMonopoly.Pages.Games.CompareModel.ComparePlayer> Players, MP.GameEngine.Models.Boards.Board Board)
 
 @{
-    var board = await BoardCache.GetDefaultBoard();
+    var board = Model.Board;
     double[] Series(string? json)
         => string.IsNullOrWhiteSpace(json) ? [] : (JsonSerializer.Deserialize<List<double>>(json) ?? []).ToArray();
 
@@ -18,7 +19,7 @@
         _ => ("secondary", "bi-dash", "Finished")
     };
 
-    var cols = Model.Count + 1;
+    var cols = Model.Players.Count + 1;
 
     // Unique id prefix so the partial can be rendered more than once on a page (e.g. one per
     // stats-view tab) without colliding collapse / chart ids. Default keeps single-use callers as-is.
@@ -27,7 +28,7 @@
 
 <link rel="stylesheet" href="~/css/player-stats.css" asp-append-version="true" />
 
-@if (Model.Count == 0)
+@if (Model.Players.Count == 0)
 {
     <div class="card border-0 shadow-sm">
         <div class="card-body text-center text-body-secondary py-5">
@@ -46,7 +47,7 @@
                 <thead>
                     <tr>
                         <th class="stat-compare-corner"></th>
-                        @foreach (var p in Model)
+                        @foreach (var p in Model.Players)
                         {
                             var oc = Outcome(p.Outcome);
                             <th class="text-center" title="@p.Profile.DisplayName">
@@ -79,9 +80,14 @@
                     <tbody class="collapse show" id="@(pfx)-sec-@i">
                         @foreach (var stat in statSection.Stats)
                         {
+                            @* Turn-tax stats are hidden entirely when the turn-tax feature is disabled. *@
+                            if (stat.RequiresTurnTax && !TurnTaxService.Enabled)
+                            {
+                                continue;
+                            }
                             @* Conditional stats (per-type card boxes) hide when no player has the data —
                                e.g. the per-type JSON is null in the cross-game aggregate view. *@
-                            if (stat.Visible is not null && !Model.Any(p => stat.Visible(p.Stat)))
+                            if (stat.Visible is not null && !Model.Players.Any(p => stat.Visible(p.Stat)))
                             {
                                 continue;
                             }
@@ -89,10 +95,10 @@
                             {
                                 var part = stat.Primary;
                                 var leader = StatRender.Leader(part.Sentiment,
-                                    Model.Select(p => StatRender.AsNumber(part, p.Stat)));
+                                    Model.Players.Select(p => StatRender.AsNumber(part, p.Stat)));
                                 <tr>
                                     <th class="stat-compare-label">@stat.Label</th>
-                                    @foreach (var p in Model)
+                                    @foreach (var p in Model.Players)
                                     {
                                         var lead = leader is not null && StatRender.AsNumber(part, p.Stat) == leader;
                                         <td class="text-center @(lead ? "stat-leader" : null)">
@@ -124,12 +130,12 @@
                                 foreach (var part in new[] { stat.Primary, stat.Secondary })
                                 {
                                     var leader = StatRender.Leader(part.Sentiment,
-                                        Model.Select(p => StatRender.AsNumber(part, p.Stat)));
+                                        Model.Players.Select(p => StatRender.AsNumber(part, p.Stat)));
                                     <tr>
                                         <th class="stat-compare-label">
                                             @stat.Label <span class="text-body-secondary fw-normal">· @part.Label</span>
                                         </th>
-                                        @foreach (var p in Model)
+                                        @foreach (var p in Model.Players)
                                         {
                                             var lead = leader is not null && StatRender.AsNumber(part, p.Stat) == leader;
                                             <td class="text-center @(lead ? "stat-leader" : null)">
@@ -165,12 +171,12 @@
 
 <script>
     (function () {
-        var players = @Html.Raw(JsonSerializer.Serialize(Model.Select(p => p.Profile.DisplayName)));
+        var players = @Html.Raw(JsonSerializer.Serialize(Model.Players.Select(p => p.Profile.DisplayName)));
         var data = {
-            balance:  @Html.Raw(JsonSerializer.Serialize(Model.Select(p => Series(p.Stat.BalanceOverTimeJson)))),
-            networth: @Html.Raw(JsonSerializer.Serialize(Model.Select(p => Series(p.Stat.NetWorthOverTimeJson)))),
-            props:    @Html.Raw(JsonSerializer.Serialize(Model.Select(p => Series(p.Stat.PropertyCountOverTimeJson)))),
-            rank:     @Html.Raw(JsonSerializer.Serialize(Model.Select(p => Series(p.Stat.WealthRankOverTimeJson))))
+            balance:  @Html.Raw(JsonSerializer.Serialize(Model.Players.Select(p => Series(p.Stat.BalanceOverTimeJson)))),
+            networth: @Html.Raw(JsonSerializer.Serialize(Model.Players.Select(p => Series(p.Stat.NetWorthOverTimeJson)))),
+            props:    @Html.Raw(JsonSerializer.Serialize(Model.Players.Select(p => Series(p.Stat.PropertyCountOverTimeJson)))),
+            rank:     @Html.Raw(JsonSerializer.Serialize(Model.Players.Select(p => Series(p.Stat.WealthRankOverTimeJson))))
         };
 
         // Fixed per-player palette (max 6 players) — same colour per player across every chart.

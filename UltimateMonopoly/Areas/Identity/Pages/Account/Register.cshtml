@@ -1,15 +1,29 @@
-﻿@page
+@page
 @model RegisterModel
 @{
     ViewData["Title"] = "Register";
 }
 
-<div class="container" style="max-width: 640px;">
+<div class="mx-auto" style="max-width: 640px;">
     <div class="card">
         <div class="card-body">
             <h2 class="card-title text-center mb-4">Register</h2>
             <form id="registerForm" asp-route-returnUrl="@Model.ReturnUrl" method="post">
-                <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
+                @* Model-level errors (Identity: duplicate email/username, password policy, …). Rendered
+                   manually as an alert rather than asp-validation-summary, which jQuery-unobtrusive clears
+                   for server-only errors the moment the user interacts. *@
+                @{ var formErrors = ViewData.ModelState[string.Empty]?.Errors; }
+                @if (formErrors is { Count: > 0 })
+                {
+                    <div class="alert alert-danger" role="alert">
+                        <ul class="mb-0 ps-3">
+                            @foreach (var error in formErrors)
+                            {
+                                <li>@error.ErrorMessage</li>
+                            }
+                        </ul>
+                    </div>
+                }
                 <div class="form-floating mb-3">
                     <input asp-for="Input.Username" class="form-control" autocomplete="username" aria-required="true" placeholder="username" />
                     <label asp-for="Input.Username">Username</label>

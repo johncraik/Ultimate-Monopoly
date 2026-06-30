@@ -5,6 +5,7 @@ using JC.Core.Extensions;
 using JC.Core.Models;
 using JC.Core.Services.DataRepositories;
 using Microsoft.EntityFrameworkCore;
+using UltimateMonopoly.Data;
 using UltimateMonopoly.Models;
 using UltimateMonopoly.Models.DataModels.Social;
 using UltimateMonopoly.Models.ViewModels;
@@ -90,6 +91,8 @@ public class FriendService
             .Distinct()
             .ToList();
 
+        var blockedIds = await GetBlockedUserIds(friendUserIds);
+
         var users = await _userService.GetUserDictionary(friendUserIds);
         var lastActive = await _presence.GetLastActiveUtcAsync(friendUserIds);
 
@@ -99,6 +102,9 @@ public class FriendService
             var friendUserId = friend.CreatedById == currentUserId
                 ? friend.FriendUserId
                 : friend.CreatedById!;
+
+            if (blockedIds.Contains(friendUserId))
+                continue;
 
             if (!users.TryGetValue(friendUserId, out var user))
                 continue;
@@ -132,6 +138,7 @@ public class FriendService
 
         var userIds = allRequests.Select(r => r.CreatedById == _userInfo.UserId ? r.ToUserId : r.CreatedById)
             .Distinct().ToList();
+        var blockedIds = await GetBlockedUserIds(userIds!);
         var users = await _userService.GetUserDictionary(userIds!);
         
         var incomingRequests = new List<FriendRequestViewModel>();
@@ -139,9 +146,12 @@ public class FriendService
         foreach (var request in allRequests)
         {
             var createdId = request.CreatedById ?? throw new InvalidOperationException("User ID not set");
-            
+
             var outgoing = request.CreatedById == _userInfo.UserId;
-            if(!users.TryGetValue(outgoing ? request.ToUserId : createdId, out var user))
+            var otherUserId = outgoing ? request.ToUserId : createdId;
+            if (blockedIds.Contains(otherUserId))
+                continue;
+            if(!users.TryGetValue(otherUserId, out var user))
                 continue;
             
             var imgUrl = _urlLinkService.GetImgUrl(user.AvatarImageName);
@@ -180,6 +190,9 @@ public class FriendService
     
     public async Task<FriendRequestResult> TrySendFriendRequest(string friendUsername)
     {
+        if(_userInfo.IsInRole(AppRoles.Restricted))
+            return new FriendRequestResult(false, "Your account is restricted and cannot send friend requests.");
+        
         //Get The user:
         var user = await _userService.GetUserByUsername(friendUsername);
         if (user == null) return new FriendRequestResult(false, "No user exists with this username.");
@@ -251,6 +264,11 @@ public class FriendService
 
         var originalSenderId = request.CreatedById ?? throw new InvalidOperationException("User ID not set");
 
+        // Block guard: a block either way severs the relationship — don't let a request
+        // that predates the block be accepted into a friendship.
+        if (await IsBlockedBetween(originalSenderId))
+            return false;
+
         request.Accept();
         var friend = new Friend();
         friend.Add(originalSenderId);
@@ -283,6 +301,20 @@ public class FriendService
         return await ProcessFriendRequest(request, null);
     }
 
+    public async Task<bool> TryCancelFriendRequest(string requestId)
+    {
+        // Sender withdraws their own still-pending outgoing request.
+        var request = await _repos.GetRepository<FriendRequest>()
+            .AsQueryable().FilterDeleted(DeletedQueryType.OnlyActive)
+            .FirstOrDefaultAsync(r => r.Id == requestId && r.IsAccepted == null && r.CreatedById == _userInfo.UserId);
+        if (request == null) return false;
+
+        //Hard delete request on cancel
+        await _repos.GetRepository<FriendRequest>()
+            .DeleteAsync(request);
+        return true;
+    }
+
     private async Task<bool> ProcessFriendRequest(FriendRequest request, Friend? friend)
     {
         await _repos.BeginTransactionAsync();
@@ -302,10 +334,35 @@ public class FriendService
         catch (Exception ex)
         {
             await _repos.RollbackTransactionAsync();
-            _logger.LogError(ex, "Failed to {Process} friend request: {RequestId}", 
+            _logger.LogError(ex, "Failed to {Process} friend request: {RequestId}",
                 friend != null ? "accept" : "decline", request.Id);
             return false;
         }
+    }
+
+
+    // ─── Block helpers ───────────────────────────────────────────────────
+    // Inlined here (rather than via BlockAndReportService) to keep the read/accept
+    // paths self-defending against a block, both directions.
+
+    private async Task<bool> IsBlockedBetween(string otherUserId)
+        => await _repos.GetRepository<BlockedUser>()
+            .AsQueryable().FilterDeleted(DeletedQueryType.OnlyActive)
+            .AnyAsync(b => (b.BlockedUserId == otherUserId && b.CreatedById == _userInfo.UserId)
+                           || (b.CreatedById == otherUserId && b.BlockedUserId == _userInfo.UserId));
+
+    private async Task<HashSet<string>> GetBlockedUserIds(IEnumerable<string> userIds)
+    {
+        var list = userIds.ToList();
+        if (list.Count == 0) return [];
+
+        var blocked = await _repos.GetRepository<BlockedUser>()
+            .AsQueryable().FilterDeleted(DeletedQueryType.OnlyActive)
+            .Where(b => (b.CreatedById == _userInfo.UserId && list.Contains(b.BlockedUserId))
+                        || (list.Contains(b.CreatedById!) && b.BlockedUserId == _userInfo.UserId))
+            .Select(b => b.CreatedById == _userInfo.UserId ? b.BlockedUserId : b.CreatedById!)
+            .ToListAsync();
+        return blocked.ToHashSet();
     }
 
     #endregion

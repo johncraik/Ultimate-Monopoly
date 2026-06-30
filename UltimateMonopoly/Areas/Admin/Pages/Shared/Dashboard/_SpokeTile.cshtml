@@ -1,0 +1,57 @@
+@using UltimateMonopoly.Areas.Admin.Models.ViewModels.Dashboard
+@model SpokeTileModel
+@* A hub tile for one spoke — headline KPIs + alerts + a "View →" link, or a "coming soon" placeholder. *@
+<div class="card h-100">
+    <div class="card-header d-flex align-items-center justify-content-between">
+        <span><i class="bi @Model.Icon text-@Model.Tone me-2"></i>@Model.Title</span>
+        @if (!Model.ComingSoon)
+        {
+            <a href="@Model.Href" class="small text-decoration-none">View <i class="bi bi-arrow-right"></i></a>
+        }
+        else
+        {
+            <span class="badge text-bg-secondary">Coming soon</span>
+        }
+    </div>
+    <div class="card-body">
+        @if (Model.ComingSoon)
+        {
+            <div class="text-body-secondary small py-3 text-center">This dashboard hasn't been built yet.</div>
+        }
+        else
+        {
+            @if (Model.Alerts != null)
+            {
+                <partial name="~/Areas/Admin/Pages/Shared/Dashboard/_AlertStrip.cshtml" model="Model.Alerts" />
+            }
+            @if (Model.Kpis != null && Model.Kpis.Count > 0)
+            {
+                <div class="row g-2 text-center">
+                    @foreach (var k in Model.Kpis)
+                    {
+                        <div class="col">
+                            <div class="fs-4 fw-semibold lh-1">@k.Value</div>
+                            <div class="small text-body-secondary text-uppercase">@k.Label</div>
+                            @if (!string.IsNullOrEmpty(k.Sub)) { <div class="small text-body-secondary">@k.Sub</div> }
+                        </div>
+                    }
+                </div>
+            }
+
+            @if (Model.Graphs != null && Model.Graphs.Count > 0)
+            {
+                <div class="row g-3 mt-1">
+                    @foreach (var g in Model.Graphs)
+                    {
+                        <div class="@(Model.Graphs.Count > 1 ? "col-12 col-md-6" : "col-12")">
+                            <div class="small text-body-secondary text-uppercase mb-1">
+                                @if (!string.IsNullOrEmpty(g.Icon)) { <i class="bi @g.Icon me-1"></i> }@g.Title
+                            </div>
+                            <partial name="~/Areas/Admin/Pages/Shared/Dashboard/_SeriesChart.cshtml" model="g" />
+                        </div>
+                    }
+                </div>
+            }
+        }
+    </div>
+</div>

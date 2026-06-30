@@ -1,0 +1,81 @@
+@page
+@model UltimateMonopoly.Areas.Admin.Pages.Games.IndexModel
+@using MP.GameEngine.Enums.Games
+@{
+    ViewData["Title"] = "Games";
+
+    string SChecked(GameState? v) => Model.State == v ? "checked" : "";
+    string OChecked(GameOutcome? v) => Model.Outcome == v ? "checked" : "";
+}
+
+<div class="d-flex align-items-center gap-3 mb-4">
+    <span class="admin-page-ico bg-success-subtle text-success"><i class="bi bi-controller"></i></span>
+    <div>
+        <h1 class="h3 mb-1">Game Management</h1>
+        <p class="text-body-secondary mb-0">Browse, filter, and search every game.</p>
+    </div>
+</div>
+
+<alert type="Success" message="@(TempData["Success"] as string)" />
+<alert type="Error" message="@(TempData["Error"] as string)" />
+
+@* Filters + searches. A plain GET form is the no-JS fallback; game-management.js intercepts changes
+   and re-fetches just the table partial (the ?handler=Table endpoint). *@
+<form id="game-filters" method="get" class="card mb-3">
+    <div class="card-body">
+        <div class="row g-3 mb-3">
+            <div class="col-12 col-xl-6">
+                <label class="form-label small text-body-secondary mb-1" for="game-search">Search</label>
+                <div class="input-group">
+                    <input type="search" class="form-control" id="game-search" name="Search" value="@Model.Search"
+                           placeholder="Game name, join code, player id…" autocomplete="off" />
+                    <button class="btn btn-primary" type="submit" aria-label="Search"><i class="bi bi-search"></i></button>
+                </div>
+            </div>
+            <div class="col-12 col-xl-6">
+                <label class="form-label small text-body-secondary mb-1" for="game-host">Host user ID</label>
+                <input type="search" class="form-control" id="game-host" name="HostId" value="@Model.HostId"
+                       placeholder="Exact host user id…" autocomplete="off" />
+            </div>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-12 col-xl">
+                <label class="form-label small text-body-secondary mb-1">State</label>
+                <div class="btn-group w-100 flex-wrap" role="group" aria-label="State filter">
+                    <input type="radio" class="btn-check" name="State" id="st-all" value="" autocomplete="off" @SChecked(null) />
+                    <label class="btn btn-outline-secondary" for="st-all">All</label>
+                    <input type="radio" class="btn-check" name="State" id="st-setup" value="Setup" autocomplete="off" @SChecked(GameState.Setup) />
+                    <label class="btn btn-outline-secondary" for="st-setup">Setup</label>
+                    <input type="radio" class="btn-check" name="State" id="st-inplay" value="InPlay" autocomplete="off" @SChecked(GameState.InPlay) />
+                    <label class="btn btn-outline-secondary" for="st-inplay">In Play</label>
+                    <input type="radio" class="btn-check" name="State" id="st-finished" value="Finished" autocomplete="off" @SChecked(GameState.Finished) />
+                    <label class="btn btn-outline-secondary" for="st-finished">Finished</label>
+                    <input type="radio" class="btn-check" name="State" id="st-cancelled" value="Cancelled" autocomplete="off" @SChecked(GameState.Cancelled) />
+                    <label class="btn btn-outline-secondary" for="st-cancelled">Cancelled</label>
+                </div>
+            </div>
+            <div class="col-12 col-xl">
+                <label class="form-label small text-body-secondary mb-1">Outcome</label>
+                <div class="btn-group w-100 flex-wrap" role="group" aria-label="Outcome filter">
+                    <input type="radio" class="btn-check" name="Outcome" id="oc-all" value="" autocomplete="off" @OChecked(null) />
+                    <label class="btn btn-outline-secondary" for="oc-all">All</label>
+                    <input type="radio" class="btn-check" name="Outcome" id="oc-none" value="None" autocomplete="off" @OChecked(GameOutcome.None) />
+                    <label class="btn btn-outline-secondary" for="oc-none">None</label>
+                    <input type="radio" class="btn-check" name="Outcome" id="oc-winner" value="Winner" autocomplete="off" @OChecked(GameOutcome.Winner) />
+                    <label class="btn btn-outline-secondary" for="oc-winner">Winner</label>
+                    <input type="radio" class="btn-check" name="Outcome" id="oc-drawn" value="Drawn" autocomplete="off" @OChecked(GameOutcome.Drawn) />
+                    <label class="btn btn-outline-secondary" for="oc-drawn">Drawn</label>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<div id="games-table">
+    <partial name="_GamesTable" model="Model.TableModel" />
+</div>
+
+@section Scripts {
+    <script src="~/scripts/admin/game-management.js" asp-append-version="true"></script>
+}

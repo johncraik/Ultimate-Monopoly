@@ -1,0 +1,59 @@
+@page
+@model UltimateMonopoly.Areas.Admin.Pages.Community.DashboardModel
+@{
+    ViewData["Title"] = "Community Dashboard";
+    var d = Model.Data;
+    const string baseDir = "~/Areas/Admin/Pages/Shared/Dashboard/";
+}
+
+<div class="d-flex align-items-center gap-3 mb-4">
+    <span class="admin-page-ico bg-info-subtle text-info"><i class="bi bi-people-fill"></i></span>
+    <div>
+        <h1 class="h3 mb-1">Community</h1>
+        <p class="text-body-secondary mb-0">Social graph and moderation — friends, requests, blocks, reports.</p>
+    </div>
+    <a asp-area="Admin" asp-page="/Reports/Index" asp-route-Resolution="Open" class="btn btn-sm btn-outline-secondary ms-auto">
+        <i class="bi bi-flag me-1"></i>Open reports
+    </a>
+</div>
+
+<partial name="@(baseDir)_AlertStrip.cshtml" model="d.Alerts" />
+
+@* KPI strip *@
+<div class="row g-3 mb-4">
+    @foreach (var k in d.Kpis)
+    {
+        <div class="col-6 col-md-4 col-xl"><partial name="@(baseDir)_MetricCard.cshtml" model="k" /></div>
+    }
+</div>
+
+@* Moderation *@
+<h2 class="h5 mb-3"><i class="bi bi-shield-check me-2 text-warning"></i>Moderation</h2>
+<div class="row g-3 mb-3">
+    <div class="col-6 col-xl-3"><partial name="@(baseDir)_Gauge.cshtml" model="d.ResolutionRate" /></div>
+    <div class="col-6 col-xl-3"><partial name="@(baseDir)_MetricCard.cshtml" model="d.AvgTimeToResolve" /></div>
+    <div class="col-12 col-xl-6"><partial name="@(baseDir)_Breakdown.cshtml" model="d.ReportsByReason" /></div>
+</div>
+<div class="row g-3 mb-4">
+    <div class="col-12 col-xl-6"><partial name="@(baseDir)_Histogram.cshtml" model="d.ReportsByState" /></div>
+    <div class="col-12 col-xl-6"><partial name="@(baseDir)_TopList.cshtml" model="d.MostReportedUsers" /></div>
+</div>
+
+@* Social graph *@
+<h2 class="h5 mb-3"><i class="bi bi-people me-2 text-success"></i>Social graph</h2>
+<div class="row g-3 mb-3">
+    <div class="col-6 col-xl-4"><partial name="@(baseDir)_Gauge.cshtml" model="d.AcceptanceRate" /></div>
+    <div class="col-6 col-xl-4"><partial name="@(baseDir)_MetricCard.cshtml" model="d.AvgResponseTime" /></div>
+    <div class="col-12 col-xl-4"><partial name="@(baseDir)_Gauge.cshtml" model="d.BlockPrevalence" /></div>
+</div>
+<div class="row g-3 mb-4">
+    <div class="col-12"><partial name="@(baseDir)_TopList.cshtml" model="d.MostBlockedUsers" /></div>
+</div>
+
+@* Trends *@
+<h2 class="h5 mb-3"><i class="bi bi-graph-up me-2 text-primary"></i>Trends</h2>
+<div class="row g-3">
+    <div class="col-12 col-xl-6"><partial name="@(baseDir)_Series.cshtml" model="d.ReportsOverTime" /></div>
+    <div class="col-12 col-xl-6"><partial name="@(baseDir)_Series.cshtml" model="d.BlocksOverTime" /></div>
+    <div class="col-12"><partial name="@(baseDir)_MultiSeries.cshtml" model="d.Friendships" /></div>
+</div>

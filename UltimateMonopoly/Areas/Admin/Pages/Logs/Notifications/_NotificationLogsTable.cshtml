@@ -1,0 +1,79 @@
+@using JC.Core.Extensions
+@model UltimateMonopoly.Areas.Admin.Models.ViewModels.Logs.NotificationLogTableModel
+@{
+    var cols = Model.ScopedToNotification ? 5 : 6;
+
+    // Global (paged) mode carries the search/read filters on the pagination links.
+    var hrefFormat = $"?Search={Uri.EscapeDataString(Model.Search ?? "")}&Read={Model.Read}&pageNumber={{0}}";
+}
+
+@if (Model.Paged != null)
+{
+    <div class="d-flex align-items-center justify-content-between mb-2">
+        <span class="small text-body-secondary">Showing @Model.Paged.Count.ToString("N0") of @Model.Paged.TotalCount.ToString("N0") event(s)</span>
+    </div>
+}
+
+<div class="table-responsive">
+    <table class="table table-hover table-sm align-middle admin-audit-table mb-0">
+        <thead>
+            <tr class="text-body-secondary small text-uppercase">
+                <th class="admin-id-col">Log ID</th>
+                @if (!Model.ScopedToNotification)
+                {
+                    <th class="admin-id-col">Notification ID</th>
+                }
+                <th>User</th>
+                <th class="text-center">State</th>
+                <th>Date</th>
+                <th>When</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.Items.Count == 0)
+            {
+                <tr><td colspan="@cols" class="text-center text-body-secondary py-4">No read/unread events.</td></tr>
+            }
+            else
+            {
+                foreach (var l in Model.Items)
+                {
+                    <tr>
+                        <td class="admin-id-col">
+                            <code class="user-id-copy" role="button" title="@l.LogId" data-copy="@l.LogId">@l.LogId.Truncate(8, "…")</code>
+                        </td>
+                        @if (!Model.ScopedToNotification)
+                        {
+                            <td class="admin-id-col">
+                                <code class="user-id-copy" role="button" title="@l.NotificationId" data-copy="@l.NotificationId">@l.NotificationId.Truncate(8, "…")</code>
+                            </td>
+                        }
+                        <td class="min-w-0">
+                            <div class="fw-semibold text-truncate">@l.Username</div>
+                            <code class="user-id-copy small text-body-secondary" role="button" title="@l.UserId" data-copy="@l.UserId">@l.UserId.Truncate(12, "…")</code>
+                        </td>
+                        <td class="text-center">
+                            @if (l.IsRead)
+                            {
+                                <span class="badge rounded-pill text-bg-success"><i class="bi bi-envelope-open me-1"></i>Read</span>
+                            }
+                            else
+                            {
+                                <span class="badge rounded-pill text-bg-secondary"><i class="bi bi-envelope me-1"></i>Unread</span>
+                            }
+                        </td>
+                        <td>@l.LogDate</td>
+                        <td class="text-body-secondary">@l.RelativeDate</td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+@if (Model.Paged != null)
+{
+    <div class="mt-3 d-flex justify-content-center">
+        <pagination model="Model.Paged" href-format="@hrefFormat" />
+    </div>
+}

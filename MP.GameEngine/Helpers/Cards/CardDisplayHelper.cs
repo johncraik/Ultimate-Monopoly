@@ -83,23 +83,26 @@ public static class CardDisplayHelper
         return text;
     }
 
-    public static string CardColourDisplay(CardType type)
+    public static string CardColourDisplay(CardType type, bool playing)
         => "card-" + type switch
         {
-            CardType.Chance => "chance",
-            CardType.ComChest => "com-chest",
-            CardType.PercentageChance => "percent-chance",
-            CardType.PercentageComChest => "percent-com-chest",
-            CardType.Third => "third",
-            CardType.Double => "double",
-            CardType.Triple => "triple",
-            CardType.Tax => "tax",
-            CardType.Go => "go",
-            CardType.JustVisiting => "jv",
-            CardType.FreeParking => "fp",
-            CardType.GoToJail => "jail",
+            CardType.Chance => $"{PlayingSlug(playing)}chance",
+            CardType.ComChest => $"{PlayingSlug(playing)}com-chest",
+            CardType.PercentageChance => $"{PlayingSlug(playing)}percent-chance",
+            CardType.PercentageComChest => $"{PlayingSlug(playing)}percent-com-chest",
+            CardType.Third => $"{PlayingSlug(playing)}third",
+            CardType.Double => $"{PlayingSlug(playing)}double",
+            CardType.Triple => $"{PlayingSlug(playing)}triple",
+            CardType.Tax => $"{PlayingSlug(playing)}tax",
+            CardType.Go => $"{PlayingSlug(playing)}go",
+            CardType.JustVisiting => $"{PlayingSlug(playing)}jv",
+            CardType.FreeParking => $"{PlayingSlug(playing)}fp",
+            CardType.GoToJail => $"{PlayingSlug(playing)}jail",
             _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
         };
+    
+    private static string PlayingSlug(bool playing)
+        => playing ? "play-" : "";
 
 
     public static string ConditionDisplay(this CardModel card)

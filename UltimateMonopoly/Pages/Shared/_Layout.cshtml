@@ -1,5 +1,6 @@
 @using MP.GameEngine.Helpers.RuleSet
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@inject IConfiguration Config
 <!DOCTYPE html>
 <html lang="en" data-bs-theme="dark">
 <head>
@@ -15,12 +16,38 @@
     <meta name="csrf-header" content="@afTokens.HeaderName" />
     <meta name="csrf-token" content="@afTokens.RequestToken" />
 </head>
-<body>
+<body class="app-shell">
     <partial name="_Navbar" />
 
-    <main class="container-lg pb-5">
+    <main class="app-page pb-5">
         @RenderBody()
     </main>
+
+    <footer class="app-footer">
+        <div class="app-page py-3">
+            <div class="app-footer-grid small">
+                @{
+                    var email = Config["Communication:Email:ContactRecipient"] ?? "support@monappoly.com";
+                }
+                
+                <div class="d-none d-lg-block"></div>
+                <div class="text-center text-body-secondary">
+                    &copy; @(DateTime.UtcNow.ToLocalTime().Date.Year) - <a href="https://home.jcserver.net" class="app-footer-link">JC Foundry</a>
+                </div>
+                <div class="text-center text-lg-end mt-2 mt-lg-0">
+                    <a href="mailto:@email" class="app-footer-link">
+                        <i class="bi bi-envelope me-1"></i>@email
+                    </a>
+                    @if (User.Identity?.IsAuthenticated == true)
+                    {
+                        <a asp-area="" asp-page="/Guides/Index" asp-route-tab="contact" class="app-footer-link ms-3">
+                            <i class="bi bi-chat-left-text me-1"></i>Contact
+                        </a>
+                    }
+                </div>
+            </div>
+        </div>
+    </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/scripts/navbar.js" asp-append-version="true"></script>
@@ -31,6 +58,10 @@
         <script src="~/scripts/notifications.js" asp-append-version="true"></script>
     }
     <script src="https://cdn.syncfusion.com/ej2/33.2.6/dist/ej2.min.js"></script>
+
+    <partial name="~/Pages/Shared/_BugReporter.cshtml" />
+    <partial name="~/Pages/Shared/_FeedbackModal.cshtml" />
+
     @await RenderSectionAsync("Scripts", required: false)
     <ejs-scripts></ejs-scripts>
 </body>

@@ -19,8 +19,6 @@ namespace MP.GameEngine.Models.Prompts.PromptTypes;
 /// </remarks>
 public sealed class CardOptionPrompt : Prompt<CardOptionResponse>
 {
-    //TODO: This may change when card framework is implemented
-    
     /// <summary>
     /// The set of options the player must choose from. Keys must be
     /// distinct; labels are display text. The engine is responsible for

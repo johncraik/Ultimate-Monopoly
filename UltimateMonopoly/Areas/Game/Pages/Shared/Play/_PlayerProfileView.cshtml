@@ -1,4 +1,5 @@
 @using JC.Core.Extensions
+@using MP.GameEngine.Abstractions.Cards
 @using MP.GameEngine.Enums
 @using MP.GameEngine.Enums.Cards
 @using MP.GameEngine.Enums.Properties
@@ -12,6 +13,8 @@
 @using UltimateMonopoly.Services.Cache
 @model PlayerProfilePlayViewModel
 @inject PlayerCacheService PlayerCache
+@inject MP.GameEngine.Abstractions.ITurnTaxService TurnTaxService
+@inject ICardCacheService CardCache
 @{
     // The live player-profile body. Rendered on first load (Player/Index) and
     // re-rendered on every SignalR StateChanged frame (Index.OnGetStateAsync →
@@ -27,6 +30,11 @@
 
     var playerId = Model.PlayerId;
     var viewerId = Model.ViewerUserId;
+
+    // Admin read-only render: the game-details page constructs this view model with IsAdminView = true.
+    // We force every command gate off (belt-and-braces with that page not loading the game-play hub) and
+    // hide the pending prompt. The live game uses the default (false), so behaviour there is unchanged.
+    var readOnly = Model.IsAdminView;
 
     var player = game.GetPlayer(playerId) ?? game.GetPlayer(playerId, true)
         ?? throw new InvalidOperationException($"Player {playerId} not found in game state.");
@@ -78,11 +86,11 @@
     // Capability gates — host-bypass aware, evaluated for the *viewer* (self or
     // the host). Mock/stub actions still wear their real guards: hidden where the
     // state forbids them, disabled where the doc wants a persistent button.
-    var canStart = tsp.CanStartTurn(playerId, viewerId);
-    var canEnd = tsp.CanEndTurn(playerId, viewerId);
-    var canPortfolio = tsp.CanPortfolioCommand(playerId, viewerId);
-    var canLeaveJail = tsp.CanLeaveJail(playerId, viewerId);
-    var canBankrupt = tsp.CanDeclareBankruptcy(playerId, viewerId);
+    var canStart = !readOnly && tsp.CanStartTurn(playerId, viewerId);
+    var canEnd = !readOnly && tsp.CanEndTurn(playerId, viewerId);
+    var canPortfolio = !readOnly && tsp.CanPortfolioCommand(playerId, viewerId);
+    var canLeaveJail = !readOnly && tsp.CanLeaveJail(playerId, viewerId);
+    var canBankrupt = !readOnly && tsp.CanDeclareBankruptcy(playerId, viewerId);
 
     var owned = game.GetOwnedProperties(playerId);
     var mortgaged = owned.Where(p => p.State == PropertyState.Mortgaged).ToList();
@@ -138,14 +146,13 @@
 <div class="row justify-content-center">
     <div class="col-12">
         <div class="pp-view">
-
             @* ─────────── Engine prompt (server-rendered overlay) ───────────
                The pending prompt for this player renders here as part of the swapped
                state — it appears/disappears atomically with each StateChanged frame
                (no client open/close race). ingame-prompts.js reads data-prompt-* + the
                controls and calls SubmitPrompt. Scoped to the drawer/profile, never the
                whole page. *@
-            @if (prompt is not null && promptType is not null)
+            @if (prompt is not null && promptType is not null && !readOnly)
             {
                 <div class="pp-prompt" data-prompt-id="@prompt.PromptId" data-prompt-type="@promptType" data-stamp="@cache.ConcurrencyStamp">
                     @* Hide (don't cancel) — the prompt stays open server-side; this only hides the
@@ -162,37 +169,37 @@
                         @switch (prompt)
                         {
                             case DiceRollPrompt p:
-                                <partial name="Play/_DiceRollPrompt" model="p" />
+                                <partial name="~/Areas/Game/Pages/Shared/Play/_DiceRollPrompt.cshtml" model="p" />
                                 break;
                             case AcknowledgePrompt p:
-                                <partial name="Play/_AcknowledgePrompt" model="p" />
+                                <partial name="~/Areas/Game/Pages/Shared/Play/_AcknowledgePrompt.cshtml" model="p" />
                                 break;
                             case AcquirePropertyPrompt p:
-                                <partial name="Play/_AcquirePropertyPrompt" model="p" />
+                                <partial name="~/Areas/Game/Pages/Shared/Play/_AcquirePropertyPrompt.cshtml" model="p" />
                                 break;
                             case AuctionBidPrompt p:
-                                <partial name="Play/_AuctionBidPrompt" model="p" />
+                                <partial name="~/Areas/Game/Pages/Shared/Play/_AuctionBidPrompt.cshtml" model="p" />
                                 break;
                             case ShortfallPrompt p:
-                                <partial name="Play/_ShortfallPrompt" model="p" />
+                                <partial name="~/Areas/Game/Pages/Shared/Play/_ShortfallPrompt.cshtml" model="p" />
                                 break;
                             case TargetPropertyPrompt p:
-                                <partial name="Play/_TargetPropertyPrompt" model="p" />
+                                <partial name="~/Areas/Game/Pages/Shared/Play/_TargetPropertyPrompt.cshtml" model="p" />
                                 break;
                             case TargetPlayerPrompt p:
-                                <partial name="Play/_TargetPlayerPrompt" model="p" />
+                                <partial name="~/Areas/Game/Pages/Shared/Play/_TargetPlayerPrompt.cshtml" model="p" />
                                 break;
                             case LeaveJailPrompt p:
-                                <partial name="Play/_LeaveJailPrompt" model="p" />
+                                <partial name="~/Areas/Game/Pages/Shared/Play/_LeaveJailPrompt.cshtml" model="p" />
                                 break;
                             case CardOptionPrompt p:
-                                <partial name="Play/_CardOptionPrompt" model="p" />
+                                <partial name="~/Areas/Game/Pages/Shared/Play/_CardOptionPrompt.cshtml" model="p" />
                                 break;
                             case DealPrompt p:
-                                <partial name="Play/_DealPrompt" model="p" />
+                                <partial name="~/Areas/Game/Pages/Shared/Play/_DealPrompt.cshtml" model="p" />
                                 break;
                             case BuildDealPrompt p:
-                                <partial name="Play/_BuildDealPrompt" model="p" />
+                                <partial name="~/Areas/Game/Pages/Shared/Play/_BuildDealPrompt.cshtml" model="p" />
                                 break;
                         }
                     </div>
@@ -311,7 +318,7 @@
                                         @* Only when the player holds a Get Out of Jail Free card
                                (LeaveJailCard → CardService.PlayCard). Same CanLeaveJail gate;
                                holding the card is the extra condition. *@
-                                        @if (player.GetOutOfJailCard() is { } jailCard)
+                                        @if (await player.GetOutOfJailCard(CardCache) is { } jailCard)
                                         {
                                             <button type="button" class="btn btn-outline-secondary py-2" data-leave-jail-card data-card-id="@jailCard.CardId">
                                                 <i class="bi bi-ticket-perforated me-1"></i> Leave jail — use card
@@ -358,9 +365,18 @@
                                 <dd class="col-5 text-end mb-2">@cur@player.TripleBonus.ToString("N0")</dd>
 
                                 <dt class="col-7 text-body-secondary fw-normal"><i class="bi bi-percent me-1"></i> Card %cap</dt>
-                                <dd class="col-5 text-end mb-0">
+                                <dd class="col-5 text-end mb-@(TurnTaxService.Enabled ? "2" : "0")">
                                     <span class="badge text-bg-secondary">@(game.PlayerPercentCap(playerId))%</span>
                                 </dd>
+
+                                @* Turn tax (D2) — only when enabled. The tax the player would pay on their
+                                   current cash at the start of their next roll; routed through Cost() so the
+                                   figure matches the (rounded) charge. *@
+                                @if (TurnTaxService.Enabled)
+                                {
+                                    <dt class="col-7 text-body-secondary fw-normal"><i class="bi bi-bank me-1"></i> Wealth tax on roll</dt>
+                                    <dd class="col-5 text-end mb-0">@Cost(TurnTaxService.TotalTax(player.Money), FinancialReason.TurnTax)</dd>
+                                }
                             </dl>
                         </div>
                     </div>
@@ -391,7 +407,7 @@
                                     {
                                         <span class="p-2"><b>Owner: </b>@(await PlayerCache.GetPlayerName(nowProp.OwnerPlayerId))</span>
                                         <span class="p-2 d-inline-flex align-items-center gap-1">
-                                            <b>Rent level:</b> <partial name="Play/_RentLevel" model="nowProp!.RentLevel" />
+                                            <b>Rent level:</b> <partial name="~/Areas/Game/Pages/Shared/Play/_RentLevel.cshtml" model="nowProp!.RentLevel" />
                                         </span>
                                         <span class="p-2"><b>Rent:</b> @nowRentText</span>
                                     }
@@ -488,6 +504,12 @@
                                 <dd class="col-5 text-end mb-2">@hotelsBuilt</dd>
                                 <dt class="col-7 text-body-secondary fw-normal">Hotels left</dt>
                                 <dd class="col-5 text-end mb-2">@hotelsLeft</dd>
+                                @* Free-hotel credits (R-06) — each waives the cost of one future hotel build. Shown only when held. *@
+                                @if (player.FreeHotels > 0)
+                                {
+                                    <dt class="col-7 text-body-secondary fw-normal">Free hotels</dt>
+                                    <dd class="col-5 text-end mb-2"><span class="badge text-bg-success">@player.FreeHotels</span></dd>
+                                }
                                 <dt class="col-7 text-body-secondary fw-normal">Cost to build all</dt>
                                 @* >0 guard: Cost() bumps a rounded-to-zero figure up to one grid unit, so show £0 directly when no set is held rather than a misleading minimum. *@
                                 <dd class="col-5 text-end mb-0">@(buildAllCostRaw > 0 ? Cost(buildAllCostRaw, FinancialReason.Build) : $"{cur}0")</dd>
@@ -592,21 +614,16 @@
                                                             {
                                                                 <span class="badge text-bg-info">Reserved</span>
                                                             }
-                                                            @* Purge state — currently purged (buildings stripped, rent reset to SET), or
-                                                               purged at some earlier point (HasBeenPurged) but since recovered. *@
+                                                            @* Purge state — currently purged (buildings stripped, rent reset to SET). *@
                                                             @if (prop.IsPurged)
                                                             {
                                                                 <span class="badge text-bg-danger">Purged</span>
-                                                            }
-                                                            else if (prop.HasBeenPurged)
-                                                            {
-                                                                <span class="badge text-bg-secondary">Purged Before</span>
                                                             }
                                                         </div>
                                                         <div class="pp-space-body">
                                                             <div class="d-flex align-items-center justify-content-between small mb-1">
                                                                 <span class="text-body-secondary">Rent level:</span>
-                                                                <partial name="Play/_RentLevel" model="prop.RentLevel" />
+                                                                <partial name="~/Areas/Game/Pages/Shared/Play/_RentLevel.cshtml" model="prop.RentLevel" />
                                                             </div>
                                                             <div class="small mb-2">
                                                                 <span class="text-body-secondary">Rent:</span>
@@ -674,10 +691,10 @@
                         //  1) Get out of jail   2) Playable now (turn-start / on-landing)   3) Triggered.
                         // A get-out-of-jail card is OnInJail-triggered, so it also matches GetOtherCards();
                         // exclude it from the triggered list so it appears once, under its own section.
-                        var jailCards = player.GetOutOfJailCards().OrderBy(c => c.CardType).ToList();
+                        var jailCards = (await player.GetOutOfJailCards(CardCache)).OrderBy(c => c.CardType).ToList();
                         var jailIds = jailCards.Select(c => c.CardId).ToHashSet();
-                        var playableCards = player.GetPlayableCards().OrderBy(c => c.CardType).ToList();
-                        var triggeredCards = player.GetOtherCards()
+                        var playableCards = (await player.GetPlayableCards(CardCache)).OrderBy(c => c.CardType).ToList();
+                        var triggeredCards = (await player.GetOtherCards(CardCache))
                             .Where(c => !jailIds.Contains(c.CardId))
                             .OrderBy(c => c.CardType).ToList();
 
@@ -688,7 +705,7 @@
                                 <i class="bi @CardIcon(item.CardType) fs-3 text-body-secondary"></i>
                                 <div class="flex-grow-1">
                                     <p class="mb-2">@item.GetDisplayText(engine.Cache, playerId)</p>
-                                    <span class="badge text-bg-@CardDisplayHelper.CardColourDisplay(item.CardType)">@item.CardType.ToDisplayName()</span>
+                                    <span class="badge text-bg-@CardDisplayHelper.CardColourDisplay(item.CardType, false)">@item.CardType.ToDisplayName()</span>
                                 </div>
                                 <div class="text-end small text-body-secondary flex-shrink-0">
                                     <div class="fw-semibold">@item.ConditionDisplay()</div>
@@ -697,7 +714,7 @@
                             </div>;
                     }
 
-                    @if (player.Cards.Count == 0)
+                    @if (player.CardInstances.Count == 0)
                     {
                         <div class="card">
                             <div class="card-body text-center text-body-secondary py-4">
@@ -863,8 +880,10 @@
                                 @foreach (var cand in dealCandidates)
                                 {
                                     var candProfile = await PlayerCache.GetPlayerProfile(cand.PlayerId);
+                                    @* In admin read-only we keep the pick clickable so the moderator can inspect each
+                                       counterparty's builder — the Offer button below is what's disabled. *@
                                     <button type="button" class="list-group-item list-group-item-action d-flex align-items-center gap-3"
-                                            data-deal-target="@cand.PlayerId" disabled="@(!canDeal)">
+                                            data-deal-target="@cand.PlayerId" disabled="@(!readOnly && !canDeal)">
                                         <profile-circle user="candProfile" size="Md" />
                                         <div class="flex-grow-1 min-w-0 text-start">
                                             <div class="fw-semibold text-truncate">@candProfile.DisplayName</div>
@@ -885,10 +904,10 @@
                     @foreach (var cand in dealCandidates)
                     {
                         <div class="d-none" data-deal-block="@cand.PlayerId">
-                            <partial name="Play/_MakeDealPartial" model="new MakeDealViewModel(cache.GameId, playerId, cand.PlayerId)" />
+                            <partial name="~/Areas/Game/Pages/Shared/Play/_MakeDealPartial.cshtml" model="new MakeDealViewModel(cache.GameId, playerId, cand.PlayerId)" />
                             <div class="d-grid gap-2 mt-2">
                                 @* Offer Deal — stub for now; will call the deal command (run the deal). *@
-                                <button type="button" class="btn btn-hero-primary" data-deal-offer data-counterparty-id="@cand.PlayerId">
+                                <button type="button" class="btn btn-hero-primary" data-deal-offer data-counterparty-id="@cand.PlayerId" disabled="@readOnly">
                                     <i class="bi bi-arrow-left-right me-1"></i> Offer Deal
                                 </button>
                                 <button type="button" class="btn btn-hero-danger" data-deal-cancel>

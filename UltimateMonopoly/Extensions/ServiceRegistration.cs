@@ -1,9 +1,10 @@
 using JC.BackgroundJobs.Extensions;
-using JC.BackgroundJobs.Models;
 using JC.Core.Extensions;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using MP.GameEngine.Abstractions;
+using MP.GameEngine.Abstractions.Cards;
 using MP.GameEngine.Extensions;
+using UltimateMonopoly.Areas.Admin.Models;
 using UltimateMonopoly.Models.DataModels;
 using UltimateMonopoly.Models.DataModels.Boards;
 using UltimateMonopoly.Models.DataModels.Games;
@@ -24,6 +25,7 @@ public static class ServiceRegistration
     public static IServiceCollection AddServices(this IServiceCollection services)
     {
         services.RegisterRepositoryContexts(
+            typeof(BlockedWord),
             typeof(BoardSkin),
             typeof(BoardSkinSpace),
             typeof(SharedBoardSkin),
@@ -31,6 +33,7 @@ public static class ServiceRegistration
             typeof(FriendRequest),
             typeof(BlockedUser),
             typeof(ReportedUser),
+            typeof(AdminActionLog),
             typeof(Game),
             typeof(GamePlayer),
             typeof(GameTurn),
@@ -59,19 +62,27 @@ public static class ServiceRegistration
         // Social — friends
         services.TryAddScoped<FriendService>();
         services.TryAddScoped<BlockAndReportService>();
+        services.TryAddScoped<FriendMessagingService>();
 
         // Identity — profile
         services.TryAddScoped<ProfileService>();
         services.TryAddScoped<PlayerCacheService>();
-        
+
+        // Content safety — profanity filtering (B1). Library filter is immutable once built → singleton;
+        // the cache + orchestrator do a (cached) DB read → scoped. Normaliser is a static helper.
+        services.TryAddSingleton<ProfanityFilter.Interfaces.IProfanityFilter, ProfanityFilter.ProfanityFilter>();
+        services.TryAddScoped<BlockedWordsCacheService>();
+        services.TryAddScoped<ProfanityService>();
+        services.TryAddScoped<BlockedWordImportService>();
+
         // Games
         services.TryAddScoped<GameSetupService>();
         services.TryAddScoped<GameService>();
         services.TryAddScoped<PlayerProfileService>();
         services.TryAddScoped<GameCacheService>();
-        
+
         // Cards
-        services.TryAddScoped<CardCacheService>();
+        services.TryAddScoped<ICardCacheService, CardCacheService>();
         services.TryAddScoped<CardImportService>();
         
         // Game Engine
@@ -80,24 +91,24 @@ public static class ServiceRegistration
         services.TryAddScoped<IGameEngineFactory, GameEngineFactory>();
         services.TryAddSingleton<IEngineNotifier, SignalrEngineNotifier>();
         services.TryAddSingleton<IGameExecutor, GameExecutor>();
+        // One singleton, exposed both ways: the engine reads ITurnTaxService; the admin editor needs the
+        // concrete TurnTaxService (Save / GetTurnTax) — both resolve to the same instance.
+        services.TryAddSingleton<TurnTaxService>();
+        services.TryAddSingleton<ITurnTaxService>(sp => sp.GetRequiredService<TurnTaxService>());
         services.AddGameEngine();
 
         // Statistics — the per-game projection. Enqueued fire-and-forget by GameStatsService when
         // a game concludes (the ad-hoc scheduler registration), and also run on a recurring
         // schedule as a safety-net: it sweeps every finished game and is idempotent, so it
-        // backfills any game whose stats never got written. 03:00 and 15:00 UK time (every 12h).
+        // backfills any game whose stats never got written. 01:00 and 13:00 UK time (every 12h).
         services.TryAddScoped<GameStatsService>();
         services.TryAddScoped<LeaderboardService>();
-        services.AddHangfireScheduler(AdHocJobRegistration.For<StatisticsJob>());
-        services.AddHangfireJob<StatisticsJob>(opts =>
-        {
-            opts.Cron = "0 3,15 * * *";
-            opts.TimeZone = TimeZoneInfo.FindSystemTimeZoneById("Europe/London");
-        });
 
         // Rules
         services.TryAddSingleton<RuleCatalog>();
 
+        // Register all background jobs
+        services.AddBackgroundJobs();
         return services;
     }
 }

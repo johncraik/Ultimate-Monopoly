@@ -10,7 +10,7 @@
 @{
     // CardColourDisplay returns the colour token (e.g. "card-chance"); compose the Bootstrap
     // utility prefixes off it. Null CardType → secondary, as before.
-    var colour = Model.CardType is { } type ? CardDisplayHelper.CardColourDisplay(type) : "secondary";
+    var colour = Model.CardType is { } type ? CardDisplayHelper.CardColourDisplay(type, Model.PlayingCard) : "secondary";
 }
 <div class="pp-prompt-card border border-2 border-@colour">
     <div class="pp-prompt-head text-bg-@colour">@Model.Title</div>

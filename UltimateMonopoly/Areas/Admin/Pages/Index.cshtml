@@ -1,0 +1,66 @@
+@page
+@model UltimateMonopoly.Areas.Admin.Pages.IndexModel
+@using UltimateMonopoly.Areas.Admin.Models.ViewModels.Dashboard
+@{
+    ViewData["Title"] = "Dashboard";
+    const string tile = "~/Areas/Admin/Pages/Shared/Dashboard/_SpokeTile.cshtml";
+    SpokeTileModel Coming(string title, string icon, string tone) => new() { Title = title, Icon = icon, Tone = tone };
+}
+
+<div class="d-flex align-items-center gap-3 mb-4">
+    <span class="admin-page-ico bg-primary-subtle text-primary"><i class="bi bi-speedometer2"></i></span>
+    <div>
+        <h1 class="h3 mb-1">Admin Dashboard</h1>
+        <p class="text-body-secondary mb-0">A glance at each area — open one for its full dashboard.</p>
+    </div>
+</div>
+
+<div class="row g-4">
+    @* 50/50 — Users · Community *@
+    <div class="col-12 col-xl-6">
+        @if (Model.UsersTile != null)
+        {
+            <partial name="@tile" model="Model.UsersTile" />
+        }
+    </div>
+    <div class="col-12 col-xl-6">
+        @if (Model.CommunityTile != null)
+        {
+            <partial name="@tile" model="Model.CommunityTile" />
+        }
+        else
+        {
+            <partial name="@tile" model='Coming("Community", "bi-people-fill", "info")' />
+        }
+    </div>
+
+    @* Full width — Games (SystemAdmin only) *@
+    @if (Model.GamesTile != null)
+    {
+        <div class="col-12">
+            <partial name="@tile" model="Model.GamesTile" />
+        </div>
+    }
+
+    @* 50/50 — Audit · App Logs *@
+    <div class="col-12 col-xl-6">
+        @if (Model.AuditTile != null)
+        {
+            <partial name="@tile" model="Model.AuditTile" />
+        }
+        else
+        {
+            <partial name="@tile" model='Coming("Audit", "bi-clipboard-data", "warning")' />
+        }
+    </div>
+    <div class="col-12 col-xl-6">
+        @if (Model.AppLogsTile != null)
+        {
+            <partial name="@tile" model="Model.AppLogsTile" />
+        }
+        else
+        {
+            <partial name="@tile" model='Coming("App Logs", "bi-journal-text", "secondary")' />
+        }
+    </div>
+</div>

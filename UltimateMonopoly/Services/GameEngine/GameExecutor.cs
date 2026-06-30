@@ -78,12 +78,26 @@ public sealed class GameExecutor : IGameExecutor, IAsyncDisposable
         while (true)
         {
             var pump = _pumps.GetOrAdd(gameId, id => new GamePump(id, _scopeFactory, _logger, OnPumpFaulted));
-            if (pump.TryEnqueue(work))
-                return;
+            switch (pump.TryEnqueue(work))
+            {
+                case EnqueueOutcome.Enqueued:
+                    return;
 
-            // The pump is faulting / shutting down and won't accept more work.
-            // Drop it and loop — GetOrAdd then spins up a fresh pump.
-            _pumps.TryRemove(new KeyValuePair<string, GamePump>(gameId, pump));
+                case EnqueueOutcome.Full:
+                    // Backpressure (M-04): the game's queue is saturated — commands piling up behind a
+                    // prompt nobody is answering, or a wedged turn. Drop this command rather than growing
+                    // memory unbounded; it would be rejected by the on-pump gate re-check anyway, and the
+                    // sweeper reclaims a genuinely wedged pump. The client can retry.
+                    _logger.LogWarning("Game {GameId} work queue is full ({Capacity}); dropping command.",
+                        gameId, GamePump.Capacity);
+                    return;
+
+                case EnqueueOutcome.Closed:
+                    // The pump is faulting / shutting down and won't accept more work.
+                    // Drop it and loop — GetOrAdd then spins up a fresh pump.
+                    _pumps.TryRemove(new KeyValuePair<string, GamePump>(gameId, pump));
+                    continue;
+            }
         }
     }
 
@@ -194,19 +208,41 @@ public sealed class GameExecutor : IGameExecutor, IAsyncDisposable
     }
 }
 
+/// <summary>Result of trying to enqueue work onto a <see cref="GamePump"/>.</summary>
+internal enum EnqueueOutcome
+{
+    /// <summary>Accepted onto the queue.</summary>
+    Enqueued,
+    /// <summary>The bounded queue is full — caller should back off / drop the command.</summary>
+    Full,
+    /// <summary>The pump is completing (fault / shutdown) — caller should replace it.</summary>
+    Closed
+}
+
 /// <summary>
-/// One game's pump: an unbounded channel drained by a single reader loop. The
+/// One game's pump: a bounded channel drained by a single reader loop. The
 /// loop awaits each work item to completion before dequeuing the next — so when
 /// a work item parks on a prompt, the whole game's queue waits, which is exactly
 /// the single-writer serialisation we want.
 /// </summary>
 internal sealed class GamePump : IAsyncDisposable
 {
+    /// <summary>Max commands that may sit QUEUED behind the in-flight one. A running item is already
+    /// dequeued (not counted) and a faulted pump discards its queue, so this bounds only pending work.
+    /// Legitimate turn-based play never queues this deep — a saturated queue means a parked/wedged turn.</summary>
+    public const int Capacity = 10;
+
     private readonly string _gameId;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger _logger;
     private readonly Channel<GameWorkItem> _channel =
-        Channel.CreateUnbounded<GameWorkItem>(new UnboundedChannelOptions { SingleReader = true });
+        Channel.CreateBounded<GameWorkItem>(new BoundedChannelOptions(Capacity)
+            { SingleReader = true, FullMode = BoundedChannelFullMode.Wait });
+
+    // Set true the moment we begin completing the channel (fault / dispose), so TryEnqueue can tell a
+    // CLOSED pump (recreate a fresh one) from a merely FULL queue (reject) — TryWrite returns false for both.
+    private volatile bool _closed;
+
     private readonly CancellationTokenSource _cts = new();
     private readonly Task _pumpTask;
     private readonly Action<string, GamePump> _onFault;
@@ -233,11 +269,18 @@ internal sealed class GamePump : IAsyncDisposable
         _pumpTask = Task.Run(() => PumpAsync(_cts.Token));
     }
 
-    public bool TryEnqueue(GameWorkItem work)
+    public EnqueueOutcome TryEnqueue(GameWorkItem work)
     {
-        var written = _channel.Writer.TryWrite(work);
-        if (written) Volatile.Write(ref _lastActivityTicks, DateTime.UtcNow.Ticks);
-        return written;
+        if (_closed) return EnqueueOutcome.Closed;
+
+        if (_channel.Writer.TryWrite(work))
+        {
+            Volatile.Write(ref _lastActivityTicks, DateTime.UtcNow.Ticks);
+            return EnqueueOutcome.Enqueued;
+        }
+
+        // TryWrite failed: either we're now closing (race with completion) or the bounded queue is full.
+        return _closed ? EnqueueOutcome.Closed : EnqueueOutcome.Full;
     }
 
     private async Task PumpAsync(CancellationToken ct)
@@ -265,6 +308,7 @@ internal sealed class GamePump : IAsyncDisposable
                     // next enqueue spins up a fresh pump that re-hydrates from the
                     // last snapshot — the engine's recovery boundary.
                     _logger.LogError(ex, "Work item failed for game {GameId}; abandoning pump and evicting cache.", _gameId);
+                    _closed = true;
                     _channel.Writer.TryComplete();
                     _onFault(_gameId, this);
                     break;
@@ -298,6 +342,7 @@ internal sealed class GamePump : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        _closed = true;
         _channel.Writer.TryComplete();
         await _cts.CancelAsync();
         try

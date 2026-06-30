@@ -1,0 +1,54 @@
+@page
+@model UltimateMonopoly.Areas.Identity.Pages.Account.DisabledModel
+@{
+    ViewData["Title"] = "Account Disabled";
+}
+
+<div class="mx-auto py-4" style="max-width: 620px;">
+    <div class="card border-danger shadow-sm">
+        <div class="card-body text-center p-4 p-md-5">
+            <div class="mb-3">
+                <i class="bi bi-slash-circle-fill text-danger" style="font-size: 3rem;"></i>
+            </div>
+            <h1 class="h3 text-danger mb-3">Account Disabled</h1>
+            <p class="mb-2">Your account has been disabled by an administrator.</p>
+            <p class="text-body-secondary mb-0">
+                While it's disabled you can't access any part of the app. Your account and data still exist,
+                and an administrator can re-enable it. If you'd rather not wait, you can permanently delete
+                your account instead.
+            </p>
+
+            <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center mt-4">
+                <form method="post" asp-page-handler="Logout" class="m-0 d-grid">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-box-arrow-right me-1"></i>Log out
+                    </button>
+                </form>
+                <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
+                    <i class="bi bi-trash me-1"></i>Delete account
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="deleteAccountModal" tabindex="-1" aria-labelledby="deleteAccountModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteAccountModalLabel">Delete your account?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2">This <strong>permanently deletes</strong> your account. This action is <strong>irreversible</strong> and cannot be undone.</p>
+                <p class="small text-body-secondary mb-0">You'll be signed out immediately.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="post" asp-page-handler="Delete" class="m-0">
+                    <button type="submit" class="btn btn-danger">Delete permanently</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

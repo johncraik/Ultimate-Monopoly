@@ -3,6 +3,7 @@ using JC.Core.Extensions;
 using JC.Core.Models;
 using JC.Core.Services.DataRepositories;
 using Microsoft.EntityFrameworkCore;
+using UltimateMonopoly.Data;
 using UltimateMonopoly.Models.DataModels.Boards;
 using UltimateMonopoly.Models.DataModels.Social;
 using UltimateMonopoly.Models.ViewModels.BoardSkins;
@@ -109,6 +110,9 @@ public class BoardSkinShareService
             .Select(u => new SharedBoardSkin(skinId, u))
             .ToList();
 
+        if (_userInfo.IsInRole(AppRoles.Restricted) && (toAdd.Count > 0 || toRestore.Count > 0))
+            return false;
+
         if(toAdd.Count == 0 && toRestore.Count == 0 && toDelete.Count == 0)
             return true;
         
@@ -132,7 +136,7 @@ public class BoardSkinShareService
 
             foreach (var userId in userIds)
             {
-                _boardCacheService.Invalidate(userId);
+                _boardCacheService.Invalidate(userId, true);
             }
             return true;
         }
@@ -156,8 +160,10 @@ public class BoardSkinShareService
         
         await _repos.GetRepository<SharedBoardSkin>()
             .SoftDeleteAsync(shareLink);
-        
-        _boardCacheService.Invalidate(_userInfo.UserId);
+
+        //Own cache → no-arg (Invalidate defaults to the current user). Passing the explicit id would hit
+        //the "another user requires admin" guard and no-op for a normal user.
+        _boardCacheService.Invalidate();
         return true;
     }
 }

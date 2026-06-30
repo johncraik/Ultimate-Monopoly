@@ -1,0 +1,172 @@
+@page "{reportId}"
+@model UltimateMonopoly.Areas.Admin.Pages.Reports.DetailsModel
+@using UltimateMonopoly.Areas.Admin.Models.ViewModels.Users
+@{
+    ViewData["Title"] = "Report Details";
+    var r = Model.Report;
+    const string staffNote = "Only a System Admin can moderate a System Admin account.";
+}
+
+<div class="d-flex align-items-center gap-3 mb-4">
+    <a asp-area="Admin" asp-page="Index" asp-route-Resolution="AnyAction" class="btn btn-sm btn-outline-secondary" title="Back to reports">
+        <i class="bi bi-arrow-left"></i>
+    </a>
+    <span class="admin-page-ico bg-danger-subtle text-danger"><i class="bi bi-flag"></i></span>
+    <div>
+        <h1 class="h3 mb-1">Report Details</h1>
+        <p class="text-body-secondary mb-0">@r.ReasonDisplay &middot; @r.ReportedDate</p>
+    </div>
+
+    @if (Model.IsOpen)
+    {
+        <span class="badge fs-6 text-bg-warning ms-auto align-self-center"><i class="bi bi-exclamation-circle-fill me-1"></i>Open</span>
+    }
+    else
+    {
+        <span class="badge fs-6 text-bg-success ms-auto align-self-center"><i class="bi bi-check-circle-fill me-1"></i>Resolved</span>
+    }
+</div>
+
+<alert type="Success" message="@(TempData["Success"] as string)" />
+<alert type="Error" message="@(TempData["Error"] as string)" />
+
+<div class="row g-4">
+    @* ---------- LEFT: the report + the two users ---------- *@
+    <div class="col-12 col-xl-7">
+        <partial name="_UserShortCard" model='new UserShortCardModel("Reported User", r.ReportedUser, r.ReportedUserId)' />
+
+        @* Report info *@
+        <div class="card mb-4">
+            <div class="card-header"><i class="bi bi-flag me-2"></i>Report</div>
+            <div class="card-body">
+                <div class="admin-detail-group">
+                    <div class="admin-detail-row">
+                        <span class="admin-detail-label"><i class="bi bi-fingerprint"></i>Report ID</span>
+                        <code class="admin-detail-value user-id-copy" role="button" data-copy="@r.ReportId" title="Click to copy">@r.ReportId</code>
+                    </div>
+                    <div class="admin-detail-row">
+                        <span class="admin-detail-label"><i class="bi bi-calendar-event"></i>Reported</span>
+                        <span class="admin-detail-value">@r.ReportedDate</span>
+                    </div>
+                    <div class="admin-detail-row">
+                        <span class="admin-detail-label"><i class="bi bi-exclamation-triangle"></i>Reason</span>
+                        <span class="admin-detail-value">@r.ReasonDisplay</span>
+                    </div>
+                    <div class="admin-detail-row">
+                        <span class="admin-detail-label"><i class="bi bi-chat-left-text"></i>Message</span>
+                        <span class="admin-detail-value">@r.Message</span>
+                    </div>
+                    <div class="admin-detail-row">
+                        <span class="admin-detail-label"><i class="bi bi-shield-check"></i>Resolution</span>
+                        <span class="admin-detail-value">@r.ResolutionDisplay</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    @* ---------- RIGHT: reporter + actions ---------- *@
+    <div class="col-12 col-xl-5">
+        <partial name="_UserShortCard" model='new UserShortCardModel("Reported By", r.ReportedByUser, r.ReportedByUserId)' />
+
+        <div class="card">
+            <div class="card-header"><i class="bi bi-shield-exclamation me-2"></i>Actions</div>
+            <div class="card-body d-flex flex-column gap-3">
+                @* Handle — close without acting on the account *@
+                <div class="d-flex justify-content-between align-items-start gap-3">
+                    <div>
+                        <div class="fw-semibold">Mark handled</div>
+                        <div class="small text-body-secondary">Close the report without acting on the account (e.g. no violation found).</div>
+                    </div>
+                    <form method="post" asp-page-handler="Handle" asp-route-reportId="@Model.ReportId">
+                        <button class="btn btn-outline-secondary text-nowrap" type="submit" @(Model.CanHandle ? "" : "disabled")>Handle</button>
+                    </form>
+                </div>
+
+                @* Restrict *@
+                <div class="d-flex justify-content-between align-items-start gap-3 border-top pt-3">
+                    <div>
+                        <div class="fw-semibold">Restrict user</div>
+                        <div class="small text-body-secondary">@AppRoles.RestrictedDesc</div>
+                        @if (Model.UserExists && !Model.CanModerateTarget) { <span class="text-warning small d-block mt-1">@staffNote</span> }
+                    </div>
+                    <form method="post" asp-page-handler="Restrict" asp-route-reportId="@Model.ReportId">
+                        <button class="btn btn-outline-warning text-nowrap" type="submit"
+                                @(Model.CanRestrict ? "" : "disabled")
+                                title="@(Model.UserExists && !Model.CanModerateTarget ? staffNote : null)">
+                            Restrict
+                        </button>
+                    </form>
+                </div>
+
+                @* Disable *@
+                <div class="d-flex justify-content-between align-items-start gap-3 border-top pt-3">
+                    <div>
+                        <div class="fw-semibold">Disable account</div>
+                        <div class="small text-body-secondary">Blocks all access to the app — the account still exists (a soft delete).</div>
+                        @if (Model.UserExists && !Model.CanModerateTarget) { <span class="text-warning small d-block mt-1">@staffNote</span> }
+                    </div>
+                    <form method="post" asp-page-handler="Disable" asp-route-reportId="@Model.ReportId">
+                        <button class="btn btn-outline-danger text-nowrap" type="submit"
+                                @(Model.CanDisable ? "" : "disabled")
+                                title="@(Model.UserExists && !Model.CanModerateTarget ? staffNote : null)">
+                            Disable
+                        </button>
+                    </form>
+                </div>
+
+                @* Delete — SystemAdmin only *@
+                @if (Model.IsSystemAdmin)
+                {
+                    <div class="d-flex justify-content-between align-items-start gap-3 border-top pt-3">
+                        <div>
+                            <div class="fw-semibold text-danger">Delete account</div>
+                            <div class="small text-body-secondary">Permanently deletes this account. A System Admin must have their role removed first, and you can't delete your own account.</div>
+                        </div>
+                        @if (Model.CanDelete)
+                        {
+                            <button class="btn btn-danger text-nowrap" type="button" data-bs-toggle="modal" data-bs-target="#deleteModal">Delete</button>
+                        }
+                        else
+                        {
+                            <button class="btn btn-danger text-nowrap" type="button" disabled
+                                    title="@(!Model.UserExists ? "This account no longer exists." : !Model.CanModerateTarget ? staffNote : Model.IsSelf ? "You can't delete your own account." : "Already deleted.")">Delete</button>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Recent activity panel (§7.3) — the reported user's logs / audit / games, keyed by their id. *@
+<partial name="~/Areas/Admin/Pages/Shared/_RecentActivityPanel.cshtml" model="Model.Activity" />
+
+@if (Model.CanDelete)
+{
+    <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteModalLabel">Delete @r.ReportedUser?.Profile.Username?</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-2">This <strong>permanently deletes</strong> this account. This cannot be undone.</p>
+                    <p class="small text-body-secondary mb-0">Their games, stats, and history stay (attributed to a now-missing id) until the cleanup job runs.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <form method="post" asp-page-handler="Delete" asp-route-reportId="@Model.ReportId" class="m-0">
+                        <button type="submit" class="btn btn-danger">Delete permanently</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script src="~/scripts/admin/copy.js" asp-append-version="true"></script>
+}

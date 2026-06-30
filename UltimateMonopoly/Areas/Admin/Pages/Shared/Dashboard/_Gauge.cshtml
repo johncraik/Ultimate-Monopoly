@@ -1,0 +1,31 @@
+@using UltimateMonopoly.Areas.Admin.Models.ViewModels.Dashboard
+@model GaugeWidget
+@* Percentage "gauge" — a Syncfusion donut ring (value vs remainder) with a centred percentage. *@
+@{
+    var hex = DashboardPalette.Hex(Model.Tone);
+    var data = new[]
+    {
+        new { x = "value", y = Math.Round(Model.Percent, 1), fill = hex },
+        new { x = "rest", y = Math.Round(100 - Model.Percent, 1), fill = DashboardPalette.Remainder }
+    };
+}
+<div class="card h-100 text-center">
+    <div class="card-body">
+        <div class="small text-body-secondary text-uppercase mb-1">
+            @if (!string.IsNullOrEmpty(Model.Icon)) { <i class="bi @Model.Icon me-1"></i> }@Model.Label
+        </div>
+        <div class="position-relative" style="min-height: 150px;">
+            <ejs-accumulationchart id="@Model.Id" background="transparent" height="150px">
+                <e-accumulation-series-collection>
+                    <e-accumulation-series dataSource="data" xName="x" yName="y" pointColorMapping="fill" innerRadius="72%" radius="92%"></e-accumulation-series>
+                </e-accumulation-series-collection>
+                <e-accumulationchart-legendsettings visible="false"></e-accumulationchart-legendsettings>
+                <e-accumulationchart-tooltipsettings enable="false"></e-accumulationchart-tooltipsettings>
+            </ejs-accumulationchart>
+            <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+                <span class="fs-4 fw-semibold">@Model.Percent.ToString("0.#")%</span>
+            </div>
+        </div>
+        @if (!string.IsNullOrEmpty(Model.Caption)) { <div class="small text-body-secondary mt-1">@Model.Caption</div> }
+    </div>
+</div>

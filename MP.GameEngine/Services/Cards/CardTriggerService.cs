@@ -1,3 +1,4 @@
+using MP.GameEngine.Abstractions.Cards;
 using MP.GameEngine.Enums;
 using MP.GameEngine.Enums.Cards;
 using MP.GameEngine.Helpers.Cards;
@@ -30,6 +31,13 @@ namespace MP.GameEngine.Services.Cards;
 /// </summary>
 public class CardTriggerService
 {
+    private readonly ICardCacheService _cacheService;
+
+    public CardTriggerService(ICardCacheService cacheService)
+    {
+        _cacheService = cacheService;
+    }
+    
     // ───────────────────── GO ─────────────────────
 
     /// <summary>Subject landed on GO — the GO bonus is threaded as the trigger amount (GO money doubled,
@@ -163,7 +171,7 @@ public class CardTriggerService
         CardActionContext? context, HashSet<HeldCard>? playedCards = null, SuppressDefault? completeSuppress = null, CancellationToken ct = default)
     {
         //Get cards that have a matching trigger:
-        var matchingCards = MatchingCardForTrigger(engine, subject, trigger);
+        var matchingCards = await MatchingCardForTrigger(engine, subject, trigger);
         if (matchingCards.Count == 0)
             return completeSuppress ?? new SuppressDefault(SuppressDefaultType.None);
         
@@ -203,47 +211,50 @@ public class CardTriggerService
 
     private record HeldCard(PlayerModel Player, CardModel Card);
     
-    private List<HeldCard> MatchingCardForTrigger(Framework.GameEngine engine, PlayerModel subject, CardTrigger trigger)
+    private async Task<List<HeldCard>> MatchingCardForTrigger(Framework.GameEngine engine, PlayerModel subject, CardTrigger trigger)
     {
         var matchingCards = new List<HeldCard>();
-        foreach (var held in from player in engine.Cache.Game.GetPlayers(subject.PlayerId, excludePovPlayer: false)
-                 //Jailed players can't play cards through the trigger pipeline — the only in-jail play is the
-                 //OnInJail trigger (get-out-of-jail-free / befriend a guard, on their own jailed subject).
-                 //Exclude jailed holders from every other trigger (anytime cards, bystander reactions).
-                 where !player.IsInJail || trigger == CardTrigger.OnInJail
-                 let mc = player.Cards
-                     .Where(c =>
-                     {
-                         if (c.ConditionType == CardConditionType.None)
-                             return false;
-
-                         //"After your NEXT move": a card drawn THIS turn must not fire on the move that drew
-                         //it (the JustVisiting "go back 17"/"forward 23" cards are drawn on landing, then the
-                         //same move's OnNextMove fires immediately). DrawnOnTurn is stamped on draw; only let
-                         //it fire once the turn number has advanced. Constant during this evaluation, so the
-                         //re-evaluation recursion can't sneak it back in.
-                         if (trigger == CardTrigger.OnNextMove
-                             && c.DrawnOnTurn is { } drawnTurn
-                             && engine.Cache.Game.Metadata.TurnNumber <= drawnTurn)
-                             return false;
-
-                         //Live when any condition matches the trigger flag AND its gates (if any): the
-                         //direction gate (e.g. "passing GO anti-clockwise") and the jail-state gate
-                         //(e.g. "a double in jail becomes a triple") against the subject.
-                         return c.Conditions.Any(cd => cd.Trigger.HasFlag(trigger)
-                             && (cd.RequiredDirection is null || cd.RequiredDirection == subject.Direction)
-                             && cd.JailFilter switch
-                             {
-                                 JailFilter.OnlyJailed => subject.IsInJail,
-                                 JailFilter.OnlyNotJailed => !subject.IsInJail,
-                                 _ => true
-                             });
-                     })
-                     .ToList()
-                 where mc.Count != 0
-                 select mc.Select(c => new HeldCard(player, c)).ToList())
+        foreach (var p in engine.Cache.Game.GetPlayers(subject.PlayerId, excludePovPlayer: false))
         {
-            matchingCards.AddRange(held);
+            //All cards are playable in jail — there is deliberately NO blanket jail exclusion here.
+            //Get-out-of-jail-free cards never surface through this pipeline anyway (their Conditions
+            //carry Trigger=None, which matches no real trigger flag); they play via their own
+            //LeaveJailCard command path. Where a card is genuinely jail-specific (e.g. the dodgy-judge
+            //"a double in jail becomes a triple"), the per-condition JailFilter below still gates it.
+            var mc = (await p.GetCards(_cacheService))
+                .Where(c =>
+                {
+                    if (c.ConditionType == CardConditionType.None)
+                        return false;
+
+                    //"After your NEXT move": a card drawn THIS turn must not fire on the move that drew
+                    //it (the JustVisiting "go back 17"/"forward 23" cards are drawn on landing, then the
+                    //same move's OnNextMove fires immediately). DrawnOnTurn is stamped on draw; only let
+                    //it fire once the turn number has advanced. Constant during this evaluation, so the
+                    //re-evaluation recursion can't sneak it back in.
+                    if (trigger == CardTrigger.OnNextMove
+                        && c.DrawnOnTurn is { } drawnTurn
+                        && engine.Cache.Game.Metadata.TurnNumber <= drawnTurn)
+                        return false;
+
+                    //Live when any condition matches the trigger flag AND its gates (if any): the
+                    //direction gate (e.g. "passing GO anti-clockwise") and the jail-state gate
+                    //(e.g. "a double in jail becomes a triple") against the subject.
+                    return c.Conditions.Any(cd => cd.Trigger.HasFlag(trigger)
+                                                  && (cd.RequiredDirection is null || cd.RequiredDirection == subject.Direction)
+                                                  && cd.JailFilter switch
+                                                  {
+                                                      JailFilter.OnlyJailed => subject.IsInJail,
+                                                      JailFilter.OnlyNotJailed => !subject.IsInJail,
+                                                      _ => true
+                                                  });
+                })
+                .ToList();
+            
+            if(mc.Count == 0)
+                continue;
+            
+            matchingCards.AddRange(mc.Select(c => new HeldCard(p, c)).ToList());
         }
 
         return matchingCards;

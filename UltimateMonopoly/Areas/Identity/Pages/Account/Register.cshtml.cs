@@ -20,6 +20,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
 using UltimateMonopoly.Data;
+using UltimateMonopoly.Services;
 
 namespace UltimateMonopoly.Areas.Identity.Pages.Account
 {
@@ -32,13 +33,15 @@ namespace UltimateMonopoly.Areas.Identity.Pages.Account
         private readonly IUserEmailStore<AppUser> _emailStore;
         private readonly ILogger<RegisterModel> _logger;
         private readonly IEmailService _emailService;
+        private readonly ProfanityService _profanityService;
 
         public RegisterModel(
             UserManager<AppUser> userManager,
             IUserStore<AppUser> userStore,
             SignInManager<AppUser> signInManager,
             ILogger<RegisterModel> logger,
-            IEmailService emailService)
+            IEmailService emailService,
+            ProfanityService profanityService)
         {
             _userManager = userManager;
             _userStore = userStore;
@@ -46,6 +49,7 @@ namespace UltimateMonopoly.Areas.Identity.Pages.Account
             _signInManager = signInManager;
             _logger = logger;
             _emailService = emailService;
+            _profanityService = profanityService;
         }
 
         /// <summary>
@@ -97,7 +101,7 @@ namespace UltimateMonopoly.Areas.Identity.Pages.Account
             ///     directly from your code. This API may change or be removed in future releases.
             /// </summary>
             [Required]
-            [StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]
+            [StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 8)]
             [DataType(DataType.Password)]
             [Display(Name = "Password")]
             public string Password { get; set; }
@@ -123,9 +127,24 @@ namespace UltimateMonopoly.Areas.Identity.Pages.Account
         {
             returnUrl ??= Url.Content("~/");
             ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
+            
+            Input.Username = Input.Username.Trim().ToLowerInvariant();
+            var profanityResult = await _profanityService.Check(Input.Username);
+            if(profanityResult.IsProfane)
+            {
+                _logger.LogWarning("User tried to register with username '{Username}'", Input.Username);
+                // Model-level (string.Empty) so it renders in the page's error alert, not the field span —
+                // jQuery-unobtrusive clears server-only field errors the moment the user interacts.
+                ModelState.AddModelError(string.Empty,
+                    "That username isn't allowed — please choose another.");
+            }
+            
             if (ModelState.IsValid)
             {
                 var user = CreateUser();
+                // Stamp registration time (powers the dashboard registration-trend / cohort metrics). LastLoginUtc
+                // is deliberately NOT set here — the sign-in / email-confirm flow owns that (TODO: reg-flow revisit).
+                user.RegisteredUtc = DateTime.UtcNow;
 
                 await _userStore.SetUserNameAsync(user, Input.Username, CancellationToken.None);
                 await _emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);

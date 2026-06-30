@@ -65,15 +65,15 @@ public class DiceService
     /// An ad-hoc (non-turn) dice roll prompted from <paramref name="player"/>, of
     /// <paramref name="diceCount"/> dice (1 or 2). Used by card effects: the dice multiplier on a
     /// money amount (the holder rolls), and the one-die dice-off that picks a highest/lowest roller.
-    /// Unlike <see cref="RollTurnDice"/> it does <b>not</b> set <c>TurnDiceRoll</c> — it's an input
-    /// to a card effect, not the turn's roll — and (for now) emits no <c>DiceRollReceipt</c>: no stat
-    /// consumes card rolls yet (<c>MovementStatsService.cardRolls</c> is a 0 TODO), and emitting a
-    /// two-die multiplier roll could false-match the dice-number stat. Card-roll receipts land with
-    /// the card stats.
+    /// Unlike <see cref="RollTurnDice"/> it does <b>not</b> set <c>TurnDiceRoll</c> — it's an input to a
+    /// card effect, not the turn's roll. It <b>does</b> emit a <c>DiceRollReceipt</c> (IsTurnRoll false,
+    /// RollType Normal) so card rolls feed <c>MovementStatsService.cardRolls</c> (M-07); the turn-roll /
+    /// doubles / triples and dice-number stats are all gated to turn rolls, so card rolls never pollute them.
     /// </summary>
     public async Task<DiceRoll> RollCardDice(Framework.GameEngine engine, PlayerModel player, ushort diceCount,
         string title, string body, CancellationToken ct)
     {
+        diceCount = Math.Min((ushort)2, diceCount);
         var dice = await engine.PromptProvider.RequestAsync(new DiceRollPrompt
         {
             PlayerId = player.PlayerId,
@@ -83,7 +83,13 @@ public class DiceService
         }, ct);
 
         // The non-turn DiceRoll ctor (1 or 2 dice, no third die) — RollType is Normal, IsTurnRoll false.
-        return diceCount >= 2 ? new DiceRoll(dice.Die1, dice.Die2) : new DiceRoll(dice.Die1);
+        var roll = diceCount >= 2 ? new DiceRoll(dice.Die1, dice.Die2) : new DiceRoll(dice.Die1);
+
+        // Emit a DiceRollReceipt so card rolls feed the card-roll stat. Sharing the turn-roll receipt type
+        // is safe: a card roll is never a turn roll (no third die → IsTurnRoll false, RollType Normal), so
+        // the turn-roll / doubles / triples counters skip it and the dice-number stat is gated to turn rolls.
+        engine.EventEmitter.Emit(new DiceRollReceipt(player.PlayerId, roll));
+        return roll;
     }
 
     /// <summary>

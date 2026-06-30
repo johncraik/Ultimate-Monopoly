@@ -56,11 +56,30 @@ public class FreeParkingService
             return;
         }
         
+        //Draw + resolve the Free Parking space card FIRST (game-rules.md Free Parking §1 — the drawn
+        //card resolves and may supersede the defaults). This MUST precede the held OnLandFreeParking
+        //cards: a held "take ALL the Free Parking money" empties the pot, so a pot-reading drawn card
+        //(e.g. "every player receives 50% of the Free Parking pot from the bank") has to read the pot
+        //BEFORE the held card empties it — otherwise the other players are paid off an emptied pot. Issue #15.
+        SuppressDefault? suppressDefault = null;
+
+        //Check if this player should be prevented from drawing a Free Parking card:
+        if(!engine.Cache.PreventBoardIndexCard(player.PlayerId, IndexHelper.FreeParkingSpace))
+            suppressDefault = await engine.CardService.DrawCard(engine, player, CardType.FreeParking, ct);
+
+        //A drawn card that wipes Free Parking entirely ("all money/property returned to the bank")
+        //supersedes everything — nothing left to take, so don't even offer the held take cards.
+        if(suppressDefault?.SuppressAllFreeParking == true)
+            return;
+
+        //THEN the held OnLandFreeParking cards (take-all / no-cash-this-visit): they take the pot
+        //money and/or suppress the default take.
         var triggerSuppress = await _triggerService.OnLandFreeParking(engine, player, ct);
-        var suppressDefault = await engine.CardService.DrawCard(engine, player, CardType.FreeParking, ct);
-        
+
         var sd = new SuppressDefault(triggerSuppress.Type());
-        sd.Aggregate(suppressDefault);
+        if(suppressDefault is not null)
+            sd.Aggregate(suppressDefault);
+
         if(sd.SuppressAllFreeParking)
             return;
         

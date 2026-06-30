@@ -1,0 +1,94 @@
+@model UltimateMonopoly.Areas.Admin.Models.ViewModels.Games.GameTableModel
+@using JC.Core.Extensions
+@using MP.GameEngine.Enums.Games
+@{
+    var hrefFormat = $"?State={Model.State}&Outcome={Model.Outcome}" +
+                     $"&Search={Uri.EscapeDataString(Model.Search ?? "")}" +
+                     $"&HostId={Uri.EscapeDataString(Model.HostId ?? "")}&pageNumber={{0}}";
+
+    string StateBadge(GameState s) => s switch
+    {
+        GameState.Setup => "text-bg-secondary",
+        GameState.InPlay => "text-bg-success",
+        GameState.Finished => "text-bg-info",
+        GameState.Cancelled => "text-bg-danger",
+        _ => "text-bg-secondary"
+    };
+
+    string OutcomeBadge(GameOutcome o) => o switch
+    {
+        GameOutcome.Winner => "text-bg-success",
+        GameOutcome.Drawn => "text-bg-warning",
+        _ => "text-bg-secondary"
+    };
+}
+
+<div class="d-flex align-items-center justify-content-between mb-2">
+    <span class="small text-body-secondary">Showing @Model.Games.Count.ToString("N0") of @Model.Games.TotalCount.ToString("N0") game(s)</span>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-hover table-sm align-middle admin-users-table mb-0">
+        <thead>
+            <tr class="text-body-secondary small text-uppercase">
+                <th>Game ID</th>
+                <th>Name</th>
+                <th>Host</th>
+                <th>Host User ID</th>
+                <th class="text-center">Players</th>
+                <th>Board</th>
+                <th>Join Code</th>
+                <th class="text-center">Turn</th>
+                <th>State</th>
+                <th>Outcome</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.Games.Count == 0)
+            {
+                <tr><td colspan="10" class="text-center text-body-secondary py-4">No games match these filters.</td></tr>
+            }
+            else
+            {
+                foreach (var g in Model.Games)
+                {
+                    <tr data-href="/Admin/Games/Details/@g.GameId">
+                        <td class="admin-id-col">
+                            <code class="user-id-copy" role="button" title="@g.GameId"
+                                  data-copy-id="@g.GameId">@g.GameId.Truncate(8, "…")</code>
+                        </td>
+                        <td class="fw-semibold"><span title="@g.Name">@g.Name.Truncate(30, "…")</span></td>
+                        <td>
+                            <div class="fw-semibold text-truncate">@(string.IsNullOrWhiteSpace(g.HostUser.Profile.Username) ? "(unknown)" : g.HostUser.Profile.Username)</div>
+                            <div class="small text-body-secondary text-truncate">@g.HostUser.Profile.DisplayName</div>
+                        </td>
+                        <td class="admin-id-col">
+                            @if (!string.IsNullOrEmpty(g.HostUserId))
+                            {
+                                <code class="user-id-copy" role="button" title="@g.HostUserId"
+                                      data-copy-id="@g.HostUserId">@g.HostUserId.Truncate(8, "…")</code>
+                            }
+                            else
+                            {
+                                <span class="text-body-secondary">—</span>
+                            }
+                        </td>
+                        <td class="text-center">@g.Players.Count</td>
+                        <td>@g.BoardName</td>
+                        <td>@g.JoinCode</td>
+                        <td class="text-center">@g.TurnNumber</td>
+                        <td><span class="badge @StateBadge(g.State)">@g.StateDisplay</span></td>
+                        <td><span class="badge @OutcomeBadge(g.Outcome)">@g.OutcomeDisplay</span></td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+@if (!Model.Preview)
+{
+    <div class="mt-3 d-flex justify-content-center">
+        <pagination model="Model.Games" href-format="@hrefFormat" />
+    </div>
+}
