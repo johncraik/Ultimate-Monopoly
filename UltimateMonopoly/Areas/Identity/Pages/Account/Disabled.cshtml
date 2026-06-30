@@ -29,7 +29,8 @@
                         </button>
                     </div>
 
-                    <partial name="~/Pages/Shared/_HelpContact.cshtml" />
+                    @* model: false → email only (no Contact button — disabled users can't reach /Guides) *@
+                    <partial name="~/Pages/Shared/_HelpContact.cshtml" model="false" />
                 </div>
             </div>
         </div>

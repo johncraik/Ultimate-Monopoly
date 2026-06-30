@@ -1,12 +1,16 @@
 @inject IConfiguration Config
+@model bool?
 @*
-    Shared "need help?" strip for the status pages (Error / Access Denied / Disabled). Surfaces the
-    support email (always — a mailto works for anyone, signed in or not) and, for signed-in users, a
-    button through to the Guides → Contact tab. Mirrors the footer's email pattern (_Layout.cshtml):
-    Communication:Email:ContactRecipient, falling back to support@monappoly.com.
+    Shared "need help?" strip for the status pages (Error / Access Denied / Disabled). Always shows the
+    support email (a mailto works for anyone, signed in or not), mirroring the footer's pattern
+    (Communication:Email:ContactRecipient → support@monappoly.com). For signed-in users it also shows a
+    button to the Guides → Contact tab — UNLESS the page passes model: false to suppress it. The Disabled
+    page does: disabled users are bounced off /Guides back to /Disabled, so the button would just loop —
+    the email is their working channel.
 *@
 @{
     var email = Config["Communication:Email:ContactRecipient"] ?? "support@monappoly.com";
+    var showContactButton = Model != false;
 }
 <hr class="my-4" />
 <p class="small text-body-secondary mb-2">Need help, or think this is a mistake?</p>
@@ -14,7 +18,7 @@
     <a href="mailto:@email" class="btn btn-sm btn-outline-secondary">
         <i class="bi bi-envelope me-1"></i>@email
     </a>
-    @if (User.Identity?.IsAuthenticated == true)
+    @if (showContactButton && User.Identity?.IsAuthenticated == true)
     {
         <a asp-area="" asp-page="/Guides/Index" asp-route-tab="contact" class="btn btn-sm btn-outline-secondary">
             <i class="bi bi-chat-left-text me-1"></i>Contact us
