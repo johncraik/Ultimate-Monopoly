@@ -77,6 +77,10 @@ builder.Services.ConfigureCoreBackgroundJobs(options =>
 {
     options.EnableAuditCleanupJob = true;
     options.AuditRetentionMonths = 6;
+    // A single game-delete writes 200+ audit entries (snapshots + events + players + game), so the
+    // AuditEntries table churns fast — raise the per-run delete cap above the default 500 so the
+    // cleanup keeps pace with the write volume rather than falling permanently behind.
+    options.AuditCleanupChunkingValue = 2000;
 
     options.EnableSoftDeleteCleanupJob = false;
 });
@@ -127,8 +131,11 @@ builder.Services.AddAuthorization(options =>
 
 // Web (security headers, cookies, client profiling). TrustProxyHeaders so the real client IP is
 // resolved from Cloudflare's CF-Connecting-IP (the app runs behind a Cloudflare tunnel on IIS) —
-// this drives the per-IP rate limiter below (and bot filtering / geo).
+// this drives the per-IP rate limiter below. Bot filtering is OFF: public pages (home, guides,
+// rules) should be crawlable for SEO, and authed pages are already gated, so blocking detected
+// bots adds nothing here — and Cloudflare handles bot management in front anyway.
 builder.Services.AddWebDefaults(builder.Configuration,
+    configureBotFilter: bots => bots.IsEnabled = false,
     configureClientIp: ip => ip.TrustProxyHeaders = true);
 
 // Rate limiting (opt-in) — scoped to the Identity auth endpoints via UseWhen in the pipeline below.
