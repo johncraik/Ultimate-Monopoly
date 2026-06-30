@@ -3,7 +3,7 @@ namespace MP.GameEngine.Helpers.RuleSet;
 public static class RuleDictionary
 {
     //Game Setup / Metadata
-    public const string GameName = "Monopoly: Property Pandamonium";
+    public const string GameName = "Monappoly: Property Pandemonium";
     public const string Currency = "£";
     public const ushort MinimumPlayers = 2;
     public const ushort MaximumPlayers = 6;

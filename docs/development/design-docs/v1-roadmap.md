@@ -8,9 +8,10 @@ piece — the detailed design for the larger items will get its own doc as it is
 **Status:** V1 is **code-complete**. Phases **A, B, C, D, E and F** are implemented (roles, profanity +
 display names, the full admin area + dashboard, the gameplay/stats items, hidden profile + friend messaging,
 and the front-end / onboarding polish — home, navbar, guides + contact), and the **A1** release gate (email
-confirmation + password policy) is now done in **code**. The sole remaining step before launch is
-**provisioning the Microsoft Entra tenant** for outbound email and setting its tenant / client ids + secret in
-**IIS environment variables** — a deploy-time config step, no code change. Out of V1 scope: the optional
+confirmation + password policy) is now done in **code** — the app is **V1 ready**. The sole remaining step
+before launch is **registering the Microsoft Entra app** (a PowerShell script on the server provisions it and
+writes the tenant / client id + secret into **IIS environment variables**) plus a **staging pass** — a
+deploy-time step, no code change. Out of V1 scope: the optional
 stretch **E3** (public cards reference page) and the **V2** guides-content backend.
 
 ---
@@ -79,7 +80,7 @@ prerequisite — provisioned only at release) · 🟡 optional / stretch · 🟢
 | F1 | Home page redesign | F | 🟢 | — |
 | F2 | Navigation bar redesign | F | 🟢 | — |
 | F3 | New-user help page + guide pages | F | 🟢 | — |
-| A1 | Email confirmation (tenant + app registration) | R | 🟢 (code) · tenant config pending | JC.Identity, JC.Communication.Email |
+| A1 | Email confirmation (tenant + app registration) | R | 🟢 (code) · server app-registration + staging pending | JC.Identity, JC.Communication.Email |
 
 ---
 
@@ -399,7 +400,7 @@ on a `/Guides/{slug}` read page. The Guides tab is the placeholder for these.
 
 The one item deliberately sequenced **after** everything else, immediately before launch.
 
-### A1. Email confirmation 🟢 — ✅ **IMPLEMENTED** (code) · Microsoft tenant provisioning pending (config only)
+### A1. Email confirmation 🟢 — ✅ **IMPLEMENTED** (code) · server app-registration + staging pending (no code)
 
 **Done (code).** `SignIn.RequireConfirmedAccount = true` plus the password policy (≥8 chars, upper / lower /
 digit / special, unique email) and per-account lockout (5 attempts / 30 min) are set in `Program.cs`
@@ -408,9 +409,10 @@ until it's confirmed; the email sender is JC.Communication.Email (Console provid
 the logs; Microsoft provider in prod). Signed-in users are also bounced off the login/register pages to account
 management (`RedirectAuthenticatedFilter`).
 
-**Pending (config only — no code).** Provision the Entra tenant + app registration and set the tenant / client
-id + secret in **IIS environment variables** (per the secrets policy), then point the Microsoft email provider
-at it. A purely deploy-time, paid prerequisite — no further code change.
+**Pending (deploy-time only — no code).** A **PowerShell script on the server** registers the Microsoft Entra
+app — provisioning the tenant / app registration and writing the tenant / client id + secret into **IIS
+environment variables** (per the secrets policy) — then the Microsoft email provider is pointed at it and the
+flow is verified by a **staging pass**. A purely deploy-time, paid prerequisite — no further code change.
 
 **What.** Stand up a **Microsoft Entra tenant + app registration** for outbound email, wire it into
 the app's email sender (JC.Communication.Email), and **enable the ConfirmEmail flow** in the
