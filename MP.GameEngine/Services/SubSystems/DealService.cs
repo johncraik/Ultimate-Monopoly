@@ -79,9 +79,16 @@ public class DealService
         return properties.All(dealable.Contains);
     }
 
-    private async Task<bool> RunDeal(Framework.GameEngine engine, PlayerModel player, PlayerModel counterpartyPlayer, 
+    private async Task<bool> RunDeal(Framework.GameEngine engine, PlayerModel player, PlayerModel counterpartyPlayer,
         DealContents contents, CancellationToken ct)
     {
+        // Reject an empty "nothing for nothing" deal — neither side offers money or property — before
+        // bothering the counter party with a meaningless accept/decline prompt. Returning false no-ops
+        // the turn-boundary command and re-prompts the shortfall path (a debt can't be settled with
+        // nothing). Issue #17.
+        if (contents.IsEmpty)
+            return false;
+
         var response = await engine.PromptProvider.RequestAsync(new DealPrompt
         {
             PlayerId = counterpartyPlayer.PlayerId,

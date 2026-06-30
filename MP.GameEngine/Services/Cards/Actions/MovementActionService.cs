@@ -71,8 +71,17 @@ public class MovementActionService : ICardActionService<MovementAction>
                     await _movementService.AdvancePlayer(engine, target, index, MovementDirection(action), ct, action.ResolveLandedSpace);
                     break;
                 case MovementKind.AdvanceToNearest:
-                    await _movementService.AdvancePlayer(engine, target, FindNearest(engine, target, action), MovementDirection(action), ct, action.ResolveLandedSpace);
+                {
+                    // No qualifying space (e.g. NearestOwnedByOther with none owned by another player)
+                    // → the whole movement action is a no-op: no move, no GO pass, no landed-space
+                    // resolution. Advancing to the player's own index is NOT a no-op (it reports
+                    // passesGo and re-resolves the space), so a null target must short-circuit. Issue #14.
+                    var nearest = FindNearest(engine, target, action);
+                    if (nearest is null)
+                        continue;
+                    await _movementService.AdvancePlayer(engine, target, nearest.Value, MovementDirection(action), ct, action.ResolveLandedSpace);
                     break;
+                }
                 case MovementKind.GoToJustVisiting:
                     if (target.IsInJail)
                         // A jailed target is RELEASED, not teleported — route through JailService so the
@@ -208,9 +217,11 @@ public class MovementActionService : ICardActionService<MovementAction>
     /// Scans forward in the player's facing direction for the nearest space of the action's
     /// <see cref="MovementAction.Nearest"/> kind (station / utility / buildable property), returning
     /// its board index. When <see cref="MovementAction.NearestOwnedByOther"/> is set, only a space
-    /// owned by another player qualifies. Falls back to the player's current index if none is found.
+    /// owned by another player qualifies. Returns <c>null</c> when no qualifying space exists — the
+    /// caller treats that as a no-op (no move). The player's own space is never returned: the scan
+    /// covers the other spaces ahead, never wrapping back onto the starting index. See issue #14.
     /// </summary>
-    private static ushort FindNearest(Framework.GameEngine engine, PlayerModel player, MovementAction action)
+    private static ushort? FindNearest(Framework.GameEngine engine, PlayerModel player, MovementAction action)
     {
         var targets = action.Nearest switch
         {
@@ -220,7 +231,10 @@ public class MovementActionService : ICardActionService<MovementAction>
         };
 
         var index = player.BoardIndex;
-        for (var step = 0; step < IndexHelper.PhysicalBoardSize; step++)
+        // Scan every space ahead except the player's own (PhysicalBoardSize - 1 single steps never
+        // wraps back to the start). With NearestOwnedByOther a board may hold no qualifying space at
+        // all — return null so the action no-ops rather than "advancing" to the current index.
+        for (var step = 0; step < IndexHelper.PhysicalBoardSize - 1; step++)
         {
             (index, _) = IndexHelper.MoveIndex(index, 1, player.Direction);
             if (!targets.Contains(index))
@@ -229,7 +243,7 @@ public class MovementActionService : ICardActionService<MovementAction>
                 continue;
             return index;
         }
-        return player.BoardIndex;   // fallback — a board always holds the target kind
+        return null;   // no qualifying space ahead — the advance is a no-op
     }
 
     /// <summary>True when the property at <paramref name="index"/> is owned by a player other than the mover.</summary>

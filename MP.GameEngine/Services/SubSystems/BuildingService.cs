@@ -297,13 +297,16 @@ public class BuildingService
 
     public async Task SellOnProperty(Framework.GameEngine engine, ushort boardIndex, CancellationToken ct, string? playerId = null)
     {
-        //Single property sell
-        var canSell = engine.Cache.Game.CanDecreaseRentLevel(boardIndex);
-        if(!canSell)
-            return;
-        
+        //Resolve the SELLER first — they may not be the current player (a player covering a rent/tax
+        //shortfall during another player's third-die movement sells from their own holdings). Issue #18.
         var player = engine.Cache.Game.GetPlayer(playerId ?? engine.Cache.Game.Metadata.CurrentPlayerId);
         if (player is null)
+            return;
+
+        //Single property sell — checked against the SELLER, not Metadata.CurrentPlayerId (the default the
+        //no-id CanDecreaseRentLevel overload uses), or a non-current seller's sell silently no-ops here.
+        var canSell = engine.Cache.Game.CanDecreaseRentLevel(player.PlayerId, boardIndex);
+        if(!canSell)
             return;
         
         var space = engine.Cache.Board.GetBoardSpace(boardIndex);
@@ -311,7 +314,7 @@ public class BuildingService
         if(property is null || space.PropertySet is null)
             return;
         
-        var streetEffect = engine.Cache.Game.HasStreetEffect((PropertySet)space.PropertySet);
+        var streetEffect = engine.Cache.Game.HasStreetEffect(player.PlayerId, (PropertySet)space.PropertySet);
         var value = PropertySetHelper.GetSellValue(boardIndex, engine.Cache.Board, streetEffect);
         uint? doubleHotelValue = null;
         if (property.RentLevel == RentLevel.DOUBLE_HOTEL)
@@ -336,7 +339,7 @@ public class BuildingService
         if(!response.Accept)
             return;
         
-        await SellOnProperties(engine, [boardIndex], ct, doubleHotelValue);
+        await SellOnProperties(engine, [boardIndex], ct, player.PlayerId, doubleHotelValue);
     } 
 
     public async Task SellOnProperties(Framework.GameEngine engine, PropertySet set, CancellationToken ct)
@@ -436,13 +439,15 @@ public class BuildingService
     
     
     private async Task SellOnProperties(Framework.GameEngine engine, List<ushort> boardIndexes, CancellationToken ct,
-        uint? doubleHotelValue = null)
+        string? playerId = null, uint? doubleHotelValue = null)
     {
         if(boardIndexes.Any(i => !i.IsProperty()))
             //Any non-buildable properties and return false (cannot build)
             return;
 
-        var player = engine.Cache.Game.CurrentPlayer();
+        var player = playerId == null 
+            ? engine.Cache.Game.CurrentPlayer() 
+            : engine.Cache.Game.GetPlayer(playerId);
         if (player is null)
             return;
         
@@ -472,7 +477,7 @@ public class BuildingService
             if(space.PropertySet is null)
                 throw new InvalidOperationException("Property space has no property set");
             
-            var streetEffect = engine.Cache.Game.HasStreetEffect((PropertySet)space.PropertySet);
+            var streetEffect = engine.Cache.Game.HasStreetEffect(player.PlayerId, (PropertySet)space.PropertySet);
             var value = PropertySetHelper.GetSellValue(property.BoardIndex, engine.Cache.Board, streetEffect);
             await _transactionService.ReceiveForSell(engine, player, doubleHotelValue ?? value, property.BoardIndex, ct);
         }

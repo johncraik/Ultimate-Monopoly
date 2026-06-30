@@ -73,8 +73,9 @@ public class DetailsModel : PageModel
         User = user;
 
         // Same profanity gate as the user's own Manage page — generic message; the term goes to the log, not the UI.
-        if (!string.IsNullOrWhiteSpace(DisplayName))
+        if (!string.IsNullOrWhiteSpace(DisplayName) && !_userInfo.IsInRole(SystemRoles.SystemAdmin))
         {
+            //No profanity check if user is SystemAdmin
             var profanity = await _profanity.Check(DisplayName);
             if (profanity.IsProfane)
                 ModelState.AddModelError(nameof(DisplayName), "This display name isn't allowed. Please choose another.");
