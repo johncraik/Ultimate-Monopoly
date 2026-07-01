@@ -2,9 +2,14 @@
 @using MP.GameEngine.Helpers.RuleSet
 @using UltimateMonopoly.Helpers
 @using UltimateMonopoly.Models.ViewModels
+@inject IConfiguration Config
 @model UltimateMonopoly.Pages.RulesModel
 @{
     ViewData["Title"] = "Rules";
+    ViewData["Description"] = $"The complete rulebook for {RuleDictionary.GameName}, a heavily-extended Monopoly variant — three-dice movement, cards and table-wide global events, bank loans, dice rules, grouped by section.";
+    
+    var webUrl = Config["Routes:WebUrl"] ?? "https://www.monappoly.com/";
+    ViewData["Canonical"] = $"{webUrl}Rules";
 
     // Sidebar sections come from the helper (single source of section order/numbering); only show
     // sections that actually have rules in the catalogue.

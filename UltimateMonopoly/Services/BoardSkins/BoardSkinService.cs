@@ -281,7 +281,7 @@ public class BoardSkinService
         if(space.IsDeleted) return true;
 
         await _repos.GetRepository<BoardSkinSpace>()
-            .SoftDeleteAsync(space);
+            .DeleteAsync(space);
         
         _boardCacheService.Invalidate();
         return true;

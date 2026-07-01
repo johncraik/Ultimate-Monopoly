@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
-using System.Text.Encodings.Web;
+using UltimateMonopoly.Helpers.Email;
 using System.Threading;
 using System.Threading.Tasks;
 using JC.Communication.Email.Models;
@@ -163,11 +163,10 @@ namespace UltimateMonopoly.Areas.Identity.Pages.Account
                         values: new { area = "Identity", userId = userId, code = code, returnUrl = returnUrl },
                         protocol: Request.Scheme);
 
+                    var (plain, html) = AccountEmail.ConfirmAccount(callbackUrl);
                     await _emailService.SendAsync(
                         new[] { new EmailRecipient(Input.Email) },
-                        "Confirm your email",
-                        plainBody: $"Please confirm your account by visiting: {callbackUrl}",
-                        htmlBody: $"Please confirm your account by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.");
+                        "Confirm your email", plain, html);
 
                     if (_userManager.Options.SignIn.RequireConfirmedAccount)
                     {

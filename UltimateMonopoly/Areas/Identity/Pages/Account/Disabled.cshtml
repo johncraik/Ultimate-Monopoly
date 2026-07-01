@@ -1,32 +1,37 @@
 @page
 @model UltimateMonopoly.Areas.Identity.Pages.Account.DisabledModel
 @{
-    ViewData["Title"] = "Account Disabled";
+    ViewData["Title"] = "Account disabled";
 }
 
-<div class="mx-auto py-4" style="max-width: 620px;">
-    <div class="card border-danger shadow-sm">
-        <div class="card-body text-center p-4 p-md-5">
-            <div class="mb-3">
-                <i class="bi bi-slash-circle-fill text-danger" style="font-size: 3rem;"></i>
-            </div>
-            <h1 class="h3 text-danger mb-3">Account Disabled</h1>
-            <p class="mb-2">Your account has been disabled by an administrator.</p>
-            <p class="text-body-secondary mb-0">
-                While it's disabled you can't access any part of the app. Your account and data still exist,
-                and an administrator can re-enable it. If you'd rather not wait, you can permanently delete
-                your account instead.
-            </p>
+<div class="py-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-8 col-lg-6">
+            <div class="card shadow-sm border-0 text-center">
+                <div class="card-body p-4 p-md-5">
+                    <i class="bi bi-slash-circle-fill display-4 text-danger d-block mb-3"></i>
+                    <h1 class="h3 mb-2">Account disabled</h1>
+                    <p class="mb-2">Your account has been disabled by an administrator.</p>
+                    <p class="text-body-secondary mb-4">
+                        While it's disabled you can't access any part of the app. Your account and data still exist,
+                        and an administrator can re-enable it. If you'd rather not wait, you can permanently delete
+                        your account instead.
+                    </p>
 
-            <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center mt-4">
-                <form method="post" asp-page-handler="Logout" class="m-0 d-grid">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-box-arrow-right me-1"></i>Log out
-                    </button>
-                </form>
-                <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
-                    <i class="bi bi-trash me-1"></i>Delete account
-                </button>
+                    <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center">
+                        <form method="post" asp-page-handler="Logout" class="m-0 d-grid">
+                            <button type="submit" class="btn btn-hero-primary">
+                                <i class="bi bi-box-arrow-right me-1"></i>Log out
+                            </button>
+                        </form>
+                        <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
+                            <i class="bi bi-trash me-1"></i>Delete account
+                        </button>
+                    </div>
+
+                    @* model: false → email only (no Contact button — disabled users can't reach /Guides) *@
+                    <partial name="~/Pages/Shared/_HelpContact.cshtml" model="false" />
+                </div>
             </div>
         </div>
     </div>

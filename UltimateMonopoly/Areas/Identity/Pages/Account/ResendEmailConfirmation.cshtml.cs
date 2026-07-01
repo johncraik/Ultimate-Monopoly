@@ -5,7 +5,7 @@
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.Text;
-using System.Text.Encodings.Web;
+using UltimateMonopoly.Helpers.Email;
 using System.Threading.Tasks;
 using JC.Communication.Email.Models;
 using JC.Communication.Email.Services;
@@ -78,11 +78,10 @@ namespace UltimateMonopoly.Areas.Identity.Pages.Account
                 pageHandler: null,
                 values: new { userId = userId, code = code },
                 protocol: Request.Scheme);
+            var (plain, html) = AccountEmail.ConfirmAccount(callbackUrl);
             await _emailService.SendAsync(
                 new[] { new EmailRecipient(Input.Email) },
-                "Confirm your email",
-                plainBody: $"Please confirm your account by visiting: {callbackUrl}",
-                htmlBody: $"Please confirm your account by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.");
+                "Confirm your email", plain, html);
 
             ModelState.AddModelError(string.Empty, "Verification email sent. Please check your email.");
             return Page();

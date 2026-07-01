@@ -67,9 +67,10 @@
                 "Actions": [
                     {
                         "$type": "Money",
-                        "Amount": 1000,
+                        "Amount": 3000,
                         "Direction": 0,
-                        "Counterparty": 1
+                        "Counterparty": 1,
+                        "PercentageApplies": true
                     }
                 ]
             }

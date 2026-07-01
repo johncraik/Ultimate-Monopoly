@@ -1,7 +1,13 @@
 @page
+@using MP.GameEngine.Helpers.RuleSet
+@inject IConfiguration Config
 @model UltimateMonopoly.Pages.Guides.IndexModel
 @{
     ViewData["Title"] = "Guides";
+    ViewData["Description"] = $"New to {RuleDictionary.GameName}? A step-by-step quick-start guide — create an account, set up your profile, add friends, and host or join your first game on the real board.";
+    
+    var webUrl = Config["Routes:WebUrl"] ?? "https://www.monappoly.com/";
+    ViewData["Canonical"] = $"{webUrl}Guides";
 
     string TabClass(string n) => Model.ActiveTab == n ? "active" : "";
     string PaneClass(string n) => Model.ActiveTab == n ? "tab-pane fade show active" : "tab-pane fade";

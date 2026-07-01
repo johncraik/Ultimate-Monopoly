@@ -1,12 +1,62 @@
 @using MP.GameEngine.Helpers.RuleSet
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 @inject IConfiguration Config
+@{
+    // Canonical always points at the production domain (never localhost/staging). Pages override the path
+    // via ViewData["Canonical"]; unset falls back to the site root.
+    var webUrl = Config["Routes:WebUrl"] ?? "https://www.monappoly.com/";
+    var canonicalUrl = ViewData["Canonical"] as string ?? webUrl;
+    var publisherUrl = Config["Routes:PublisherUrl"] ?? "https://www.jcfoundry.co.uk";
+    var metaDescription = ViewData["Description"] as string;
+    var ogTitle = ViewData["Title"] is string pageTitle && !string.IsNullOrWhiteSpace(pageTitle)
+        ? $"{pageTitle} - {RuleDictionary.GameName}"
+        : RuleDictionary.GameName;
+}
+
 <!DOCTYPE html>
 <html lang="en" data-bs-theme="dark">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - @RuleDictionary.GameName</title>
+    <link rel="canonical" href="@canonicalUrl" />
+    @* Public pages set ViewData["Description"] for the search snippet + share preview; omitted elsewhere. *@
+    @if (!string.IsNullOrWhiteSpace(metaDescription))
+    {
+        <meta name="description" content="@metaDescription" />
+    }
+    @* Open Graph — link-share preview card (no og:image / Twitter card by design). *@
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="@RuleDictionary.GameName" />
+    <meta property="og:title" content="@ogTitle" />
+    <meta property="og:url" content="@canonicalUrl" />
+    @if (!string.IsNullOrWhiteSpace(metaDescription))
+    {
+        <meta property="og:description" content="@metaDescription" />
+    }
+    @* Structured data — declares the site as a free web game app by JC Foundry for rich results.
+       @@ is escaped to a literal @ (Razor); the schema.org keys must render as @context / @type. *@
+    <script type="application/ld+json">
+    {
+        "@@context": "https://schema.org",
+        "@@type": "WebApplication",
+        "name": "@RuleDictionary.GameName",
+        "url": "@webUrl",
+        "applicationCategory": "GameApplication",
+        "operatingSystem": "Web",
+        "description": "A free companion app for a wilder, heavily-extended take on the Monopoly board game.",
+        "offers": {
+            "@@type": "Offer",
+            "price": "0",
+            "priceCurrency": "GBP"
+        },
+        "publisher": {
+            "@@type": "Organization",
+            "name": "JC Foundry",
+            "url": "@publisherUrl"
+        }
+    }
+    </script>
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css" />
     <link rel="stylesheet" href="https://cdn.syncfusion.com/ej2/33.2.6/bootstrap5-dark.css" />
@@ -32,7 +82,7 @@
                 
                 <div class="d-none d-lg-block"></div>
                 <div class="text-center text-body-secondary">
-                    &copy; @(DateTime.UtcNow.ToLocalTime().Date.Year) - <a href="https://home.jcserver.net" class="app-footer-link">JC Foundry</a>
+                    &copy; @(DateTime.UtcNow.ToLocalTime().Date.Year) - <a href="@publisherUrl" class="app-footer-link">JC Foundry</a>
                 </div>
                 <div class="text-center text-lg-end mt-2 mt-lg-0">
                     <a href="mailto:@email" class="app-footer-link">

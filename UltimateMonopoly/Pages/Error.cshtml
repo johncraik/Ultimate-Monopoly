@@ -1,7 +1,9 @@
 @page "{code?}"
 @model UltimateMonopoly.Pages.ErrorModel
 @{
-    ViewData["Title"] = $"{Model.StatusCode} — {Model.Title}";
+    // Lead with the friendly title, not the status code — users don't read HTTP codes. The code is
+    // kept as a small, muted reference at the foot (handy when someone reports an issue to support).
+    ViewData["Title"] = Model.Title;
 }
 
 <div class="py-5">
@@ -9,14 +11,18 @@
         <div class="col-12 col-md-8 col-lg-6">
             <div class="card shadow-sm border-0 text-center">
                 <div class="card-body p-4 p-md-5">
-                    <div class="display-1 fw-bold text-secondary lh-1 mb-2">@Model.StatusCode</div>
-                    <i class="bi @Model.Icon display-5 text-secondary d-block mb-3"></i>
+                    <i class="bi @Model.Icon display-4 text-secondary d-block mb-3"></i>
                     <h1 class="h3 mb-2">@Model.Title</h1>
                     <p class="text-body-secondary mb-4">@Model.Message</p>
+
                     <div class="d-flex gap-2 justify-content-center flex-wrap">
                         <a href="/" class="btn btn-hero-primary">Go home</a>
                         <button type="button" class="btn btn-hero-secondary" onclick="history.back()">Go back</button>
                     </div>
+
+                    <partial name="~/Pages/Shared/_HelpContact.cshtml" model="true"/>
+
+                    <p class="small text-body-tertiary mt-3 mb-0">Error @Model.StatusCode</p>
                 </div>
             </div>
         </div>

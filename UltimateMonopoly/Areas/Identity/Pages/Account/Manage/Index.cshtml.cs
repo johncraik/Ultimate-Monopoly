@@ -2,7 +2,6 @@
 
 using System.ComponentModel.DataAnnotations;
 using System.Text;
-using System.Text.Encodings.Web;
 using JC.Communication.Email.Models;
 using JC.Communication.Email.Services;
 using Microsoft.AspNetCore.Identity;
@@ -11,6 +10,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.WebUtilities;
 using UltimateMonopoly.Data;
 using UltimateMonopoly.Services;
+using UltimateMonopoly.Helpers.Email;
 
 namespace UltimateMonopoly.Areas.Identity.Pages.Account.Manage;
 
@@ -165,11 +165,10 @@ public class IndexModel : PageModel
                 values: new { area = "Identity", userId, email = EmailInput.NewEmail, code },
                 protocol: Request.Scheme);
 
+            var (plain, html) = AccountEmail.ConfirmEmailChange(callbackUrl);
             var result = await _emailService.SendAsync(
                 new[] { new EmailRecipient(EmailInput.NewEmail) },
-                "Confirm your email",
-                plainBody: $"Please confirm your account by visiting: {callbackUrl}",
-                htmlBody: $"Please confirm your account by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.");
+                "Confirm your email", plain, html);
 
             StatusMessage = result.Succeeded
                 ? "Confirmation link to change email sent. Please check your email."
@@ -197,11 +196,10 @@ public class IndexModel : PageModel
             values: new { area = "Identity", userId, code },
             protocol: Request.Scheme);
 
+        var (plain, html) = AccountEmail.ConfirmAccount(callbackUrl);
         var result = await _emailService.SendAsync(
             new[] { new EmailRecipient(email) },
-            "Confirm your email",
-            plainBody: $"Please confirm your account by visiting: {callbackUrl}",
-            htmlBody: $"Please confirm your account by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.");
+            "Confirm your email", plain, html);
 
         StatusMessage = result.Succeeded
             ? "Verification email sent. Please check your email."

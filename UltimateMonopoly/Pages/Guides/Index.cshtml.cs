@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using MP.GameEngine.Helpers.RuleSet;
 using UltimateMonopoly.Data;
+using UltimateMonopoly.Helpers.Email;
 
 namespace UltimateMonopoly.Pages.Guides;
 
@@ -75,17 +76,17 @@ public class IndexModel : PageModel
 
         var sender = await _userManager.GetUserAsync(User);
         var subject = $"[Contact] {Contact.Subject.Trim()}";
-        var body =
-            $"New contact message from {RuleDictionary.GameName}.\n\n" +
-            $"From: {sender?.UserName} <{Contact.Email.Trim()}>\n" +
-            $"Subject: {Contact.Subject.Trim()}\n\n" +
-            "----------------------------------------\n" +
-            $"{Contact.Message.Trim()}\n" +
-            "----------------------------------------\n\n" +
-            $"Reply directly to {Contact.Email.Trim()}.";
+
+        // Same branded shell as the admin reply, via EmailBuilder — encodes the user-supplied fields for us.
+        var (plain, html) = EmailBuilder.Create("New contact message")
+            .Paragraph($"A visitor sent a contact message from {RuleDictionary.GameName}.")
+            .Paragraph($"From: {sender?.UserName} <{Contact.Email.Trim()}>\nSubject: {Contact.Subject.Trim()}")
+            .Quote(Contact.Message.Trim())
+            .Footer($"Reply directly to {Contact.Email.Trim()}.")
+            .Build();
 
         // Simple overload → uses the configured DefaultFromAddress / DisplayName as the sender (auto-logs).
-        var result = await _email.SendAsync(new[] { new EmailRecipient(recipient) }, subject, body);
+        var result = await _email.SendAsync(new[] { new EmailRecipient(recipient) }, subject, plain, html);
 
         if (result.Succeeded)
         {

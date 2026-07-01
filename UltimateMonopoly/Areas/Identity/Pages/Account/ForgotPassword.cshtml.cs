@@ -5,7 +5,7 @@
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.Text;
-using System.Text.Encodings.Web;
+using UltimateMonopoly.Helpers.Email;
 using System.Threading.Tasks;
 using JC.Communication.Email.Models;
 using JC.Communication.Email.Services;
@@ -73,11 +73,10 @@ namespace UltimateMonopoly.Areas.Identity.Pages.Account
                     values: new { area = "Identity", code },
                     protocol: Request.Scheme);
 
+                var (plain, html) = AccountEmail.ResetPassword(callbackUrl);
                 await _emailService.SendAsync(
                     new[] { new EmailRecipient(Input.Email) },
-                    "Reset Password",
-                    plainBody: $"Please reset your password by visiting: {callbackUrl}",
-                    htmlBody: $"Please reset your password by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.");
+                    "Reset Password", plain, html);
 
                 return RedirectToPage("./ForgotPasswordConfirmation");
             }

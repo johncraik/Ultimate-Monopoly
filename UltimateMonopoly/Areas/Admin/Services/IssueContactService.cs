@@ -1,4 +1,3 @@
-using System.Net;
 using JC.Communication.Email.Models;
 using JC.Communication.Email.Services;
 using JC.Core.Models;
@@ -12,6 +11,7 @@ using UltimateMonopoly.Areas.Admin.Models;
 using UltimateMonopoly.Areas.Admin.Models.ViewModels.Logs;
 using UltimateMonopoly.Data;
 using UltimateMonopoly.Pages;
+using UltimateMonopoly.Helpers.Email;
 
 namespace UltimateMonopoly.Areas.Admin.Services;
 
@@ -29,17 +29,20 @@ public class IssueContactService
     private readonly UserManagementService _users;
     private readonly IEmailService _email;
     private readonly AdminLogService _adminLog;
+    private readonly IConfiguration _config;
 
     public IssueContactService(IRepositoryManager repos,
         UserManagementService users,
         IEmailService email,
         AdminLogService adminLog,
+        IConfiguration config,
         IUserInfo userInfo)
     {
         _repos = repos;
         _users = users;
         _email = email;
         _adminLog = adminLog;
+        _config = config;
 
         if (!userInfo.IsInRole(SystemRoles.Admin)
             && !userInfo.IsInRole(SystemRoles.SystemAdmin)
@@ -102,10 +105,13 @@ public class IssueContactService
         subject = string.IsNullOrWhiteSpace(subject) ? $"Re: your report on {RuleDictionary.GameName}" : subject.Trim();
         var (plain, html) = BuildBody(issue, contact.DisplayName, message.Trim());
 
-        // The simple overload uses the configured DefaultFromAddress / DefaultFromDisplayName.
-        var result = await _email.SendAsync(
-            new[] { new EmailRecipient(contact.Email, contact.DisplayName) },
-            subject, plain, html);
+        // Send from the support mailbox (same address contact messages go to), not the noreply DefaultFromAddress —
+        // the body invites the reporter to "just reply to this email", so replies must land in support.
+        var from = _config["Communication:Email:ContactRecipient"] ?? "support@monappoly.com";
+        var messageToSend = new EmailMessage(
+            from, htmlBody: html, plainBody: plain, subject: subject,
+            new EmailRecipient(contact.Email, contact.DisplayName));
+        var result = await _email.SendAsync(messageToSend);
 
         if (!result.Succeeded) return IssueContactResult.SendFailed;
 
@@ -113,8 +119,9 @@ public class IssueContactService
         return IssueContactResult.Sent;
     }
 
-    /// <summary>Builds the plain-text + HTML bodies: greeting → the admin's message → the reporter's original
-    /// report → sign-off + a short reference. Deliberately carries no GitHub link or client metadata.</summary>
+    /// <summary>Builds the plain-text + HTML bodies via <see cref="EmailBuilder"/>: greeting → the admin's message
+    /// → the reporter's original report → sign-off + a short reference. Deliberately carries no GitHub link or
+    /// client metadata.</summary>
     private static (string Plain, string Html) BuildBody(ReportedIssue issue, string displayName, string message)
     {
         var typeLabel = issue.Type == IssueType.Suggestion ? "suggestion" : "bug report";
@@ -124,45 +131,16 @@ public class IssueContactService
         // The user's own report only — never the appended "View Issue in App" link (off the email to the client).
         var report = BugReportModel.StripReportLink(issue.Description);
 
-        var plain =
-            $"Hi {displayName},\n\n" +
-            $"Thanks for the {typeLabel} you sent us on {date} — we appreciate you helping improve {RuleDictionary.GameName}.\n\n" +
-            "----------------------------------------\n" +
-            $"{message}\n" +
-            "----------------------------------------\n\n" +
-            "For reference, here's what you originally reported:\n" +
-            $"  \"{report}\"\n\n" +
-            $"— The {RuleDictionary.GameName} Team\n" +
-            $"Reference: {reference}\n\n" +
-            "You're receiving this because you submitted feedback in the app. If you need to add anything, just reply to this email.";
-
-        // Inline styles only: email clients strip <style>/classes/CSS variables, so inline hex is the norm
-        // for transactional email HTML (this is not app CSS, so the colour-variable convention doesn't apply).
-        var html =
-            "<div style=\"font-family: Arial, Helvetica, sans-serif; font-size: 15px; color: #1f2933; line-height: 1.5;\">" +
-            $"<p>Hi {WebUtility.HtmlEncode(displayName)},</p>" +
-            $"<p>Thanks for the {typeLabel} you sent us on {date} — we appreciate you helping improve {RuleDictionary.GameName}.</p>" +
-            "<hr style=\"border: none; border-top: 1px solid #d9dee3; margin: 20px 0;\">" +
-            $"<div>{HtmlParagraphs(message)}</div>" +
-            "<hr style=\"border: none; border-top: 1px solid #d9dee3; margin: 20px 0;\">" +
-            "<p style=\"color: #52606d; margin-bottom: 6px;\"><strong>For reference, here's what you originally reported:</strong></p>" +
-            $"<blockquote style=\"margin: 0; padding: 10px 14px; border-left: 3px solid #c8d0d8; color: #52606d; background: #f5f7fa;\">{WebUtility.HtmlEncode(report)}</blockquote>" +
-            $"<p style=\"margin-top: 20px;\">— The {RuleDictionary.GameName} Team<br>" +
-            $"<span style=\"color: #7b8794; font-size: 12px;\">Reference: {reference}</span></p>" +
-            "<p style=\"color: #7b8794; font-size: 12px;\">You're receiving this because you submitted feedback in the app. If you need to add anything, just reply to this email.</p>" +
-            "</div>";
-
-        return (plain, html);
-    }
-
-    /// <summary>Encodes free text for HTML, then maps blank lines to paragraphs and single newlines to &lt;br&gt;.</summary>
-    private static string HtmlParagraphs(string text)
-    {
-        var encoded = WebUtility.HtmlEncode(text).Replace("\r\n", "\n");
-        var paragraphs = encoded
-            .Split("\n\n", StringSplitOptions.RemoveEmptyEntries)
-            .Select(p => $"<p>{p.Replace("\n", "<br>")}</p>");
-        return string.Join("", paragraphs);
+        return EmailBuilder.Create("Support")
+            .Paragraph($"Hi {displayName},")
+            .Paragraph($"Thanks for the {typeLabel} you sent us on {date} — we appreciate you helping improve {RuleDictionary.GameName}.")
+            .Quote(message)
+            .Paragraph("For reference, here's what you originally reported:", emphasis: true)
+            .Quote(report)
+            .SignOff($"— The {RuleDictionary.GameName} Team")
+            .Reference(reference)
+            .Footer("You're receiving this because you submitted feedback in the app. If you need to add anything, just reply to this email.")
+            .Build();
     }
 }
 

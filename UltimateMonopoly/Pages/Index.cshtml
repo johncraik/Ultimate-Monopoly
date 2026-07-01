@@ -3,7 +3,9 @@
 @model IndexModel
 @{
     ViewData["Title"] = "Home";
+
     var gameName = RuleDictionary.GameName;
+    ViewData["Description"] = $"{gameName}: a free companion app for a wilder take on Monopoly — three-dice movement, a deep card system with global events, loans and lifetime stats. You play on a real board; the app runs the money, cards and bookkeeping.";
 }
 
 <link rel="stylesheet" href="~/css/home.css" asp-append-version="true" />
