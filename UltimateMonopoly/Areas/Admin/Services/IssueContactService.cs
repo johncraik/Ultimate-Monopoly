@@ -1,3 +1,4 @@
+using JC.Communication.Email.Helpers;
 using JC.Communication.Email.Models;
 using JC.Communication.Email.Services;
 using JC.Core.Models;
@@ -11,7 +12,6 @@ using UltimateMonopoly.Areas.Admin.Models;
 using UltimateMonopoly.Areas.Admin.Models.ViewModels.Logs;
 using UltimateMonopoly.Data;
 using UltimateMonopoly.Pages;
-using UltimateMonopoly.Helpers.Email;
 
 namespace UltimateMonopoly.Areas.Admin.Services;
 
@@ -30,19 +30,22 @@ public class IssueContactService
     private readonly IEmailService _email;
     private readonly AdminLogService _adminLog;
     private readonly IConfiguration _config;
+    private readonly DefaultEmailBranding _branding;
 
     public IssueContactService(IRepositoryManager repos,
         UserManagementService users,
         IEmailService email,
         AdminLogService adminLog,
         IConfiguration config,
-        IUserInfo userInfo)
+        IUserInfo userInfo,
+        DefaultEmailBranding branding)
     {
         _repos = repos;
         _users = users;
         _email = email;
         _adminLog = adminLog;
         _config = config;
+        _branding = branding;
 
         if (!userInfo.IsInRole(SystemRoles.Admin)
             && !userInfo.IsInRole(SystemRoles.SystemAdmin)
@@ -103,7 +106,7 @@ public class IssueContactService
         if (string.IsNullOrWhiteSpace(contact.Email)) return IssueContactResult.NoEmail;
 
         subject = string.IsNullOrWhiteSpace(subject) ? $"Re: your report on {RuleDictionary.GameName}" : subject.Trim();
-        var (plain, html) = BuildBody(issue, contact.DisplayName, message.Trim());
+        var (plain, html) = BuildBody(issue, contact.DisplayName, message.Trim(), _branding.Get());
 
         // Send from the support mailbox (same address contact messages go to), not the noreply DefaultFromAddress —
         // the body invites the reporter to "just reply to this email", so replies must land in support.
@@ -122,7 +125,7 @@ public class IssueContactService
     /// <summary>Builds the plain-text + HTML bodies via <see cref="EmailBuilder"/>: greeting → the admin's message
     /// → the reporter's original report → sign-off + a short reference. Deliberately carries no GitHub link or
     /// client metadata.</summary>
-    private static (string Plain, string Html) BuildBody(ReportedIssue issue, string displayName, string message)
+    private static (string Plain, string Html) BuildBody(ReportedIssue issue, string displayName, string message, EmailBranding branding)
     {
         var typeLabel = issue.Type == IssueType.Suggestion ? "suggestion" : "bug report";
         var date = issue.Created.ToLocalTime().ToString("D");
@@ -131,7 +134,7 @@ public class IssueContactService
         // The user's own report only — never the appended "View Issue in App" link (off the email to the client).
         var report = BugReportModel.StripReportLink(issue.Description);
 
-        return EmailBuilder.Create("Support")
+        return EmailBodyBuilder.Create(branding, "Support")
             .Paragraph($"Hi {displayName},")
             .Paragraph($"Thanks for the {typeLabel} you sent us on {date} — we appreciate you helping improve {RuleDictionary.GameName}.")
             .Quote(message)

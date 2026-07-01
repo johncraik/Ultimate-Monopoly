@@ -2,11 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 #nullable disable
 
-using System;
 using System.ComponentModel.DataAnnotations;
 using System.Text;
-using UltimateMonopoly.Helpers.Email;
-using System.Threading.Tasks;
+using JC.Communication.Email.Helpers;
 using JC.Communication.Email.Models;
 using JC.Communication.Email.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -23,11 +21,13 @@ namespace UltimateMonopoly.Areas.Identity.Pages.Account
     {
         private readonly UserManager<AppUser> _userManager;
         private readonly IEmailService _emailService;
+        private readonly DefaultEmailBranding _branding;
 
-        public ResendEmailConfirmationModel(UserManager<AppUser> userManager, IEmailService emailService)
+        public ResendEmailConfirmationModel(UserManager<AppUser> userManager, IEmailService emailService, DefaultEmailBranding branding)
         {
             _userManager = userManager;
             _emailService = emailService;
+            _branding = branding;
         }
 
         /// <summary>
@@ -78,9 +78,9 @@ namespace UltimateMonopoly.Areas.Identity.Pages.Account
                 pageHandler: null,
                 values: new { userId = userId, code = code },
                 protocol: Request.Scheme);
-            var (plain, html) = AccountEmail.ConfirmAccount(callbackUrl);
+            var (plain, html) = AccountEmail.ConfirmAccount(_branding.Get(), callbackUrl ?? string.Empty);
             await _emailService.SendAsync(
-                new[] { new EmailRecipient(Input.Email) },
+                [new EmailRecipient(Input.Email ?? string.Empty)],
                 "Confirm your email", plain, html);
 
             ModelState.AddModelError(string.Empty, "Verification email sent. Please check your email.");

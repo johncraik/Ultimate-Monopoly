@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using JC.Communication.Email.Helpers;
 using JC.Communication.Email.Models;
 using JC.Communication.Email.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -7,7 +8,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using MP.GameEngine.Helpers.RuleSet;
 using UltimateMonopoly.Data;
-using UltimateMonopoly.Helpers.Email;
 
 namespace UltimateMonopoly.Pages.Guides;
 
@@ -21,12 +21,14 @@ public class IndexModel : PageModel
     private readonly IEmailService _email;
     private readonly IConfiguration _config;
     private readonly UserManager<AppUser> _userManager;
+    private readonly DefaultEmailBranding _branding;
 
-    public IndexModel(IEmailService email, IConfiguration config, UserManager<AppUser> userManager)
+    public IndexModel(IEmailService email, IConfiguration config, UserManager<AppUser> userManager, DefaultEmailBranding branding)
     {
         _email = email;
         _config = config;
         _userManager = userManager;
+        _branding = branding;
     }
 
     /// <summary>Which tab renders active — "quickstart" by default; "contact" after a contact post / status.</summary>
@@ -78,7 +80,7 @@ public class IndexModel : PageModel
         var subject = $"[Contact] {Contact.Subject.Trim()}";
 
         // Same branded shell as the admin reply, via EmailBuilder — encodes the user-supplied fields for us.
-        var (plain, html) = EmailBuilder.Create("New contact message")
+        var (plain, html) = EmailBodyBuilder.Create(_branding.Get(), "New contact message")
             .Paragraph($"A visitor sent a contact message from {RuleDictionary.GameName}.")
             .Paragraph($"From: {sender?.UserName} <{Contact.Email.Trim()}>\nSubject: {Contact.Subject.Trim()}")
             .Quote(Contact.Message.Trim())

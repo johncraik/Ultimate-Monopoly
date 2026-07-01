@@ -144,8 +144,10 @@ public class BoardSkinService
 
         await _repos.GetRepository<BoardSkin>()
             .UpdateAsync(boardSkin);
-        
-        _boardCacheService.Invalidate();
+
+        //Editing an already-shared board must clear every recipient's cache too (their cached
+        //list holds this board's name/spaces), not just the owner's.
+        await InvalidateSkinCachesAsync(boardSkin.Id);
         return true;
     }
 
@@ -214,8 +216,11 @@ public class BoardSkinService
             
             await _repos.SaveChangesAsync();
             await _repos.CommitTransactionAsync();
-            
-            _boardCacheService.Invalidate();
+
+            //Clear the owner's cache and every recipient the board was shared with. The share
+            //links are now soft-deleted, so an OnlyActive query would return nothing — use the
+            //recipients captured before deletion.
+            InvalidateSkinCaches(shareLinks.Select(sbs => sbs.UserId));
             return true;
         }
         catch (Exception ex)
@@ -224,6 +229,34 @@ public class BoardSkinService
             _logger.LogError(ex, "Failed to delete board skin {BoardSkinId}", id);
             return false;
         }
+    }
+
+    /// <summary>
+    /// Invalidates the current user's (owner's) board cache and the caches of every user the
+    /// board is actively shared with, so an owner-side edit propagates to shared recipients.
+    /// </summary>
+    private async Task InvalidateSkinCachesAsync(string boardSkinId)
+    {
+        var recipientUserIds = await _repos.GetRepository<SharedBoardSkin>()
+            .AsQueryable().FilterDeleted(DeletedQueryType.OnlyActive)
+            .Where(sbs => sbs.BoardSkinId == boardSkinId)
+            .Select(sbs => sbs.UserId)
+            .Distinct()
+            .ToListAsync();
+
+        InvalidateSkinCaches(recipientUserIds);
+    }
+
+    /// <summary>
+    /// Invalidates the current user's (owner's) board cache plus each supplied recipient cache.
+    /// Recipients bypass the admin guard — the owner is not an admin, but must be able to clear
+    /// the caches of users their board is shared with.
+    /// </summary>
+    private void InvalidateSkinCaches(IEnumerable<string> recipientUserIds)
+    {
+        _boardCacheService.Invalidate();
+        foreach (var userId in recipientUserIds)
+            _boardCacheService.Invalidate(userId, bypassAdminCheck: true);
     }
     
     
@@ -254,8 +287,8 @@ public class BoardSkinService
         
         await _repos.GetRepository<BoardSkinSpace>()
             .AddAsync(boardSkinSpace);
-        
-        _boardCacheService.Invalidate();
+
+        await InvalidateSkinCachesAsync(boardSkinSpace.BoardId);
         return true;
     }
 
@@ -266,8 +299,8 @@ public class BoardSkinService
         
         await _repos.GetRepository<BoardSkinSpace>()
             .UpdateAsync(boardSkinSpace);
-        
-        _boardCacheService.Invalidate();
+
+        await InvalidateSkinCachesAsync(boardSkinSpace.BoardId);
         return true;
     }
 
@@ -282,8 +315,8 @@ public class BoardSkinService
 
         await _repos.GetRepository<BoardSkinSpace>()
             .DeleteAsync(space);
-        
-        _boardCacheService.Invalidate();
+
+        await InvalidateSkinCachesAsync(space.BoardId);
         return true;
     }
 

@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.Authorization;
 using JC.Web.Security.Models;
 using MP.GameEngine.Abstractions;
 using MP.GameEngine.Abstractions.Cards;
+using MP.GameEngine.Helpers.RuleSet;
 using UltimateMonopoly.Areas.Admin.Middleware;
 using UltimateMonopoly.Areas.Admin.Services;
 using UltimateMonopoly.Authorization;
@@ -165,11 +166,16 @@ builder.Services.AddGithub<AppDbContext>(builder.Configuration, options =>
 builder.Services.AddEmail<AppDbContext>(builder.Configuration, options =>
 {
     options.Provider = builder.Environment.IsDevelopment() 
-        ? EmailProvider.Microsoft 
+        ? EmailProvider.Console 
         : EmailProvider.Microsoft;
     options.LoggingMode = builder.Environment.IsDevelopment()
         ? EmailLoggingMode.FullLog
         : EmailLoggingMode.ExcludeContent;
+    options.DefaultBranding = new EmailBranding(RuleDictionary.GameName)
+    {
+        BrandStart = "#0b9fbd",
+        BrandEnd = "#8d94f0"
+    };
 });
 // Email-log retention — keep 6 months (registered with Hangfire in ServiceRegistration).
 builder.Services.ConfigureEmailBackgroundJobs(options =>
@@ -252,18 +258,21 @@ await app.Services.MigrateDatabaseAsync<AppDbContext>();
 await app.ConfigureAdminAndRolesAsync<AppUser, AppRole, AppDbContext, AppRoles>();
 
 // XML sitemap — only the publicly crawlable content pages (everything else is behind global auth).
-// Built from the live request host so the <loc>s are correct across dev / staging / prod without a
-// hardcoded domain. AllowAnonymous so the global "require authenticated user" fallback doesn't gate it.
-app.MapGet("/sitemap.xml", (HttpContext ctx) =>
+// Emits the configured canonical origin (Routes:WebUrl, the same value the pages use for their
+// <link rel="canonical">) rather than the request host, so the <loc>s are always the canonical public
+// URLs regardless of which host (production, .co.uk alias, staging, localhost, tunnel) reached the
+// endpoint. Loc values are XML-escaped defensively. AllowAnonymous so the global "require
+// authenticated user" fallback doesn't gate it.
+app.MapGet("/sitemap.xml", (IConfiguration config) =>
 {
-    var baseUrl = $"{ctx.Request.Scheme}://{ctx.Request.Host}";
+    var baseUrl = (config["Routes:WebUrl"] ?? "https://www.monappoly.com/").TrimEnd('/');
     string[] paths = ["/", "/Rules", "/Guides"];
 
     var sb = new System.Text.StringBuilder();
     sb.AppendLine("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
     sb.AppendLine("<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">");
     foreach (var path in paths)
-        sb.AppendLine($"  <url><loc>{baseUrl}{path}</loc></url>");
+        sb.AppendLine($"  <url><loc>{System.Security.SecurityElement.Escape($"{baseUrl}{path}")}</loc></url>");
     sb.AppendLine("</urlset>");
 
     return Results.Content(sb.ToString(), "application/xml");

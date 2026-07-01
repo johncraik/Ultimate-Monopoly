@@ -155,7 +155,7 @@ public class PlayerTurnOrchestrator
             case DiceRollType.Triple:
                 if (player.TriplesInRow < RuleDictionary.TriplesBeforeJail)
                 {
-                    transitionToThirdDie = await TripleRoll(engine, player, otherPlayers, dice, suppressDefault, ct);
+                    transitionToThirdDie = await TripleRoll(engine, player, otherPlayers, suppressDefault, ct);
                 }
                 else
                 {
@@ -166,7 +166,7 @@ public class PlayerTurnOrchestrator
                     engine.CiteRule(RuleCode.Triple_ThreeInRowToJail);
                     var sentToJail = await _jailService.SendPlayerToJail(engine, player, ct);
                     
-                    transitionToThirdDie = !sentToJail && await TripleRoll(engine, player, otherPlayers, dice, suppressDefault, ct);
+                    transitionToThirdDie = !sentToJail && await TripleRoll(engine, player, otherPlayers, suppressDefault, ct);
                 }
                 
                 break;
@@ -276,8 +276,7 @@ public class PlayerTurnOrchestrator
     }
 
 
-    private async Task<bool> TripleRoll(Framework.GameEngine engine, PlayerModel player, List<PlayerModel> otherPlayers,
-        DiceRoll dice, SuppressDefault sd, CancellationToken ct)
+    private async Task<bool> TripleRoll(Framework.GameEngine engine, PlayerModel player, List<PlayerModel> otherPlayers, SuppressDefault sd, CancellationToken ct)
     {
         var suppressDefault = await engine.CardService.DrawCard(engine, player, CardType.Triple, ct);
         sd.Aggregate(suppressDefault);
@@ -287,8 +286,8 @@ public class PlayerTurnOrchestrator
             await _playerService.ResolveTripleBonus(engine, player, ct);
         }
         
-        //Re-get dice roll (triple card may have changed roll type):
-        dice = engine.Cache.GetTurnDiceRoll() 
+        //Re-get dice roll (triple card may have downgraded to double):
+        var dice = engine.Cache.GetTurnDiceRoll() 
                ?? throw new InvalidOperationException("Dice roll cannot be null");
                     
         //Switch roll type again IF card has changed roll type:

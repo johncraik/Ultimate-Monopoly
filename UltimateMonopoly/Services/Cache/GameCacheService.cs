@@ -123,9 +123,14 @@ public class GameCacheService
             .FirstOrDefaultAsync(g => g.Id == gameId);
         if (game is null) return null;
 
+        // Filter soft-deleted snapshots (and their turns) out of the live hydrate path, matching the
+        // active-only game query above and every other snapshot access. Without this, an active game
+        // whose latest-by-turn snapshot has been soft-deleted (e.g. by SnapshotCleanupJob's retention
+        // pass, or any future/partial cleanup) would rebuild the live GameCacheModel from deleted state.
         var snapshot = await _repos.GetRepository<GameSnapshot>()
             .AsQueryable()
-            .Where(s => s.GameId == gameId)
+            .FilterDeleted(DeletedQueryType.OnlyActive)
+            .Where(s => s.GameId == gameId && !s.Turn.IsDeleted)
             .Include(s => s.Turn)
             .OrderByDescending(s => s.Turn.TurnNumber)
             .FirstOrDefaultAsync();

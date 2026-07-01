@@ -9,6 +9,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Text;
+using JC.Communication.Email.Helpers;
 using JC.Communication.Email.Models;
 using JC.Communication.Email.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -17,7 +18,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.WebUtilities;
 using UltimateMonopoly.Data;
-using UltimateMonopoly.Helpers.Email;
 
 namespace UltimateMonopoly.Areas.Identity.Pages.Account
 {
@@ -29,6 +29,7 @@ namespace UltimateMonopoly.Areas.Identity.Pages.Account
         private readonly IUserStore<AppUser> _userStore;
         private readonly IUserEmailStore<AppUser> _emailStore;
         private readonly IEmailService _emailService;
+        private readonly DefaultEmailBranding _branding;
         private readonly ILogger<ExternalLoginModel> _logger;
 
         public ExternalLoginModel(
@@ -36,7 +37,8 @@ namespace UltimateMonopoly.Areas.Identity.Pages.Account
             UserManager<AppUser> userManager,
             IUserStore<AppUser> userStore,
             ILogger<ExternalLoginModel> logger,
-            IEmailService emailService)
+            IEmailService emailService,
+            DefaultEmailBranding branding)
         {
             _signInManager = signInManager;
             _userManager = userManager;
@@ -44,6 +46,7 @@ namespace UltimateMonopoly.Areas.Identity.Pages.Account
             _emailStore = GetEmailStore();
             _logger = logger;
             _emailService = emailService;
+            _branding = branding;
         }
 
         /// <summary>
@@ -180,7 +183,7 @@ namespace UltimateMonopoly.Areas.Identity.Pages.Account
                             values: new { area = "Identity", userId = userId, code = code },
                             protocol: Request.Scheme);
 
-                        var (plain, html) = AccountEmail.ConfirmAccount(callbackUrl);
+                        var (plain, html) = AccountEmail.ConfirmAccount(_branding.Get(), callbackUrl ?? string.Empty);
                         await _emailService.SendAsync(
                             new[] { new EmailRecipient(Input.Email) },
                             "Confirm your email", plain, html);

@@ -9,11 +9,13 @@ using System.Linq;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Threading.Tasks;
+using JC.Identity.Helpers;
 using JC.Web.UI.Helpers;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
+using MP.GameEngine.Helpers.RuleSet;
 using UltimateMonopoly.Data;
 
 namespace UltimateMonopoly.Areas.Identity.Pages.Account.Manage
@@ -159,10 +161,11 @@ namespace UltimateMonopoly.Areas.Identity.Pages.Account.Manage
                 unformattedKey = await _userManager.GetAuthenticatorKeyAsync(user);
             }
 
-            SharedKey = FormatKey(unformattedKey);
-
+            var helper = new IdentityHelper(_urlEncoder, AuthenticatorUriFormat);
             var email = await _userManager.GetEmailAsync(user);
-            AuthenticatorUri = GenerateQrCodeUri(email, unformattedKey);
+            (SharedKey, AuthenticatorUri) =
+                helper.Generate2faKey(RuleDictionary.GameName, email ?? string.Empty, unformattedKey ?? string.Empty);
+            
             QrCodeSvg = new QrCodeHelper(QrCodeFormat.Svg, pixelsPerModule: 5).GenerateQrCode(AuthenticatorUri);
         }
 

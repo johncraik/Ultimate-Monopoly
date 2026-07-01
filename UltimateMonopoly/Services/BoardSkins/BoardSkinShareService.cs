@@ -134,9 +134,17 @@ public class BoardSkinShareService
             await _repos.SaveChangesAsync();
             await _repos.CommitTransactionAsync();
 
-            foreach (var userId in userIds)
+            //Invalidate every affected recipient — added, restored, and REMOVED. The submitted
+            //userIds cover adds/restores/unchanged, but removed users (toDelete) are no longer in
+            //that list, so their cache would otherwise keep the now-unshared board until expiry.
+            var affectedUserIds = toAdd.Select(sbs => sbs.UserId)
+                .Concat(toRestore.Select(sbs => sbs.UserId))
+                .Concat(toDelete.Select(sbs => sbs.UserId))
+                .Concat(userIds)
+                .Distinct();
+            foreach (var userId in affectedUserIds)
             {
-                _boardCacheService.Invalidate(userId, true);
+                _boardCacheService.Invalidate(userId, bypassAdminCheck: true);
             }
             return true;
         }

@@ -2,11 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 #nullable disable
 
-using System;
 using System.ComponentModel.DataAnnotations;
 using System.Text;
-using UltimateMonopoly.Helpers.Email;
-using System.Threading.Tasks;
+using JC.Communication.Email.Helpers;
 using JC.Communication.Email.Models;
 using JC.Communication.Email.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -23,11 +21,13 @@ namespace UltimateMonopoly.Areas.Identity.Pages.Account
     {
         private readonly UserManager<AppUser> _userManager;
         private readonly IEmailService _emailService;
+        private readonly DefaultEmailBranding _branding;
 
-        public ForgotPasswordModel(UserManager<AppUser> userManager, IEmailService emailService)
+        public ForgotPasswordModel(UserManager<AppUser> userManager, IEmailService emailService, DefaultEmailBranding branding)
         {
             _userManager = userManager;
             _emailService = emailService;
+            _branding = branding;
         }
 
         /// <summary>
@@ -73,7 +73,7 @@ namespace UltimateMonopoly.Areas.Identity.Pages.Account
                     values: new { area = "Identity", code },
                     protocol: Request.Scheme);
 
-                var (plain, html) = AccountEmail.ResetPassword(callbackUrl);
+                var (plain, html) = AccountEmail.ResetPassword(_branding.Get(), callbackUrl ?? string.Empty);
                 await _emailService.SendAsync(
                     new[] { new EmailRecipient(Input.Email) },
                     "Reset Password", plain, html);

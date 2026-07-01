@@ -86,8 +86,7 @@
                                     @f.LastSeen
                                 </p>
                                 <div class="mt-auto d-flex gap-2">
-                                    <button class="btn btn-primary btn-sm flex-grow-1" type="button">Invite to Game</button>
-                                    <a class="btn btn-outline-info btn-sm" asp-page="/Messages/Index" asp-route-friendId="@f.FriendId">Message</a>
+                                    <a class="btn btn-outline-info btn-sm flex-grow-1" asp-page="/Messages/Index" asp-route-friendId="@f.FriendId">Message</a>
                                 </div>
                             </div>
                         </div>
@@ -130,7 +129,6 @@
                                 <td>@f.LastSeen</td>
                                 <td class="text-end">
                                     <div class="btn-group btn-group-sm" role="group">
-                                        <button class="btn btn-primary" type="button">Invite</button>
                                         <a class="btn btn-outline-info" asp-page="/Messages/Index" asp-route-friendId="@f.FriendId">Message</a>
                                         <div class="btn-group btn-group-sm" role="group">
                                             <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="More actions"></button>

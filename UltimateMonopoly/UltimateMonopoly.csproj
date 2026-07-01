@@ -8,15 +8,15 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="JC.BackgroundJobs" Version="3.6.3" />
-        <PackageReference Include="JC.Communication" Version="3.6.4" />
-        <PackageReference Include="JC.Communication.Web" Version="3.6.4" />
-        <PackageReference Include="JC.Core" Version="3.6.3" />
-        <PackageReference Include="JC.Github" Version="3.6.5" />
-        <PackageReference Include="JC.Identity" Version="3.6.4" />
-        <PackageReference Include="JC.MySql" Version="3.6.3" />
-        <PackageReference Include="JC.SqlServer.Hangfire" Version="3.6.2" />
-        <PackageReference Include="JC.Web" Version="3.6.6" />
+        <PackageReference Include="JC.BackgroundJobs" Version="3.7.0" />
+        <PackageReference Include="JC.Communication" Version="3.7.0" />
+        <PackageReference Include="JC.Communication.Web" Version="3.7.0" />
+        <PackageReference Include="JC.Core" Version="3.7.0" />
+        <PackageReference Include="JC.Github" Version="3.7.0" />
+        <PackageReference Include="JC.Identity" Version="3.7.0" />
+        <PackageReference Include="JC.MySql" Version="3.7.0" />
+        <PackageReference Include="JC.SqlServer.Hangfire" Version="3.7.0" />
+        <PackageReference Include="JC.Web" Version="3.7.0" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.17">
           <PrivateAssets>all</PrivateAssets>
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

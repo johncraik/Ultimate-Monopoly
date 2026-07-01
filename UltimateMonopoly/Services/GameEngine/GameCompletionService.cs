@@ -68,7 +68,7 @@ public class GameCompletionService : IGameCompletionService
     }
 
 
-    public async Task<bool> TryDrawGameByAdmin(MP.GameEngine.Services.Framework.GameEngine engine)
+    public async Task<bool> TryDrawGameByAdmin(MP.GameEngine.Services.Framework.GameEngine engine, bool isAdmin = false)
     {
         var gameCache = engine.Cache;
         var game = await _repos.GetRepository<Game>()
@@ -80,7 +80,9 @@ public class GameCompletionService : IGameCompletionService
 
         try
         {
-            await ConcludeGame(gameCache, game);
+            //Attribute the game/player audit rows to the acting admin when this is an admin action;
+            //the automated abandoned-game sweep passes isAdmin: false so it stays attributed to System.
+            await ConcludeGame(gameCache, game, isAdmin);
             return true;
         }
         catch (Exception ex)

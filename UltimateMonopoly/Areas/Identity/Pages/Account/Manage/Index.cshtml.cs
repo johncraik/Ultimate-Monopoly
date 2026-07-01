@@ -2,6 +2,7 @@
 
 using System.ComponentModel.DataAnnotations;
 using System.Text;
+using JC.Communication.Email.Helpers;
 using JC.Communication.Email.Models;
 using JC.Communication.Email.Services;
 using Microsoft.AspNetCore.Identity;
@@ -10,7 +11,6 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.WebUtilities;
 using UltimateMonopoly.Data;
 using UltimateMonopoly.Services;
-using UltimateMonopoly.Helpers.Email;
 
 namespace UltimateMonopoly.Areas.Identity.Pages.Account.Manage;
 
@@ -21,19 +21,22 @@ public class IndexModel : PageModel
     private readonly IEmailService _emailService;
     private readonly ProfanityService _profanityService;
     private readonly ProfileService _profileService;
+    private readonly DefaultEmailBranding _branding;
 
     public IndexModel(
         UserManager<AppUser> userManager,
         SignInManager<AppUser> signInManager,
         IEmailService emailService,
         ProfanityService profanityService,
-        ProfileService profileService)
+        ProfileService profileService,
+        DefaultEmailBranding branding)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _emailService = emailService;
         _profanityService = profanityService;
         _profileService = profileService;
+        _branding = branding;
     }
 
     public string Username { get; set; }
@@ -165,7 +168,7 @@ public class IndexModel : PageModel
                 values: new { area = "Identity", userId, email = EmailInput.NewEmail, code },
                 protocol: Request.Scheme);
 
-            var (plain, html) = AccountEmail.ConfirmEmailChange(callbackUrl);
+            var (plain, html) = AccountEmail.ConfirmEmailChange(_branding.Get(), callbackUrl ?? string.Empty);
             var result = await _emailService.SendAsync(
                 new[] { new EmailRecipient(EmailInput.NewEmail) },
                 "Confirm your email", plain, html);
@@ -196,9 +199,9 @@ public class IndexModel : PageModel
             values: new { area = "Identity", userId, code },
             protocol: Request.Scheme);
 
-        var (plain, html) = AccountEmail.ConfirmAccount(callbackUrl);
+        var (plain, html) = AccountEmail.ConfirmAccount(_branding.Get(), callbackUrl ?? string.Empty);
         var result = await _emailService.SendAsync(
-            new[] { new EmailRecipient(email) },
+            [new EmailRecipient(email ?? string.Empty)],
             "Confirm your email", plain, html);
 
         StatusMessage = result.Succeeded

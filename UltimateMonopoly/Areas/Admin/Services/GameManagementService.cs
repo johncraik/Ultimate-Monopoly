@@ -265,9 +265,9 @@ public class GameManagementService
         var engine = await _adminGameStateService.BuildEngine(gameId);
         if(engine == null) return false;
 
-        var result = await _gameCompletionService.TryDrawGameByAdmin(engine);
+        var result = await _gameCompletionService.TryDrawGameByAdmin(engine, isAdmin: true);
         if(!result) return false;
-        
+
         await _adminLogService.LogGameDrawn(gameId);
         return true;
     }

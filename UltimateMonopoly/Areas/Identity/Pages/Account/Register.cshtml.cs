@@ -2,14 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 #nullable disable
 
-using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
 using System.Text;
-using UltimateMonopoly.Helpers.Email;
-using System.Threading;
-using System.Threading.Tasks;
+using JC.Communication.Email.Helpers;
 using JC.Communication.Email.Models;
 using JC.Communication.Email.Services;
 using Microsoft.AspNetCore.Authentication;
@@ -18,7 +13,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.WebUtilities;
-using Microsoft.Extensions.Logging;
 using UltimateMonopoly.Data;
 using UltimateMonopoly.Services;
 
@@ -34,6 +28,7 @@ namespace UltimateMonopoly.Areas.Identity.Pages.Account
         private readonly ILogger<RegisterModel> _logger;
         private readonly IEmailService _emailService;
         private readonly ProfanityService _profanityService;
+        private readonly DefaultEmailBranding _branding;
 
         public RegisterModel(
             UserManager<AppUser> userManager,
@@ -41,7 +36,8 @@ namespace UltimateMonopoly.Areas.Identity.Pages.Account
             SignInManager<AppUser> signInManager,
             ILogger<RegisterModel> logger,
             IEmailService emailService,
-            ProfanityService profanityService)
+            ProfanityService profanityService,
+            DefaultEmailBranding branding)
         {
             _userManager = userManager;
             _userStore = userStore;
@@ -50,6 +46,7 @@ namespace UltimateMonopoly.Areas.Identity.Pages.Account
             _logger = logger;
             _emailService = emailService;
             _profanityService = profanityService;
+            _branding = branding;
         }
 
         /// <summary>
@@ -163,9 +160,9 @@ namespace UltimateMonopoly.Areas.Identity.Pages.Account
                         values: new { area = "Identity", userId = userId, code = code, returnUrl = returnUrl },
                         protocol: Request.Scheme);
 
-                    var (plain, html) = AccountEmail.ConfirmAccount(callbackUrl);
+                    var (plain, html) = AccountEmail.ConfirmAccount(_branding.Get(), callbackUrl ?? string.Empty);
                     await _emailService.SendAsync(
-                        new[] { new EmailRecipient(Input.Email) },
+                        [new EmailRecipient(Input.Email ?? string.Empty)],
                         "Confirm your email", plain, html);
 
                     if (_userManager.Options.SignIn.RequireConfirmedAccount)
